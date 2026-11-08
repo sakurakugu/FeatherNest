@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
 import { SwitchButton } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
+import { 使用下拉面板 } from '@personal-system/ui'
 import { ElButton, ElIcon } from 'element-plus'
-import { computed, ref } from 'vue'
-import { useSlots } from 'vue'
 import type { Component } from 'vue'
-import { UniversalAvatar, 使用下拉面板 } from '@personal-system/ui'
+import { computed, ref, useSlots } from 'vue'
 
 type UserMenuItem = {
   label: string
@@ -16,13 +15,10 @@ type UserMenuItem = {
 
 const props = withDefaults(defineProps<{
   isAuthed: boolean
-  avatarUrl?: string | null
-  avatarText: string
   menuItems: UserMenuItem[]
   extraMenuItems?: UserMenuItem[]
   mobile?: boolean
 }>(), {
-  avatarUrl: '',
   extraMenuItems: () => [],
   mobile: false,
 })
@@ -78,28 +74,13 @@ function handleGuestSelect(key: 'login') {
     @mouseleave="closeMenu"
   >
     <ElButton
-      class="header-btn avatar-btn"
+      class="header-btn user-menu-btn"
       :aria-label="buttonAriaLabel"
       @click.stop="toggleMenu"
     >
-      <UniversalAvatar
-        v-if="isAuthed"
-        :src="avatarUrl"
-        :text="avatarText"
-        :size="32"
-        alt="用户头像"
-        class="user-avatar"
-      />
-      <UniversalAvatar
-        v-else
-        text="登"
-        :size="32"
-        alt="访客头像"
-        class="guest-avatar"
-        background="var(--header-accent-surface)"
-        color="var(--header-accent)"
-        font-size="13px"
-      />
+      <svg class="user-menu-icon" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true">
+        <path d="M338.763294 502.000941H77.462588c-35.779765 0-65.054118-29.274353-65.054117-65.054117V175.646118c0-35.779765 29.274353-65.054118 65.054117-65.054118h261.842824c35.779765 0 65.054118 29.274353 65.054117 65.054118v261.842823a65.234824 65.234824 0 0 1-65.596235 64.512zM77.462588 175.646118v261.842823h261.842824V175.646118H77.462588z m645.662118 380.566588c-17.347765 0-33.611294-6.505412-46.08-18.974118L492.182588 352.376471a64.331294 64.331294 0 0 1-18.974117-46.08c0-17.347765 6.505412-33.611294 18.974117-46.08l184.862118-184.862118c12.468706-12.468706 28.732235-18.974118 46.08-18.974118 17.347765 0 33.611294 6.505412 46.08 18.974118l184.862118 184.862118c12.468706 12.468706 18.974118 28.732235 18.974117 46.08 0 17.347765-6.505412 33.611294-18.974117 46.08L769.204706 537.238588a64.331294 64.331294 0 0 1-46.08 18.974118z m0-435.320471L538.262588 305.754353l184.862118 184.862118 184.862118-184.862118-184.862118-184.862118zM338.763294 1017.012706H77.462588c-35.779765 0-65.054118-29.274353-65.054117-65.054118v-261.842823c0-35.779765 29.274353-65.054118 65.054117-65.054118h261.842824c35.779765 0 65.054118 29.274353 65.054117 65.054118v261.842823a65.355294 65.355294 0 0 1-65.596235 65.054118z m-261.300706-326.354824v261.842824h261.842824v-261.842824H77.462588z m776.312471 326.354824H591.932235c-35.779765 0-65.054118-29.274353-65.054117-65.054118v-261.842823c0-35.779765 29.274353-65.054118 65.054117-65.054118h261.842824c35.779765 0 65.054118 29.274353 65.054117 65.054118v261.842823c0 36.321882-28.732235 65.054118-65.054117 65.054118z m-261.300706-326.354824v261.842824h261.842823v-261.842824H592.474353z" />
+      </svg>
     </ElButton>
     <Transition name="dropdown">
       <div v-show="isOpen" class="custom-dropdown-panel" :class="{ 'custom-dropdown-panel--wide': hasExtraSection }">
@@ -160,7 +141,7 @@ function handleGuestSelect(key: 'login') {
   background: transparent;
   color: rgba(0, 0, 0, 0.7);
   cursor: pointer;
-  transition: color 0.15s ease-out;
+  transition: color 0.2s ease-out;
   overflow: hidden;
   outline: none;
 }
@@ -174,7 +155,7 @@ function handleGuestSelect(key: 'login') {
   transform: scale(0.85);
   opacity: 0;
   z-index: -1;
-  transition: all 0.15s ease-out;
+  transition: all 0.2s ease-out;
 }
 
 .header-btn:hover::before {
@@ -186,22 +167,26 @@ function handleGuestSelect(key: 'login') {
   background: rgba(0, 0, 0, 0.1);
 }
 
-.avatar-btn,
-.avatar-btn:hover,
-.avatar-btn:focus {
-  background: transparent !important;
+.user-menu-btn:hover {
+  color: var(--header-accent);
 }
 
-.avatar-btn::before,
-.avatar-btn:hover::before,
-.avatar-btn:active::before {
-  opacity: 0;
-  transform: scale(0.85);
-  background: transparent;
+.user-menu-btn:hover::before {
+  background: var(--header-accent-overlay-12);
+  opacity: 1;
+  transform: scale(1);
 }
 
-.user-avatar,
-.guest-avatar {
+.user-menu-btn:active::before {
+  background: var(--header-accent-overlay-18);
+}
+
+.user-menu-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 8;
+  stroke-linejoin: round;
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -230,12 +215,24 @@ function handleGuestSelect(key: 'login') {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.dark .avatar-btn::before,
-.dark .avatar-btn:hover::before,
-.dark .avatar-btn:active::before {
-  opacity: 0;
-  transform: scale(0.85);
-  background: transparent;
+.dark .header-btn::before {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .header-btn:active::before {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark .user-menu-btn:hover {
+  color: var(--header-accent-bright);
+}
+
+.dark .user-menu-btn:hover::before {
+  background: var(--header-accent-overlay-15);
+}
+
+.dark .user-menu-btn:active::before {
+  background: var(--header-accent-overlay-22);
 }
 
 .dark .custom-divider {

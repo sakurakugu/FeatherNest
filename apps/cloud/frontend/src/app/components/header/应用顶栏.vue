@@ -98,8 +98,6 @@ function 当前搜索是否使用替换() {
 }
 
 const isAuthed = computed(() => auth.isAuthenticated)
-const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
-const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() || 'U')
 const isDashboardPage = computed(() => 判断是否控制台路由(route))
 const 紧凑头部断点 = 960
 const { width, isMobileViewport } = 使用视口()
@@ -228,14 +226,12 @@ onBeforeUnmount(() => {
         >
           <!-- 左侧区域 -->
           <div class="header-left">
-            <!-- 移动端左侧头像入口 -->
+            <!-- 移动端左侧用户菜单入口 -->
             <div v-if="shouldShowMobileUserEntry" class="mobile-user-entry">
               <HeaderUserDropdown
                 class="mobile-user-dropdown"
                 :mobile="true"
                 :is-authed="isAuthed"
-                :avatar-url="auth.user?.avatar_url"
-                :avatar-text="avatarText"
                 :menu-items="menuOptions"
                 :extra-menu-items="headerMenuOptions"
                 @menu-select="handleMenu"
@@ -304,8 +300,6 @@ onBeforeUnmount(() => {
               v-if="(isDashboardPage || isAuthed) && !isMobileViewport"
               class="desktop-user-dropdown"
               :is-authed="isAuthed"
-              :avatar-url="auth.user?.avatar_url"
-              :avatar-text="avatarText"
               :menu-items="menuOptions"
               :extra-menu-items="headerMenuOptions"
               @menu-select="handleMenu"
