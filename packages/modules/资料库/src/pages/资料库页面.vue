@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { useIntersectionObserver } from '@vueuse/core'
 /* global Event, HTMLInputElement, IntersectionObserver, MouseEvent, TouchEvent */
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ElButton,
@@ -109,7 +110,6 @@ const filters = ref({
 })
 const 选中的上传目录 = ref<string | null>(null)
 const 选中的上传目录路径 = ref('全部文件')
-let loadMoreObserver: IntersectionObserver | null = null
 
 const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<MaterialRecord>({
   getId: record => record.id,
@@ -410,12 +410,7 @@ function applyCollectionPage(data: MaterialListResponse, append: boolean) {
   }
 }
 
-function disconnectLoadMoreObserver() {
-  if (loadMoreObserver) {
-    loadMoreObserver.disconnect()
-    loadMoreObserver = null
-  }
-}
+
 
 function isSelected(recordId: string): boolean {
   return selectedCollectionIdSet.value.has(recordId)
@@ -1008,33 +1003,10 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(() => {
-  disconnectLoadMoreObserver()
-})
 
-watch(
-  () => [pageContainerRef.value, loadMoreTriggerRef.value] as const,
-  ([container, trigger]) => {
-    disconnectLoadMoreObserver()
-    if (!container || !trigger) {
-      return
-    }
-    loadMoreObserver = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some(entry => entry.isIntersecting)) {
-          return
-        }
-        void fetchNextPage()
-      },
-      {
-        root: container,
-        rootMargin: '0px 0px 240px 0px',
-      },
-    )
-    loadMoreObserver.observe(trigger)
-  },
-  { flush: 'post' },
-)
+useIntersectionObserver(loadMoreTriggerRef, (entries) => {
+  if (entries.some((entry) => entry.isIntersecting)) void fetchNextPage()
+}, { root: pageContainerRef, rootMargin: '0px 0px 240px 0px' })
 
 watch(collections, (items) => {
   const idSet = new Set(items.map(item => item.id))

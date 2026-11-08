@@ -1,4 +1,5 @@
-import { onBeforeUnmount, reactive } from 'vue'
+import { useTimeoutFn } from '@vueuse/core'
+import { onScopeDispose } from 'vue'
 
 interface LongPressSelectionOptions<T> {
   delay?: number
@@ -8,15 +9,12 @@ interface LongPressSelectionOptions<T> {
 
 export function 使用长按选择<T>(options: LongPressSelectionOptions<T>) {
   const delay = options.delay ?? 520
-  const timers = reactive<Record<string, ReturnType<typeof setTimeout> | null>>({})
-  const triggered = reactive<Record<string, boolean>>({})
+  const timers = new Map<string, ReturnType<typeof useTimeoutFn>>()
+  const triggered = new Set<string>()
 
   function 清除定时器(id: string) {
-    const timer = timers[id]
-    if (timer !== null && timer !== undefined) {
-      clearTimeout(timer)
-      timers[id] = null
-    }
+    timers.get(id)?.stop()
+    timers.delete(id)
   }
 
   function 开始长按(item: T, event?: Event) {
@@ -26,12 +24,12 @@ export function 使用长按选择<T>(options: LongPressSelectionOptions<T>) {
 
     const id = options.getId(item)
     清除定时器(id)
-    triggered[id] = false
-    timers[id] = setTimeout(() => {
-      triggered[id] = true
+    triggered.delete(id)
+    timers.set(id, useTimeoutFn(() => {
+      triggered.add(id)
+      timers.delete(id)
       options.onLongPress(item)
-      timers[id] = null
-    }, delay)
+    }, delay))
   }
 
   function 取消长按(item: T) {
@@ -40,13 +38,14 @@ export function 使用长按选择<T>(options: LongPressSelectionOptions<T>) {
 
   function 消费长按(item: T): boolean {
     const id = options.getId(item)
-    const wasTriggered = Boolean(triggered[id])
-    triggered[id] = false
+    const wasTriggered = triggered.delete(id)
     return wasTriggered
   }
 
-  onBeforeUnmount(() => {
-    Object.keys(timers).forEach(清除定时器)
+  onScopeDispose(() => {
+    timers.forEach((timer) => timer.stop())
+    timers.clear()
+    triggered.clear()
   })
 
   return {

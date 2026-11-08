@@ -11,6 +11,7 @@ from time import perf_counter
 from typing import Any
 
 import httpx
+from httpx_sse import aconnect_sse
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import Select, func, select
@@ -320,42 +321,6 @@ def _编码SSE数据(data: str | dict[str, Any]) -> bytes:
     return f"data: {payload}\n\n".encode("utf-8")
 
 
-def _提取供应商增量(line: str) -> str:
-    """从 OpenAI 兼容 SSE 行提取增量文本。"""
-    normalized = line.strip()
-    if not normalized.startswith("data:"):
-        return ""
-    payload = normalized.removeprefix("data:").strip()
-    if not payload or payload == "[DONE]":
-        return ""
-    try:
-        data = json.loads(payload)
-    except json.JSONDecodeError:
-        return ""
-    choices = data.get("choices")
-    if not isinstance(choices, list) or not choices:
-        return ""
-    delta = choices[0].get("delta")
-    if isinstance(delta, dict) and isinstance(delta.get("content"), str):
-        return delta["content"]
-    return ""
-
-
-def _解析供应商SSE数据(line: str) -> dict[str, Any] | None:
-    """解析 OpenAI 兼容 SSE 数据。"""
-    normalized = line.strip()
-    if not normalized.startswith("data:"):
-        return None
-    payload = normalized.removeprefix("data:").strip()
-    if not payload or payload == "[DONE]":
-        return None
-    try:
-        data = json.loads(payload)
-    except json.JSONDecodeError:
-        return None
-    return data if isinstance(data, dict) else None
-
-
 def _合并工具调用增量(tool_calls: dict[int, dict[str, Any]], delta_tool_calls: list[Any]) -> None:
     """合并流式工具调用增量。"""
     for item in delta_tool_calls:
@@ -452,12 +417,18 @@ async def 流式生成AI回复(
                 )
                 tool_call_deltas: dict[int, dict[str, Any]] = {}
                 finish_reason = ""
-                async with client.stream("POST", url, json=payload, headers=headers) as response:
-                    response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        data = _解析供应商SSE数据(line)
-                        if data is None:
+                async with aconnect_sse(client, "POST", url, json=payload, headers=headers) as source:
+                    source.response.raise_for_status()
+                    async for event in source.aiter_sse():
+                        if event.data == "[DONE]":
+                            break
+                        if not event.data:
                             continue
+                        data = event.json()
+                        if not isinstance(data, dict):
+                            raise ValueError("供应商 SSE 数据必须是 JSON 对象")
+                        if isinstance(data.get("usage"), dict):
+                            usage = data["usage"]
                         choices = data.get("choices")
                         if not isinstance(choices, list) or not choices:
                             continue

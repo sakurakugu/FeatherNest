@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* global Blob, CanvasRenderingContext2D, DragEvent, Event, File, HTMLCanvasElement, HTMLDivElement, HTMLImageElement, HTMLInputElement, Image, PointerEvent, ResizeObserver, URL */
+/* global Blob, CanvasRenderingContext2D, DragEvent, Event, File, HTMLCanvasElement, HTMLDivElement, HTMLImageElement, HTMLInputElement, Image, URL */
 import {
   创建图片工具服务,
   获取默认图片工具能力,
@@ -9,22 +9,16 @@ import {
   type 桌面文件结果,
 } from '@personal-system/platform/image-tools'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
+import { CropperCanvas, CropperHandle, CropperSelection, getAdjustedSizes } from 'cropperjs'
 import { ElButton, ElEmpty, ElIcon, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
 import { UploadFilled, RefreshLeft, RefreshRight, Download, Delete, Crop, Refresh, Switch, MagicStick, Picture, View } from '@element-plus/icons-vue'
 import WorkbenchSectionCard from './工作台卡片.vue'
 import { 获取图片预览实例, type 图片预览实例 } from '../lib/fancybox'
+import { 获取像素裁剪区域, 缩放裁剪区域, type CropRect } from '../lib/crop-geometry'
 
 type AspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:4'
-type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
-type DragMode = 'move' | ResizeHandle
 type ExportFormat = 'image/png' | 'image/jpeg' | 'image/webp'
-
-type CropRect = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
 
 type ImageMeta = {
   name: string
@@ -39,11 +33,6 @@ type DisplayRect = {
   y: number
   width: number
   height: number
-}
-
-type Point = {
-  x: number
-  y: number
 }
 
 type 编辑来源类型 = 'browser' | 'desktop'
@@ -82,6 +71,7 @@ const 图片预览选项 = {
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const previewStageRef = ref<HTMLDivElement | null>(null)
 const previewCanvasRef = ref<HTMLCanvasElement | null>(null)
+const cropperHostRef = ref<HTMLDivElement | null>(null)
 
 const baseImage = shallowRef<HTMLImageElement | null>(null)
 const imageMeta = ref<ImageMeta | null>(null)
@@ -127,13 +117,6 @@ const exportFormatOptions: Array<{ label: string; value: ExportFormat }> = [
   { label: 'WEBP', value: 'image/webp' },
 ]
 
-const handleCursorMap: Record<ResizeHandle, string> = {
-  nw: 'nwse-resize',
-  ne: 'nesw-resize',
-  sw: 'nesw-resize',
-  se: 'nwse-resize',
-}
-
 const currentObjectUrl = ref<string | null>(null)
 const normalizedRotation = computed(() => ((imageTransform.rotation % 360) + 360) % 360)
 const hasImage = computed(() => baseImage.value !== null && imageMeta.value !== null)
@@ -154,8 +137,9 @@ const sourceSizeLabel = computed(() => {
   return `${imageMeta.value.width} × ${imageMeta.value.height}`
 })
 const outputSizeLabel = computed(() => {
-  if (!cropRect.value) return '未生成'
-  return `${Math.max(1, Math.round(cropRect.value.width))} × ${Math.max(1, Math.round(cropRect.value.height))}`
+  if (!cropRect.value || !transformedSize.value) return '未生成'
+  const crop = 获取像素裁剪区域(cropRect.value, transformedSize.value)
+  return `${crop.width} × ${crop.height}`
 })
 const fileSizeLabel = computed(() => {
   if (!imageMeta.value) return '0 B'
@@ -212,17 +196,13 @@ const frameStyle = computed<Record<string, string> | null>(() => {
   }
 })
 
-let resizeObserver: ResizeObserver | null = null
 let renderFrame = 0
 let Fancybox实例: 图片预览实例 | null = null
 let 编辑结果预览Url: string | null = null
-let dragSession:
-  | {
-      mode: DragMode
-      startPoint: Point
-      startCrop: CropRect
-    }
-  | null = null
+let cropperCanvas: CropperCanvas | null = null
+let cropperSelection: CropperSelection | null = null
+let syncingCropper = false
+let imageLoadVersion = 0
 
 function formatFileSize(size: number) {
   if (size < 1024) return `${size} B`
@@ -255,55 +235,88 @@ function getFilterString() {
   ].join(' ')
 }
 
-function cloneCrop(crop: CropRect): CropRect {
-  return {
-    x: crop.x,
-    y: crop.y,
-    width: crop.width,
-    height: crop.height,
-  }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
-function clampCropToBounds(input: CropRect, size: { width: number; height: number }) {
-  const nextWidth = clamp(input.width, 1, size.width)
-  const nextHeight = clamp(input.height, 1, size.height)
-  const nextX = clamp(input.x, 0, size.width - nextWidth)
-  const nextY = clamp(input.y, 0, size.height - nextHeight)
-  return {
-    x: nextX,
-    y: nextY,
-    width: nextWidth,
-    height: nextHeight,
-  }
-}
-
 function createMaxCrop(size: { width: number; height: number }, preset: AspectPreset) {
   const ratio = getAspectRatio(preset)
-  if (!ratio) {
-    return {
-      x: 0,
-      y: 0,
-      width: size.width,
-      height: size.height,
-    }
-  }
-
-  let width = size.width
-  let height = width / ratio
-  if (height > size.height) {
-    height = size.height
-    width = height * ratio
-  }
-
+  const { width, height } = ratio ? getAdjustedSizes({ ...size, aspectRatio: ratio }) : size
   return {
     x: (size.width - width) / 2,
     y: (size.height - height) / 2,
     width,
     height,
+  }
+}
+
+function handleCropperChange(event: Event) {
+  if (syncingCropper) return
+  const frame = cropperCanvas?.getBoundingClientRect()
+  const size = transformedSize.value
+  if (!frame?.width || !frame.height || !size) return
+  const rect = (event as CustomEvent<CropRect>).detail
+  const displaySize = getAdjustedSizes({ width: frame.width, height: frame.height, aspectRatio: size.width / size.height })
+  const crop = 缩放裁剪区域(rect, displaySize, size)
+  if (crop.width < 1 || crop.height < 1) {
+    event.preventDefault()
+    return
+  }
+  cropRect.value = crop
+}
+
+function syncCropper() {
+  const frame = displayRect.value
+  const size = transformedSize.value
+  const crop = cropRect.value
+  const host = cropperHostRef.value
+  if (!frame || !size || !crop || !host) {
+    if (cropperCanvas) cropperCanvas.hidden = true
+    return
+  }
+
+  if (!cropperCanvas) {
+    cropperCanvas = new CropperCanvas()
+    cropperSelection = new CropperSelection()
+    cropperSelection.movable = true
+    cropperSelection.resizable = true
+    cropperSelection.precise = true
+    cropperSelection.minInset = '0'
+    cropperSelection.addEventListener('change', handleCropperChange)
+    const moveHandle = new CropperHandle()
+    moveHandle.action = 'move'
+    moveHandle.plain = true
+    cropperSelection.append(moveHandle)
+    for (const direction of ['nw', 'ne', 'sw', 'se']) {
+      const handle = new CropperHandle()
+      handle.action = `${direction}-resize`
+      handle.className = 'crop-handle'
+      cropperSelection.append(handle)
+    }
+    cropperCanvas.append(cropperSelection)
+    host.append(cropperCanvas)
+    cropperCanvas.$addStyles(':host{min-width:0;min-height:0;overflow:visible}')
+    for (const handle of cropperSelection.querySelectorAll<CropperHandle>('.crop-handle')) {
+      handle.$addStyles(':host::after{display:none}')
+    }
+  }
+
+  cropperCanvas.hidden = false
+  Object.assign(cropperCanvas.style, {
+    position: 'absolute',
+    left: `${frame.x}px`,
+    top: `${frame.y}px`,
+    width: `${frame.width}px`,
+    height: `${frame.height}px`,
+  })
+  // 浏览器会把 CSS 尺寸量化为子像素，边界校验必须使用实际布局尺寸。
+  const bounds = cropperCanvas.getBoundingClientRect()
+  if (!bounds.width || !bounds.height) return
+  const displaySize = getAdjustedSizes({ width: bounds.width, height: bounds.height, aspectRatio: size.width / size.height })
+  const rect = 缩放裁剪区域(crop, size, displaySize)
+  syncingCropper = true
+  try {
+    const selection = cropperSelection!
+    selection.aspectRatio = getAspectRatio(aspectPreset.value) ?? NaN
+    selection.$change(rect.x, rect.y, rect.width, rect.height)
+  } finally {
+    syncingCropper = false
   }
 }
 
@@ -347,14 +360,15 @@ function revokeCurrentObjectUrl() {
 
 async function releaseDesktopImageResource() {
   const handle = 桌面资源句柄.value
+  桌面资源句柄.value = null
   if (!handle) {
     return
   }
 
   try {
     await 图片工具服务实例.释放资源([handle.id])
-  } catch {
-    // 临时资源释放失败不阻断界面清理
+  } catch (error) {
+    console.warn('[图片编辑] 桌面临时资源释放失败', error)
   }
 }
 
@@ -371,6 +385,7 @@ function resetEditorOptions() {
 }
 
 function clearEditor() {
+  imageLoadVersion += 1
   关闭图片预览()
   释放编辑结果预览链接()
   revokeCurrentObjectUrl()
@@ -392,10 +407,7 @@ async function loadImageFile(file: File) {
     return
   }
 
-  关闭图片预览()
-  释放编辑结果预览链接()
-  revokeCurrentObjectUrl()
-  await releaseDesktopImageResource()
+  const version = ++imageLoadVersion
   const objectUrl = URL.createObjectURL(file)
   const image = new Image()
   image.decoding = 'async'
@@ -403,12 +415,22 @@ async function loadImageFile(file: File) {
 
   try {
     await image.decode()
-  } catch {
+  } catch (error) {
     URL.revokeObjectURL(objectUrl)
+    if (version !== imageLoadVersion) return
+    console.error('[图片编辑] 图片读取失败', error)
     ElMessage.error('图片读取失败，请换一张试试')
     return
   }
 
+  if (version !== imageLoadVersion) {
+    URL.revokeObjectURL(objectUrl)
+    return
+  }
+  关闭图片预览()
+  释放编辑结果预览链接()
+  revokeCurrentObjectUrl()
+  void releaseDesktopImageResource()
   currentObjectUrl.value = objectUrl
   baseImage.value = image
   编辑来源.value = 'browser'
@@ -426,23 +448,33 @@ async function loadImageFile(file: File) {
   schedulePreviewRender()
 }
 
-async function loadDesktopImageHandle(handle: 图片资源句柄) {
-  关闭图片预览()
-  释放编辑结果预览链接()
-  revokeCurrentObjectUrl()
-  await releaseDesktopImageResource()
-
+async function loadDesktopImageHandle(handle: 图片资源句柄, version: number) {
   const image = new Image()
   image.decoding = 'async'
   image.src = handle.预览地址
 
   try {
     await image.decode()
-  } catch {
+  } catch (error) {
+    void 图片工具服务实例.释放资源([handle.id]).catch((releaseError) => {
+      console.warn('[图片编辑] 无效桌面预览资源释放失败', releaseError)
+    })
+    if (version !== imageLoadVersion) return
+    console.error('[图片编辑] 桌面预览图读取失败', error)
     ElMessage.error('桌面预览图读取失败，请换一张试试')
     return
   }
 
+  if (version !== imageLoadVersion) {
+    void 图片工具服务实例.释放资源([handle.id]).catch((error) => {
+      console.warn('[图片编辑] 过期桌面预览资源释放失败', error)
+    })
+    return
+  }
+  关闭图片预览()
+  释放编辑结果预览链接()
+  revokeCurrentObjectUrl()
+  void releaseDesktopImageResource()
   baseImage.value = image
   编辑来源.value = 'desktop'
   桌面资源句柄.value = handle
@@ -504,21 +536,29 @@ async function selectDesktopImagePath() {
     return
   }
 
+  const version = ++imageLoadVersion
   try {
     const paths = await 图片工具服务实例.选择桌面输入()
+    if (version !== imageLoadVersion) return
     const firstPath = paths[0]
     if (!firstPath) {
       return
     }
 
     const handles = await 图片工具服务实例.从桌面路径导入图片([firstPath])
+    if (version !== imageLoadVersion) {
+      await 图片工具服务实例.释放资源(handles.map((handle) => handle.id))
+      return
+    }
     const firstHandle = handles[0]
     if (!firstHandle) {
       return
     }
 
-    await loadDesktopImageHandle(firstHandle)
+    await loadDesktopImageHandle(firstHandle, version)
   } catch (error) {
+    console.error('[图片编辑] 选择桌面图片失败', error)
+    if (version !== imageLoadVersion) return
     ElMessage.error(error instanceof Error ? error.message : '选择桌面图片失败')
   }
 }
@@ -537,7 +577,9 @@ function buildTransformedCanvas() {
   context.translate(canvas.width / 2, canvas.height / 2)
   context.scale(imageTransform.flipX ? -1 : 1, imageTransform.flipY ? -1 : 1)
   context.rotate(normalizedRotation.value * Math.PI / 180)
-  context.drawImage(baseImage.value, -baseImage.value.naturalWidth / 2, -baseImage.value.naturalHeight / 2)
+  // 桌面预览可能经过缩小，绘制时仍须对齐原图坐标。
+  const meta = imageMeta.value!
+  context.drawImage(baseImage.value, -meta.width / 2, -meta.height / 2, meta.width, meta.height)
   return canvas
 }
 
@@ -559,6 +601,7 @@ function renderPreview() {
   const canvas = previewCanvasRef.value
   const stage = previewStageRef.value
   if (!canvas || !stage) return
+  if (!stage.clientWidth || !stage.clientHeight) return
 
   const stageWidth = Math.max(1, stage.clientWidth)
   const stageHeight = Math.max(1, stage.clientHeight)
@@ -579,6 +622,7 @@ function renderPreview() {
   const transformedCanvas = buildTransformedCanvas()
   if (!transformedCanvas) {
     displayRect.value = null
+    syncCropper()
     return
   }
 
@@ -595,17 +639,12 @@ function renderPreview() {
     width: drawWidth,
     height: drawHeight,
   }
+  syncCropper()
 }
 
 function resetCrop() {
-  const size = transformedSize.value
-  if (!size) return
-  cropRect.value = {
-    x: 0,
-    y: 0,
-    width: size.width,
-    height: size.height,
-  }
+  aspectPreset.value = 'free'
+  initializeCrop()
 }
 
 function resetAdjustments() {
@@ -617,27 +656,8 @@ function resetAdjustments() {
 }
 
 function rotate(delta: number) {
-  const sizeBefore = transformedSize.value
-  const cropBefore = cropRect.value ? cloneCrop(cropRect.value) : null
-
   imageTransform.rotation = ((imageTransform.rotation + delta) % 360 + 360) % 360
-
-  const sizeAfter = transformedSize.value
-  if (!sizeAfter) return
-
-  if (!sizeBefore || !cropBefore) {
-    cropRect.value = createMaxCrop(sizeAfter, aspectPreset.value)
-    return
-  }
-
-  const nextCrop = clampCropToBounds({
-    x: cropBefore.x / sizeBefore.width * sizeAfter.width,
-    y: cropBefore.y / sizeBefore.height * sizeAfter.height,
-    width: cropBefore.width / sizeBefore.width * sizeAfter.width,
-    height: cropBefore.height / sizeBefore.height * sizeAfter.height,
-  }, sizeAfter)
-
-  cropRect.value = nextCrop
+  initializeCrop()
 }
 
 function flipHorizontal() {
@@ -648,171 +668,8 @@ function flipVertical() {
   imageTransform.flipY = !imageTransform.flipY
 }
 
-function getPointFromClient(clientX: number, clientY: number, clampToFrame = false) {
-  const stage = previewStageRef.value
-  const frame = displayRect.value
-  const size = transformedSize.value
-  if (!stage || !frame || !size || frame.width <= 0 || frame.height <= 0) return null
-
-  const stageRect = stage.getBoundingClientRect()
-  const localX = clientX - stageRect.left - frame.x
-  const localY = clientY - stageRect.top - frame.y
-
-  if (!clampToFrame && (localX < 0 || localY < 0 || localX > frame.width || localY > frame.height)) {
-    return null
-  }
-
-  const safeX = clamp(localX, 0, frame.width)
-  const safeY = clamp(localY, 0, frame.height)
-
-  return {
-    x: safeX / frame.width * size.width,
-    y: safeY / frame.height * size.height,
-  }
-}
-
-function getMinimumCropSize(ratio: number | null) {
-  if (!ratio) {
-    return { width: 40, height: 40 }
-  }
-  if (ratio >= 1) {
-    return { width: 80, height: 80 / ratio }
-  }
-  return { width: 80 * ratio, height: 80 }
-}
-
-function resizeCropFreely(mode: ResizeHandle, point: Point, startCrop: CropRect, size: { width: number; height: number }) {
-  const left = startCrop.x
-  const right = startCrop.x + startCrop.width
-  const top = startCrop.y
-  const bottom = startCrop.y + startCrop.height
-  const minSize = 40
-
-  switch (mode) {
-    case 'nw':
-      return {
-        x: clamp(point.x, 0, right - minSize),
-        y: clamp(point.y, 0, bottom - minSize),
-        width: right - clamp(point.x, 0, right - minSize),
-        height: bottom - clamp(point.y, 0, bottom - minSize),
-      }
-    case 'ne':
-      return {
-        x: left,
-        y: clamp(point.y, 0, bottom - minSize),
-        width: clamp(point.x, left + minSize, size.width) - left,
-        height: bottom - clamp(point.y, 0, bottom - minSize),
-      }
-    case 'sw':
-      return {
-        x: clamp(point.x, 0, right - minSize),
-        y: top,
-        width: right - clamp(point.x, 0, right - minSize),
-        height: clamp(point.y, top + minSize, size.height) - top,
-      }
-    case 'se':
-      return {
-        x: left,
-        y: top,
-        width: clamp(point.x, left + minSize, size.width) - left,
-        height: clamp(point.y, top + minSize, size.height) - top,
-      }
-  }
-}
-
-function resizeCropWithRatio(mode: ResizeHandle, point: Point, startCrop: CropRect, size: { width: number; height: number }, ratio: number) {
-  const minimum = getMinimumCropSize(ratio)
-  const anchorMap = {
-    nw: { x: startCrop.x + startCrop.width, y: startCrop.y + startCrop.height, signX: -1, signY: -1 },
-    ne: { x: startCrop.x, y: startCrop.y + startCrop.height, signX: 1, signY: -1 },
-    sw: { x: startCrop.x + startCrop.width, y: startCrop.y, signX: -1, signY: 1 },
-    se: { x: startCrop.x, y: startCrop.y, signX: 1, signY: 1 },
-  } as const
-
-  const anchor = anchorMap[mode]
-  const maxWidth = anchor.signX > 0 ? size.width - anchor.x : anchor.x
-  const maxHeight = anchor.signY > 0 ? size.height - anchor.y : anchor.y
-  const rawWidth = Math.max(Math.abs(point.x - anchor.x), minimum.width)
-  const rawHeight = Math.max(Math.abs(point.y - anchor.y), minimum.height)
-
-  let width = rawWidth
-  let height = width / ratio
-  if (height < rawHeight) {
-    height = rawHeight
-    width = height * ratio
-  }
-
-  width = Math.min(width, maxWidth, maxHeight * ratio)
-  height = width / ratio
-  if (height > maxHeight) {
-    height = maxHeight
-    width = height * ratio
-  }
-
-  width = Math.max(width, minimum.width)
-  height = Math.max(height, minimum.height)
-
-  return clampCropToBounds({
-    x: anchor.signX > 0 ? anchor.x : anchor.x - width,
-    y: anchor.signY > 0 ? anchor.y : anchor.y - height,
-    width,
-    height,
-  }, size)
-}
-
-function startCropDrag(mode: DragMode, event: PointerEvent) {
-  if (!cropRect.value || !transformedSize.value) return
-  const point = getPointFromClient(event.clientX, event.clientY, true)
-  if (!point) return
-
-  dragSession = {
-    mode,
-    startPoint: point,
-    startCrop: cloneCrop(cropRect.value),
-  }
-
-  window.addEventListener('pointermove', handlePointerMove)
-  window.addEventListener('pointerup', stopCropDrag)
-  window.addEventListener('pointercancel', stopCropDrag)
-}
-
-function handlePointerMove(event: PointerEvent) {
-  if (!dragSession || !transformedSize.value || !cropRect.value) return
-  const point = getPointFromClient(event.clientX, event.clientY, true)
-  if (!point) return
-
-  if (dragSession.mode === 'move') {
-    const deltaX = point.x - dragSession.startPoint.x
-    const deltaY = point.y - dragSession.startPoint.y
-    cropRect.value = {
-      x: clamp(dragSession.startCrop.x + deltaX, 0, transformedSize.value.width - dragSession.startCrop.width),
-      y: clamp(dragSession.startCrop.y + deltaY, 0, transformedSize.value.height - dragSession.startCrop.height),
-      width: dragSession.startCrop.width,
-      height: dragSession.startCrop.height,
-    }
-    return
-  }
-
-  const ratio = getAspectRatio(aspectPreset.value)
-  if (ratio) {
-    const fixedCrop = resizeCropWithRatio(dragSession.mode, point, dragSession.startCrop, transformedSize.value, ratio)
-    cropRect.value = fixedCrop
-    return
-  }
-
-  const freeCrop = resizeCropFreely(dragSession.mode, point, dragSession.startCrop, transformedSize.value)
-  cropRect.value = clampCropToBounds(freeCrop, transformedSize.value)
-}
-
-function stopCropDrag() {
-  dragSession = null
-  window.removeEventListener('pointermove', handlePointerMove)
-  window.removeEventListener('pointerup', stopCropDrag)
-  window.removeEventListener('pointercancel', stopCropDrag)
-}
-
 async function 渲染编辑结果Blob(format: ExportFormat, quality?: number) {
-  if (!cropRect.value) {
+  if (!cropRect.value || !transformedSize.value) {
     throw new Error('当前没有可导出的编辑结果')
   }
 
@@ -822,8 +679,9 @@ async function 渲染编辑结果Blob(format: ExportFormat, quality?: number) {
   }
 
   const exportCanvas = document.createElement('canvas')
-  exportCanvas.width = Math.max(1, Math.round(cropRect.value.width))
-  exportCanvas.height = Math.max(1, Math.round(cropRect.value.height))
+  const crop = 获取像素裁剪区域(cropRect.value, transformedSize.value)
+  exportCanvas.width = crop.width
+  exportCanvas.height = crop.height
   const context = exportCanvas.getContext('2d')
   if (!context) {
     throw new Error('canvas 上下文创建失败')
@@ -833,10 +691,10 @@ async function 渲染编辑结果Blob(format: ExportFormat, quality?: number) {
   context.imageSmoothingQuality = 'high'
   context.drawImage(
     transformedCanvas,
-    Math.round(cropRect.value.x),
-    Math.round(cropRect.value.y),
-    Math.round(cropRect.value.width),
-    Math.round(cropRect.value.height),
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
     0,
     0,
     exportCanvas.width,
@@ -866,7 +724,7 @@ async function openEditedPreview() {
     const blob = await 渲染编辑结果Blob('image/png')
     编辑结果预览Url = URL.createObjectURL(blob)
 
-  const Fancybox = await 获取共享图片预览实例()
+    const Fancybox = await 获取共享图片预览实例()
     Fancybox.show([{
       src: 编辑结果预览Url,
       thumbSrc: 编辑结果预览Url,
@@ -876,13 +734,14 @@ async function openEditedPreview() {
       ...图片预览选项,
       startIndex: 0,
     })
-  } catch {
+  } catch (error) {
+    console.error('[图片编辑] 大图预览失败', error)
     ElMessage.error('大图预览打开失败，请稍后重试')
   }
 }
 
 async function exportEditedImage() {
-  if (!cropRect.value) {
+  if (!cropRect.value || !transformedSize.value) {
     ElMessage.warning('请先上传图片')
     return
   }
@@ -901,6 +760,10 @@ async function exportEditedImage() {
       if (!outputPath) {
         return
       }
+      if (!cropRect.value || !transformedSize.value || !桌面资源句柄.value) {
+        throw new Error('当前图片已清空，请重新选择图片')
+      }
+      const crop = 获取像素裁剪区域(cropRect.value, transformedSize.value)
 
       const result = await 图片工具服务实例.执行编辑(桌面资源句柄.value.id, {
         旋转角度: normalizedRotation.value,
@@ -911,14 +774,9 @@ async function exportEditedImage() {
         饱和度: imageTransform.saturation,
         灰度: imageTransform.grayscale,
         模糊: imageTransform.blur,
-        裁剪区域: cropRect.value ? {
-          x: cropRect.value.x,
-          y: cropRect.value.y,
-          width: cropRect.value.width,
-          height: cropRect.value.height,
-        } : undefined,
-        输出宽度: Math.max(1, Math.round(cropRect.value.width)),
-        输出高度: Math.max(1, Math.round(cropRect.value.height)),
+        裁剪区域: crop,
+        输出宽度: crop.width,
+        输出高度: crop.height,
       }, {
         mimeType: exportOptions.format,
         quality: exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100,
@@ -938,7 +796,8 @@ async function exportEditedImage() {
     anchor.click()
     window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000)
     ElMessage.success('图片已开始下载')
-  } catch {
+  } catch (error) {
+    console.error('[图片编辑] 导出失败', error)
     ElMessage.error('导出失败，请稍后重试')
   } finally {
     isExporting.value = false
@@ -972,6 +831,9 @@ watch(aspectPreset, (next, prev) => {
   initializeCrop()
 })
 
+watch([cropRect, aspectPreset], syncCropper, { flush: 'post' })
+useResizeObserver(previewStageRef, schedulePreviewRender)
+
 onMounted(() => {
   void (async () => {
     try {
@@ -980,12 +842,6 @@ onMounted(() => {
       平台图片工具能力.value = 获取默认图片工具能力()
     }
   })()
-  if (typeof window.ResizeObserver !== 'undefined' && previewStageRef.value) {
-    resizeObserver = new window.ResizeObserver(() => {
-      schedulePreviewRender()
-    })
-    resizeObserver.observe(previewStageRef.value)
-  }
   schedulePreviewRender()
 })
 
@@ -998,18 +854,18 @@ async function handlePreviewCardToggle(expanded: boolean) {
 }
 
 onBeforeUnmount(() => {
+  imageLoadVersion += 1
   关闭图片预览()
   释放编辑结果预览链接()
   void releaseDesktopImageResource()
-  if (resizeObserver) {
-    resizeObserver.disconnect()
-    resizeObserver = null
-  }
   if (renderFrame) {
     window.cancelAnimationFrame(renderFrame)
     renderFrame = 0
   }
-  stopCropDrag()
+  cropperSelection?.removeEventListener('change', handleCropperChange)
+  cropperCanvas?.remove()
+  cropperSelection = null
+  cropperCanvas = null
   revokeCurrentObjectUrl()
 })
 </script>
@@ -1086,7 +942,7 @@ onBeforeUnmount(() => {
             </ElButton>
           </div>
 
-          <p class="hint-text">拖动选框可以移动，拖动四角可以裁剪尺寸。</p>
+          <p class="hint-text">拖动选框可以移动，拖动四角可以裁剪尺寸。旋转后按当前比例重新选区，整张选中会切换为自由比例。</p>
         </WorkbenchSectionCard>
 
         <WorkbenchSectionCard class="editor-card" shadow="never" title="变换" :icon="Switch" :disabled="!hasImage">
@@ -1170,22 +1026,9 @@ onBeforeUnmount(() => {
 
             <div v-if="frameStyle" class="preview-frame" :style="frameStyle" />
 
-            <div
-              v-if="cropStyle"
-              class="crop-selection"
-              :style="cropStyle"
-              @pointerdown.stop.prevent="startCropDrag('move', $event)"
-            >
+            <div ref="cropperHostRef" class="cropper-host" />
+            <div v-if="cropStyle" class="crop-label-layer" :style="cropStyle">
               <span class="crop-selection__label">{{ outputSizeLabel }}</span>
-              <button
-                v-for="handle in ['nw', 'ne', 'sw', 'se']"
-                :key="handle"
-                type="button"
-                class="crop-handle"
-                :class="`is-${handle}`"
-                :style="{ cursor: handleCursorMap[handle as ResizeHandle] }"
-                @pointerdown.stop.prevent="startCropDrag(handle as ResizeHandle, $event)"
-              />
             </div>
 
             <div v-if="!hasImage" class="preview-empty">
@@ -1451,6 +1294,8 @@ onBeforeUnmount(() => {
 }
 
 .preview-canvas {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -1471,15 +1316,30 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.crop-selection {
+.cropper-host {
   position: absolute;
-  border: 2px solid rgba(255, 255, 255, 0.96);
+  inset: 0;
+  pointer-events: none;
+}
+
+.cropper-host :deep(cropper-canvas) {
+  pointer-events: auto;
+}
+
+.cropper-host :deep(cropper-selection) {
+  position: absolute;
+  outline: 2px solid rgba(255, 255, 255, 0.96);
   box-shadow:
     0 0 0 1px rgba(16, 36, 24, 0.28),
     0 0 0 9999px rgba(8, 14, 12, 0.32);
   background: rgba(255, 255, 255, 0.04);
   cursor: move;
   touch-action: none;
+}
+
+.crop-label-layer {
+  position: absolute;
+  pointer-events: none;
 }
 
 .crop-selection__label {
@@ -1498,7 +1358,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.crop-handle {
+.cropper-host :deep(.crop-handle) {
   position: absolute;
   width: 14px;
   height: 14px;
@@ -1508,22 +1368,22 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 1px rgba(16, 36, 24, 0.22);
 }
 
-.crop-handle.is-nw {
+.cropper-host :deep(.crop-handle[action='nw-resize']) {
   top: -7px;
   left: -7px;
 }
 
-.crop-handle.is-ne {
+.cropper-host :deep(.crop-handle[action='ne-resize']) {
   top: -7px;
   right: -7px;
 }
 
-.crop-handle.is-sw {
+.cropper-host :deep(.crop-handle[action='sw-resize']) {
   bottom: -7px;
   left: -7px;
 }
 
-.crop-handle.is-se {
+.cropper-host :deep(.crop-handle[action='se-resize']) {
   right: -7px;
   bottom: -7px;
 }
@@ -1604,7 +1464,7 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--el-color-primary-light-5) 12%, var(--bg-card));
 }
 
-.dark .crop-selection {
+.dark .cropper-host :deep(cropper-selection) {
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.12),
     0 0 0 9999px rgba(2, 6, 23, 0.42);
@@ -1613,10 +1473,6 @@ onBeforeUnmount(() => {
 .dark .crop-selection__label {
   background: rgba(255, 255, 255, 0.88);
   color: #102418;
-}
-
-.dark .crop-handle {
-  background: #fff;
 }
 
 @media (max-width: 1280px) {

@@ -1,59 +1,14 @@
-import type { FileItem } from './files-types'
+import type { paths } from '@personal-system/api/generated/system'
 
-export type MaterialType = 'link' | 'text' | 'image' | 'file'
-export type MaterialStatus = 'active' | 'archived'
-
-export interface MaterialAssetPayload {
-  file_id: string
-  sort_order: number
-}
-
-export interface MaterialAssetRecord {
-  id: string
-  file_id: string
-  sort_order: number
-  created_at: string
-  file: FileItem
-}
-
-export interface MaterialRecord {
-  id: string
-  type: MaterialType
-  title: string | null
-  content_text: string | null
-  note: string | null
-  status: MaterialStatus
-  tags: string[] | null
-  assets: MaterialAssetRecord[]
-  archived_at: string | null
-  is_deleted: boolean
-  deleted_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface MaterialTagStat {
-  name: string
-  count: number
-}
-
-export interface MaterialListResponse {
-  items: MaterialRecord[]
-  total: number
-  page: number
-  page_size: number
-  pages: number
-}
-
-export interface MaterialPayload {
-  type: MaterialType
-  title?: string | null
-  content_text?: string | null
-  note?: string | null
-  status?: MaterialStatus
-  tags?: string[] | null
-  assets?: MaterialAssetPayload[] | null
-}
+export type MaterialListResponse = paths['/materials']['get']['responses'][200]['content']['application/json']
+export type MaterialRecord = MaterialListResponse['items'][number]
+export type MaterialType = MaterialRecord['type']
+export type MaterialStatus = MaterialRecord['status']
+export type MaterialAssetRecord = MaterialRecord['assets'][number]
+export type MaterialPayload = paths['/materials']['post']['requestBody']['content']['application/json']
+export type MaterialAssetPayload = NonNullable<MaterialPayload['assets']>[number]
+export type MaterialTagStat = paths['/materials/tags']['get']['responses'][200]['content']['application/json'][number]
+export type MaterialBatchStatusPayload = paths['/materials/batch/status']['post']['requestBody']['content']['application/json']
 
 export interface MaterialListQuery {
   page?: number
@@ -63,9 +18,4 @@ export interface MaterialListQuery {
   tag?: string
   keyword?: string
   is_deleted?: boolean
-}
-
-export interface MaterialBatchStatusPayload {
-  ids: string[]
-  status: MaterialStatus
 }

@@ -35,7 +35,13 @@ def 规范化文件名(value: str) -> str:
     return normalized
 
 
-class FileRead(BaseModel):
+class 文件响应(BaseModel):
+    """明确响应会序列化默认值，使生成类型与实际 JSON 一致。"""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+
+class FileRead(文件响应):
     """文件数据响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -59,7 +65,7 @@ class FileRead(BaseModel):
     media_asset_type: str | None = None
 
 
-class FileFolderRead(BaseModel):
+class FileFolderRead(文件响应):
     """文件夹数据响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -71,7 +77,7 @@ class FileFolderRead(BaseModel):
     updated_at: datetime
 
 
-class FileFolderTreeNodeRead(BaseModel):
+class FileFolderTreeNodeRead(文件响应):
     """文件夹树节点。"""
 
     id: UUID
@@ -80,14 +86,14 @@ class FileFolderTreeNodeRead(BaseModel):
     children: list["FileFolderTreeNodeRead"] = Field(default_factory=list)
 
 
-class FileBreadcrumbRead(BaseModel):
+class FileBreadcrumbRead(文件响应):
     """文件夹导航栏。"""
 
     id: UUID | None
     name: str
 
 
-class FileExplorerRead(BaseModel):
+class FileExplorerRead(文件响应):
     """资源管理器数据响应。"""
 
     current_folder: FileFolderRead | None
@@ -97,7 +103,7 @@ class FileExplorerRead(BaseModel):
     files: list[FileRead]
 
 
-class FileFolderSearchRead(BaseModel):
+class FileFolderSearchRead(文件响应):
     """文件夹搜索结果。"""
 
     id: UUID
@@ -107,7 +113,7 @@ class FileFolderSearchRead(BaseModel):
     updated_at: datetime
 
 
-class FileSearchItemRead(BaseModel):
+class FileSearchItemRead(文件响应):
     """文件搜索结果。"""
 
     id: UUID
@@ -130,14 +136,14 @@ class FileSearchItemRead(BaseModel):
     media_asset_type: str | None = None
 
 
-class FileSearchRead(BaseModel):
+class FileSearchRead(文件响应):
     """跨目录搜索结果。"""
 
     folders: list[FileFolderSearchRead]
     files: list[FileSearchItemRead]
 
 
-class FileTrashItemRead(BaseModel):
+class FileTrashItemRead(文件响应):
     """回收站资源响应。"""
 
     id: UUID
@@ -152,7 +158,7 @@ class FileTrashItemRead(BaseModel):
     mime_type: str | None = None
 
 
-class FileTrashRead(BaseModel):
+class FileTrashRead(文件响应):
     """回收站列表响应。"""
 
     items: list[FileTrashItemRead]

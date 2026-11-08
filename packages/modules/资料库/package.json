@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@personal-system/api": "*",
-    "@personal-system/ui": "*"
+    "@personal-system/ui": "*",
+    "@vueuse/core": "^15.0.0",
+    "@personal-system/module-files": "*"
   },
   "peerDependencies": {
     "@element-plus/icons-vue": "^2.0.0",

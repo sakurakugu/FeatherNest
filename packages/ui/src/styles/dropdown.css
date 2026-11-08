@@ -6,7 +6,8 @@
 .dropdown-wrapper:focus-within::after {
   content: '';
   position: absolute;
-  top: 100%;
+  top: var(--panel-bridge-top, 100%);
+  bottom: var(--panel-bridge-bottom, auto);
   left: var(--panel-left, 50%);
   width: var(--panel-bridge-width, 100%);
   height: var(--dropdown-panel-offset, 20px);
@@ -15,19 +16,19 @@
 
 .dropdown-wrapper--align-end:hover::after,
 .dropdown-wrapper--align-end:focus-within::after {
-  left: auto;
-  right: 0;
-  transform: none;
+  left: var(--panel-left, auto);
+  right: var(--panel-right, 0);
+  transform: var(--panel-transform, none);
 }
 
 .custom-dropdown-panel {
   position: absolute;
-  top: calc(100% + var(--dropdown-panel-offset, 20px));
+  top: var(--panel-top, calc(100% + var(--dropdown-panel-offset, 20px)));
   left: var(--panel-left, 50%);
   right: var(--panel-right, auto);
   transform: var(--panel-transform, translateX(-50%));
   min-width: var(--dropdown-panel-min-width, 160px);
-  max-width: calc(100vw - 24px);
+  max-width: var(--panel-max-width, calc(100vw - 24px));
   max-height: var(--panel-max-height, calc(100dvh - 92px));
   padding: var(--dropdown-panel-padding, 8px);
   box-sizing: border-box;
@@ -50,9 +51,9 @@
 }
 
 .dropdown-wrapper--align-end .custom-dropdown-panel {
-  left: auto;
-  right: 0;
-  transform: none;
+  left: var(--panel-left, auto);
+  right: var(--panel-right, 0);
+  transform: var(--panel-transform, none);
 }
 
 .custom-dropdown-panel::-webkit-scrollbar {

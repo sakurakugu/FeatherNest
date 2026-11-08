@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
+import { computed, nextTick, onMounted, ref, watch, type Component } from 'vue'
 
 type 分段值类型 = string | number
 
@@ -37,7 +38,6 @@ const emit = defineEmits<{
 const 根节点引用 = ref<HTMLElement | null>(null)
 const 需要均分选项 = ref(false)
 const 原始内容宽度 = ref(0)
-let 尺寸观察器: ResizeObserver | null = null
 
 const 组件样式 = computed(() => ({
   '--segmented-active-color': props.activeColor,
@@ -85,20 +85,9 @@ function 选择选项(value: 分段值类型, disabled?: boolean) {
 
 onMounted(() => {
   void 重新测量内容宽度()
-  if (typeof ResizeObserver === 'undefined') {
-    return
-  }
-  尺寸观察器 = new ResizeObserver(() => {
-    更新均分状态()
-  })
-  if (根节点引用.value) {
-    尺寸观察器.observe(根节点引用.value)
-  }
 })
 
-onBeforeUnmount(() => {
-  尺寸观察器?.disconnect()
-})
+useResizeObserver(根节点引用, 更新均分状态)
 
 watch(
   () => [props.options, props.fullWidth, props.size],

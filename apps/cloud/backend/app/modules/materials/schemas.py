@@ -5,12 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.modules.files.schemas import FileRead
 
-资料状态值 = {"active", "archived"}
-资料类型值 = {"link", "text", "image", "file"}
+from app.modules.materials.models import 资料状态, 资料类型
 
 
 def _规范化可选文本(value: str | None) -> str | None:
@@ -31,29 +30,13 @@ class 资料资产输入(BaseModel):
 class 资料创建(BaseModel):
     """创建资料库条目请求。"""
 
-    type: str = "link"
+    type: 资料类型 = 资料类型.link
     title: str | None = Field(default=None, max_length=300)
     content_text: str | None = None
     note: str | None = None
-    status: str = "active"
+    status: 资料状态 = 资料状态.active
     tags: list[str] | None = None
     assets: list[资料资产输入] | None = None
-
-    @field_validator("type")
-    @classmethod
-    def validate_type(cls, value: str) -> str:
-        """校验资料库类型。"""
-        if value not in 资料类型值:
-            raise ValueError("资料库类型不合法")
-        return value
-
-    @field_validator("status")
-    @classmethod
-    def validate_status(cls, value: str) -> str:
-        """校验资料库状态。"""
-        if value not in 资料状态值:
-            raise ValueError("资料库状态不合法")
-        return value
 
     @field_validator("title", "content_text", "note")
     @classmethod
@@ -85,33 +68,13 @@ class 资料创建(BaseModel):
 class 资料更新(BaseModel):
     """更新资料库条目请求。"""
 
-    type: str | None = None
+    type: 资料类型 | None = None
     title: str | None = Field(default=None, max_length=300)
     content_text: str | None = None
     note: str | None = None
-    status: str | None = None
+    status: 资料状态 | None = None
     tags: list[str] | None = None
     assets: list[资料资产输入] | None = None
-
-    @field_validator("type")
-    @classmethod
-    def validate_type(cls, value: str | None) -> str | None:
-        """校验资料库类型。"""
-        if value is None:
-            return None
-        if value not in 资料类型值:
-            raise ValueError("资料库类型不合法")
-        return value
-
-    @field_validator("status")
-    @classmethod
-    def validate_status(cls, value: str | None) -> str | None:
-        """校验资料库状态。"""
-        if value is None:
-            return None
-        if value not in 资料状态值:
-            raise ValueError("资料库状态不合法")
-        return value
 
     @field_validator("title", "content_text", "note")
     @classmethod
@@ -131,7 +94,13 @@ class 资料更新(BaseModel):
         return list(dict.fromkeys(tags)) or None
 
 
-class 资料资产信息(BaseModel):
+class 资料响应(BaseModel):
+    """资料响应始终输出默认字段。"""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+
+class 资料资产信息(资料响应):
     """资料库附件响应。"""
 
     id: UUID
@@ -141,15 +110,15 @@ class 资料资产信息(BaseModel):
     file: FileRead
 
 
-class 资料信息(BaseModel):
+class 资料信息(资料响应):
     """资料库条目详情响应。"""
 
     id: UUID
-    type: str
+    type: 资料类型
     title: str | None = None
     content_text: str | None = None
     note: str | None = None
-    status: str
+    status: 资料状态
     tags: list[str] | None = None
     assets: list[资料资产信息] = Field(default_factory=list)
     archived_at: datetime | None = None
@@ -170,12 +139,4 @@ class 资料批量状态更新(BaseModel):
     """批量更新资料库状态请求。"""
 
     ids: list[UUID] = Field(min_length=1, max_length=200)
-    status: str
-
-    @field_validator("status")
-    @classmethod
-    def validate_status(cls, value: str) -> str:
-        """校验资料库状态。"""
-        if value not in 资料状态值:
-            raise ValueError("资料库状态不合法")
-        return value
+    status: 资料状态

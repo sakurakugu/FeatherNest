@@ -45,6 +45,7 @@
     "@vscode/markdown-it-katex": "^1.1.2",
     "@vueuse/core": "^15.0.0",
     "axios": "^1.20.0",
+    "cropperjs": "^2.3.1",
     "echarts": "^6.1.0",
     "element-plus": "^2.14.7",
     "highlight.js": "^11.12.0",

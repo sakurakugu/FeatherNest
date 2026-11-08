@@ -15,6 +15,11 @@
     "packages/modules/*"
   ],
   "scripts": {
+    "generate:api": "node tools/generate-api-types.mjs",
+    "check:api": "node tools/generate-api-types.mjs --check",
+    "test:unit": "node --test packages/ui/tests/*.test.mjs apps/cloud/frontend/tests/*.test.mjs packages/domain/tests/*.test.mjs",
+    "test:unit:dependencies": "node --test packages/modules/待办/tests/*.test.mjs packages/modules/文件/tests/*.test.mjs packages/domain/tests/*.test.mjs",
+    "test:unit:markdown": "node --test packages/modules/文章/tests/markdown-container.test.mjs",
     "lint": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone,packages \"npm run lint --workspace frontend\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\" \"npm run lint:packages\"",
     "lint:frontend": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone \"npm run lint --workspace frontend\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\"",
     "lint:packages": "eslint \"packages/**/*.{ts,tsx,vue,d.ts}\" --config ./configs/eslint.packages.mjs --cache --cache-location .cache/eslint/packages-cache",
@@ -36,8 +41,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/markdown-it-container": "^4.0.1",
     "concurrently": "^10.0.6",
     "eslint-config-prettier": "^10.1.8",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.10",
     "unocss": "^66.11.0"
   }

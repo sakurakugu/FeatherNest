@@ -35,7 +35,7 @@ async def 列出资料标签(
     return await 列出资料标签_service(db, user, is_deleted=is_deleted)
 
 
-@router.get("", response_model=PaginatedResponse)
+@router.get("", response_model=PaginatedResponse[资料信息])
 async def 列出资料(
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=100),

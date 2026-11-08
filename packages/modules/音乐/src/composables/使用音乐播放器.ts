@@ -1,4 +1,5 @@
-import { computed, onBeforeUnmount, onMounted, readonly, ref } from 'vue'
+import { useEventListener, useStorage } from '@vueuse/core'
+import { computed, effectScope, onBeforeUnmount, onMounted, readonly, ref } from 'vue'
 import { 默认音乐播放列表, 默认音乐播放模式, 默认音乐音量 } from '../config'
 import type { MusicLyricLine, MusicPlayMode, MusicTrack } from '../types'
 
@@ -38,6 +39,11 @@ const 状态 = ref<播放器状态>({
 
 let audio: HTMLAudioElement | null = null
 let listenersBound = false
+// 播放器跨页面共享，监听器不能跟随首次使用它的组件卸载。
+const 播放器作用域 = effectScope(true)
+const 持久音量 = 播放器作用域.run(() => useStorage(音量存储键, 默认音乐音量, undefined, {
+  onError: (error) => console.warn('[音乐播放器] 音量读写失败', error),
+}))!
 
 function 格式化时间(seconds: number) {
   if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -114,16 +120,6 @@ async function 加载歌词(track: MusicTrack) {
   }
 }
 
-function 读取初始音量() {
-  if (typeof window === 'undefined') {
-    return 默认音乐音量
-  }
-
-  const rawValue = window.localStorage.getItem(音量存储键)
-  const savedValue = rawValue === null ? Number.NaN : Number.parseFloat(rawValue)
-  return Number.isFinite(savedValue) ? Math.min(1, Math.max(0, savedValue)) : 默认音乐音量
-}
-
 function 确保音频实例() {
   if (typeof window === 'undefined') {
     return null
@@ -137,13 +133,13 @@ function 确保音频实例() {
   }
 
   if (!listenersBound) {
-    audio.addEventListener('timeupdate', 同步播放时间)
-    audio.addEventListener('loadedmetadata', 同步播放时间)
-    audio.addEventListener('durationchange', 同步播放时间)
-    audio.addEventListener('play', 同步播放状态)
-    audio.addEventListener('pause', 同步播放状态)
-    audio.addEventListener('ended', 处理播放结束)
-    audio.addEventListener('error', 处理播放错误)
+    const target = audio
+    播放器作用域.run(() => {
+      useEventListener(target, ['timeupdate', 'loadedmetadata', 'durationchange'], 同步播放时间)
+      useEventListener(target, ['play', 'pause'], 同步播放状态)
+      useEventListener(target, 'ended', 处理播放结束)
+      useEventListener(target, 'error', 处理播放错误)
+    })
     listenersBound = true
   }
 
@@ -229,7 +225,7 @@ async function 初始化播放器() {
     return
   }
 
-  状态.value.volume = 读取初始音量()
+  状态.value.volume = Number.isFinite(持久音量.value) ? Math.min(1, Math.max(0, 持久音量.value)) : 默认音乐音量
   const currentAudio = 确保音频实例()
   if (!currentAudio) {
     return
@@ -324,9 +320,7 @@ function 设置音量(volume: number) {
     audio.muted = false
   }
 
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(音量存储键, nextVolume.toString())
-  }
+  持久音量.value = nextVolume
 }
 
 function 切换静音() {
@@ -408,4 +402,13 @@ export function 使用音乐播放器() {
     seekToTime: 跳转到时间,
     playTrackByIndex: 播放指定歌曲,
   }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    播放器作用域.stop()
+    audio?.pause()
+    audio?.removeAttribute('src')
+    audio?.load()
+  })
 }

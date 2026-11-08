@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class 仪表盘统计(BaseModel):
@@ -42,6 +42,8 @@ class 待办完成历史项信息(BaseModel):
 
 class 待办完成历史日信息(BaseModel):
     """待办完成历史单日汇总。"""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     date: date
     completed_count: int

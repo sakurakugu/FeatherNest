@@ -23,7 +23,9 @@
     "@milkdown/prose": "^7.22.3",
     "@milkdown/utils": "^7.22.3",
     "@personal-system/api": "*",
-    "@personal-system/ui": "*"
+    "@personal-system/ui": "*",
+    "@vueuse/core": "^15.0.0",
+    "markdown-it-container": "^4.0.0"
   },
   "peerDependencies": {
     "@codemirror/commands": "^6.0.0",

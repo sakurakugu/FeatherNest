@@ -20,6 +20,7 @@ import {
   是否保留待办强调色,
 } from '../helpers/todo-item'
 import { getHolidayCalendarYears } from '../helpers/holiday-calendar'
+import { 待办当日重复活跃 } from '../helpers/recurrence'
 
 const props = defineProps<{
   todos: Todo[]
@@ -375,71 +376,10 @@ function getRecurrenceSegments(todo: Todo) {
 
 // 判断任务是否在某天发生
 function occursOnDay(todo: Todo, date: Date): boolean {
-  const type = todo.recurrence_type
-  if (!type || type === 'none') return false
-
-  // 检查是否在开始日期之后
-  if (todo.start_date) {
-    const start = new Date(todo.start_date)
-    start.setHours(0, 0, 0, 0)
-    const checkDate = new Date(date)
-    checkDate.setHours(0, 0, 0, 0)
-    if (checkDate < start) return false
-  }
-
-  // 检查是否在截止日期之前
-  if (todo.end_date) {
-    const end = new Date(todo.end_date)
-    end.setHours(23, 59, 59, 999)
-    const checkDate = new Date(date)
-    checkDate.setHours(23, 59, 59, 999)
-    if (checkDate > end) return false
-  }
-
-  const day = date.getDay()
-  const dateNum = date.getDate()
-  const month = date.getMonth()
-  const iso = formatDateLocal(date)
-
-  switch (type) {
-    case 'daily':
-      return true
-    case 'weekly': {
-      if (!todo.start_date) return false
-      const start = new Date(todo.start_date)
-      return day === start.getDay()
-    }
-    case 'workday':
-      if (workdayDates.value.has(iso)) return true
-      if (holidayDates.value.has(iso)) return false
-      return day >= 1 && day <= 5
-    case 'weekend':
-      return day === 0 || day === 6
-    case 'holiday':
-      return holidayDates.value.has(iso)
-    case 'monthly': {
-      if (!todo.start_date) return false
-      const start = new Date(todo.start_date)
-      return dateNum === start.getDate()
-    }
-    case 'yearly': {
-      if (!todo.start_date) return false
-      const start = new Date(todo.start_date)
-      return month === start.getMonth() && dateNum === start.getDate()
-    }
-    case 'custom': {
-      if (!todo.start_date) return false
-      const start = new Date(todo.start_date)
-      start.setHours(0, 0, 0, 0)
-      const checkDate = new Date(date)
-      checkDate.setHours(0, 0, 0, 0)
-      const diffDays = Math.floor((checkDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-      const interval = Math.max(1, todo.recurrence_interval || 1)
-      return diffDays % interval === 0
-    }
-    default:
-      return false
-  }
+  return 待办当日重复活跃(todo, date, {
+    workdays: workdayDates.value,
+    holidays: holidayDates.value,
+  })
 }
 
 // 获取任务条样式类

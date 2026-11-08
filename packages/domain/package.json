@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@personal-system/api": "*",
-    "@personal-system/platform": "*"
+    "@personal-system/platform": "*",
+    "@tanstack/query-core": "^5.105.0",
+    "@vueuse/core": "^15.0.0"
   },
   "peerDependencies": {
     "pinia": "^4.0.0",

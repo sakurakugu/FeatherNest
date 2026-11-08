@@ -1,4 +1,5 @@
 /* global Event, MouseEvent, PointerEvent, TouchEvent */
+import { useEventListener, useStorage, useTimeoutFn, useWindowSize } from '@vueuse/core'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import type { 侧栏布局配置, 侧栏模式 } from '../sidebar-layout'
 
@@ -17,8 +18,18 @@ const 默认配置: Required<侧栏布局配置> = {
 
 export function 使用侧栏布局(storageKey: string, config: 侧栏布局配置 = {}) {
   const 配置 = { ...默认配置, ...config }
-  const viewportWidth = ref<number | null>(null)
-  const userPreferredSiderMode = ref<侧栏模式>('expanded')
+  const { width: viewportWidth } = useWindowSize({ initialWidth: 0 })
+  const 存储选项 = {
+    onError: (error: unknown) => console.warn('[SidebarLayout] 读写侧栏偏好失败', error),
+  }
+  const userPreferredSiderMode = useStorage<侧栏模式>(storageKey, 'expanded', undefined, {
+    ...存储选项,
+    serializer: {
+      read: (value) => value === 'compact' || value === 'hidden' ? value : 'expanded',
+      write: (value) => value,
+    },
+  })
+  const 首选侧栏宽度 = useStorage(`${storageKey}_width`, 配置.默认展开宽度, undefined, 存储选项)
   const siderMode = ref<侧栏模式>('expanded')
   const autoCompact = ref(false)
   const expandedSiderWidth = ref(配置.默认展开宽度)
@@ -26,6 +37,9 @@ export function 使用侧栏布局(storageKey: string, config: 侧栏布局配�
   const isHandleDragging = ref(false)
   const hasMoved = ref(false)
   const isResizing = ref(false)
+  const { start: 延迟清除移动标记, stop: 取消清除移动标记 } = useTimeoutFn(() => {
+    hasMoved.value = false
+  }, 50, { immediate: false })
   const dragState = reactive({
     startY: 0,
     startBottom: 0,
@@ -53,50 +67,22 @@ export function 使用侧栏布局(storageKey: string, config: 侧栏布局配�
     return '收起侧栏'
   })
 
-  function 同步视口宽度() {
-    viewportWidth.value = window.innerWidth
-  }
-
-  function 读取侧栏偏好状态(): 侧栏模式 {
-    const value = window.localStorage.getItem(storageKey)
-    if (value === 'expanded' || value === 'compact' || value === 'hidden') {
-      return value
-    }
-    return 'expanded'
-  }
-
-  function 保存侧栏偏好状态(mode: 侧栏模式) {
-    window.localStorage.setItem(storageKey, mode)
-  }
-
-  function 读取侧栏宽度偏好值() {
-    const value = Number.parseInt(window.localStorage.getItem(`${storageKey}_width`) || '', 10)
-    return Number.isFinite(value) ? value : null
-  }
-
-  function 保存侧栏宽度偏好值(nextWidth: number) {
-    window.localStorage.setItem(`${storageKey}_width`, String(Math.round(nextWidth)))
-  }
-
   function 切换侧栏() {
     if (isHidden.value) {
       const width = viewportWidth.value ?? 0
       const nextMode = width && expandedSiderWidth.value / width >= 配置.自动收紧比例 ? 'compact' : 'expanded'
       userPreferredSiderMode.value = nextMode
-      保存侧栏偏好状态(nextMode)
       siderMode.value = nextMode
       autoCompact.value = false
       return
     }
     if (isCompact.value) {
       userPreferredSiderMode.value = 'hidden'
-      保存侧栏偏好状态('hidden')
       siderMode.value = 'hidden'
       autoCompact.value = false
       return
     }
     userPreferredSiderMode.value = 'compact'
-    保存侧栏偏好状态('compact')
     siderMode.value = 'compact'
     autoCompact.value = false
   }
@@ -155,6 +141,7 @@ export function 使用侧栏布局(storageKey: string, config: 侧栏布局配�
   }
 
   function 处理手柄触摸开始(e: Event) {
+    取消清除移动标记()
     isHandleDragging.value = true
     hasMoved.value = false
     dragState.startBottom = handleBottom.value
@@ -192,9 +179,7 @@ export function 使用侧栏布局(storageKey: string, config: 侧栏布局配�
 
   function 处理手柄触摸结束() {
     isHandleDragging.value = false
-    setTimeout(() => {
-      hasMoved.value = false
-    }, 50)
+    延迟清除移动标记()
   }
 
   function 处理调整器指针按下(event: PointerEvent) {
@@ -224,7 +209,7 @@ export function 使用侧栏布局(storageKey: string, config: 侧栏布局配�
     isResizing.value = false
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
-    保存侧栏宽度偏好值(expandedSiderWidth.value)
+    首选侧栏宽度.value = Math.round(expandedSiderWidth.value)
   }
 
   function 处理手柄点击() {
@@ -235,35 +220,25 @@ export function 使用侧栏布局(storageKey: string, config: 侧栏布局配�
   }
 
   onMounted(() => {
-    同步视口宽度()
-    userPreferredSiderMode.value = 读取侧栏偏好状态()
-    expandedSiderWidth.value = 约束展开侧栏宽度(读取侧栏宽度偏好值() ?? 配置.默认展开宽度)
+    expandedSiderWidth.value = 约束展开侧栏宽度(
+      Number.isFinite(首选侧栏宽度.value) ? 首选侧栏宽度.value : 配置.默认展开宽度,
+    )
     siderMode.value = userPreferredSiderMode.value
     应用自动收起()
 
     document.body.style.overflow = 'hidden'
-
-    window.addEventListener('resize', 同步视口宽度)
-    window.addEventListener('mousemove', 处理手柄触摸移动)
-    window.addEventListener('mouseup', 处理手柄触摸结束)
-    window.addEventListener('touchmove', 处理手柄触摸移动, { passive: false })
-    window.addEventListener('touchend', 处理手柄触摸结束)
-    window.addEventListener('pointermove', 处理调整器指针移动)
-    window.addEventListener('pointerup', 处理调整器指针结束)
-    window.addEventListener('pointercancel', 处理调整器指针结束)
   })
+
+  useEventListener('mousemove', 处理手柄触摸移动)
+  useEventListener('mouseup', 处理手柄触摸结束)
+  useEventListener('touchmove', 处理手柄触摸移动, { passive: false })
+  useEventListener('touchend', 处理手柄触摸结束)
+  useEventListener('pointermove', 处理调整器指针移动)
+  useEventListener('pointerup', 处理调整器指针结束)
+  useEventListener('pointercancel', 处理调整器指针结束)
 
   onBeforeUnmount(() => {
     document.body.style.overflow = ''
-
-    window.removeEventListener('resize', 同步视口宽度)
-    window.removeEventListener('mousemove', 处理手柄触摸移动)
-    window.removeEventListener('mouseup', 处理手柄触摸结束)
-    window.removeEventListener('touchmove', 处理手柄触摸移动)
-    window.removeEventListener('touchend', 处理手柄触摸结束)
-    window.removeEventListener('pointermove', 处理调整器指针移动)
-    window.removeEventListener('pointerup', 处理调整器指针结束)
-    window.removeEventListener('pointercancel', 处理调整器指针结束)
     处理调整器指针结束()
   })
 
@@ -274,6 +249,19 @@ export function 使用侧栏布局(storageKey: string, config: 侧栏布局配�
     同步展开侧栏宽度()
     应用自动收起()
   }, { immediate: true })
+
+  watch(userPreferredSiderMode, (mode) => {
+    siderMode.value = mode
+    autoCompact.value = false
+    应用自动收起()
+  })
+
+  watch(首选侧栏宽度, (width) => {
+    expandedSiderWidth.value = 约束展开侧栏宽度(
+      Number.isFinite(width) ? width : 配置.默认展开宽度,
+    )
+    应用自动收起()
+  })
 
   return {
     viewportWidth,

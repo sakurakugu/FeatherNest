@@ -1,3 +1,4 @@
+import { useStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
@@ -49,6 +50,10 @@ export const 使用控制台标签存储 = defineStore('dashboard-tabs', () => {
   const tabs = ref<控制台标签项[]>([])
   const activeTabId = ref('')
   const 是否已初始化 = ref(false)
+  const 持久化标签 = useStorage<标签持久化数据>(标签存储键, {}, undefined, {
+    listenToStorageChanges: false,
+    onError: (error) => console.warn('[控制台标签] 本地缓存读写失败', error),
+  })
 
   /** 初始化时保存的路由实例，用于标题解析与路径合法性校验。 */
   let 路由实例: Router | null = null
@@ -125,18 +130,8 @@ export const 使用控制台标签存储 = defineStore('dashboard-tabs', () => {
 
   /** 读取 localStorage 中的标签并校验，失效路径丢弃。 */
   function 读取持久化数据() {
-    let 原始数据: string
     try {
-      原始数据 = window.localStorage.getItem(标签存储键) ?? ''
-    } catch {
-      return
-    }
-    if (!原始数据) {
-      return
-    }
-
-    try {
-      const 数据 = JSON.parse(原始数据) as 标签持久化数据
+      const 数据 = 持久化标签.value
       const 已收录路径 = new Set<string>()
       const 恢复标签: 控制台标签项[] = []
 
@@ -176,7 +171,7 @@ export const 使用控制台标签存储 = defineStore('dashboard-tabs', () => {
         tabs: tabs.value.map((标签) => ({ path: 标签.path, fullPath: 标签.fullPath })),
         activePath: 活跃标签.value?.fullPath ?? '',
       }
-      window.localStorage.setItem(标签存储键, JSON.stringify(数据))
+      持久化标签.value = 数据
     } catch {
       // 隐私模式等场景下 localStorage 不可用时静默忽略
     }

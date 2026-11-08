@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import 用户
+from app.modules.todos.models import TodoStatus
 from app.modules.todos.schemas import TodoCreate, TodoRead, TodoTagRead, TodoUpdate
 from app.modules.todos.service import (
     complete_todo as complete_todo_service,
@@ -39,7 +40,7 @@ async def list_todo_tags(
 async def list_todos(
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
-    status: str | None = Query(None, description="状态筛选: todo/done"),
+    status: TodoStatus | None = Query(None, description="状态筛选: todo/done"),
     tag: str | None = Query(None, description="标签筛选"),
     is_deleted: bool = Query(False, description="是否显示已删除（回收站）"),
     is_pinned: bool | None = Query(None, description="置顶筛选"),

@@ -1,3 +1,4 @@
+import { EventSourceParserStream } from 'eventsource-parser/stream'
 import type { 聊天附件, 聊天消息 } from './types'
 
 const 支持图片扩展名 = new Set([
@@ -79,46 +80,43 @@ export function 转为接口消息(messages: 聊天消息[]) {
   }))
 }
 
-export function 提取JSON文本(payload: unknown): string {
-  if (typeof payload === 'string') return payload
-  if (!payload || typeof payload !== 'object') return ''
-
-  const record = payload as Record<string, unknown>
-  if (typeof record.text === 'string') return record.text
-  if (typeof record.content === 'string') return record.content
-  if (typeof record.message === 'string') return record.message
-  if (typeof record.delta === 'string') return record.delta
-  if (typeof record.response === 'string') return record.response
-  if (Array.isArray(record.parts)) return record.parts.map(提取JSON文本).join('')
-  if (record.message && typeof record.message === 'object') return 提取JSON文本(record.message)
-  if (Array.isArray(record.choices)) {
-    return record.choices
-      .map((choice) => {
-        if (!choice || typeof choice !== 'object') return ''
-        const item = choice as Record<string, unknown>
-        return 提取JSON文本(item.delta) || 提取JSON文本(item.message)
-      })
-      .join('')
+export async function 读取聊天事件流(
+  response: Response,
+  onDelta: (text: string) => void | Promise<void>,
+): Promise<void> {
+  const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase()
+  if (contentType !== 'text/event-stream' || !response.body) {
+    await response.body?.cancel().catch(() => undefined)
+    throw new Error('聊天接口未返回 SSE 事件流')
   }
-  return ''
-}
 
-export function 解析数据流行(rawLine: string): string {
-  const line = rawLine.trim()
-  if (!line || line === 'data: [DONE]' || line === '[DONE]') return ''
-
-  const payload = line.startsWith('data:') ? line.slice(5).trim() : line
-  if (!payload || payload === '[DONE]') return ''
+  const reader = response.body
+    .pipeThrough(new TextDecoderStream())
+    .pipeThrough(new EventSourceParserStream({ onError: 'terminate', maxBufferSize: 1024 * 1024 }))
+    .getReader()
 
   try {
-    return 提取JSON文本(JSON.parse(payload) as unknown)
-  } catch {
-    const sdkTextMatch = payload.match(/^\d+:(.*)$/)
-    if (!sdkTextMatch) return payload
-    try {
-      return String(JSON.parse(sdkTextMatch[1] ?? '""'))
-    } catch {
-      return sdkTextMatch[1] ?? ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        throw new Error('聊天事件流意外结束，未收到完成标记')
+      }
+      if (value.data === '[DONE]') return
+
+      const payload: unknown = JSON.parse(value.data)
+      if (
+        !payload ||
+        typeof payload !== 'object' ||
+        !('delta' in payload) ||
+        typeof payload.delta !== 'string'
+      ) {
+        throw new Error('聊天事件缺少有效的文本增量')
+      }
+      await onDelta(payload.delta)
     }
+  } finally {
+    // 完成、停止或解析失败都释放底层流，避免连接继续占用资源。
+    await reader.cancel().catch(() => undefined)
+    reader.releaseLock()
   }
 }

@@ -5,6 +5,7 @@ import MarkdownIt, {
   type RendererRule,
 } from 'markdown-it'
 import markdownItAbbr from 'markdown-it-abbr'
+import markdownItContainer from 'markdown-it-container'
 import * as markdownItEmojiModule from 'markdown-it-emoji'
 import markdownItFootnote from 'markdown-it-footnote'
 import markdownItMark from 'markdown-it-mark'
@@ -14,7 +15,6 @@ import {
   MarkdownGithub卡片正则,
   Markdown仓库名称正则,
   Markdown剧透文本正则,
-  Markdown容器提示块结束正则,
   Markdown容器提示块起始正则,
   Markdown折叠块匹配正则,
   Markdown提示块类型集合,
@@ -78,6 +78,19 @@ function 创建Markdown渲染器(options: MarkdownItOptions = {}): MarkdownIt实
   安全注册Markdown插件(renderer, 获取Mark插件(), 'Mark')
   安全注册Markdown插件(renderer, 获取Emoji插件(), 'Emoji')
   安全注册Markdown插件(renderer, 获取任务列表插件(), '任务列表', [{ enabled: false }])
+  renderer.use(markdownItContainer, 'admonition', {
+    validate: (params: string) => {
+      const match = `:::${params.trim()}`.match(Markdown容器提示块起始正则)
+      return Boolean(match && Markdown提示块类型集合.has(match[1].toLowerCase()))
+    },
+    render: (tokens: Parameters<RendererRule>[0], index: number) => {
+      if (tokens[index].nesting === -1) return '</div></div>\n'
+      const match = `:::${tokens[index].info.trim()}`.match(Markdown容器提示块起始正则)!
+      const type = 规范化提示块类型(match[1])
+      const title = match[2] ? 解析Markdown标题文本(match[2]) : 生成提示块默认标题(type)
+      return `<div class="admonition bdm-${escapeHtml(type)}" data-admonition-type="${escapeHtml(type)}"><p class="bdm-title">${escapeHtml(title)}</p><div class="archive-admonition__content">\n`
+    },
+  })
   return renderer
 }
 
@@ -339,69 +352,6 @@ function 提取独立Markdown图片行项目(line: string): string[] | null {
   }
 
   return items.length > 0 ? items : null
-}
-
-function preprocessAdmonitions(raw: string): string {
-  const lines = raw.split('\n')
-  const result: string[] = []
-  let inAdmonition = false
-  let admonitionType = ''
-  let admonitionTitle = ''
-  let admonitionLines: string[] = []
-  let inCodeFence = false
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-
-    if (trimmed.startsWith('```')) {
-      inCodeFence = !inCodeFence
-      if (inAdmonition) {
-        admonitionLines.push(line)
-      } else {
-        result.push(line)
-      }
-      continue
-    }
-
-    if (inCodeFence) {
-      if (inAdmonition) {
-        admonitionLines.push(line)
-      } else {
-        result.push(line)
-      }
-      continue
-    }
-
-    const match = trimmed.match(Markdown容器提示块起始正则)
-    if (match && !inAdmonition) {
-      const type = match[1].toLowerCase()
-      if (Markdown提示块类型集合.has(type)) {
-        inAdmonition = true
-        admonitionType = type
-        admonitionTitle = match[2] || ''
-        admonitionLines = []
-        continue
-      }
-    }
-
-    if (Markdown容器提示块结束正则.test(trimmed) && inAdmonition) {
-      inAdmonition = false
-      result.push(渲染Markdown提示块(admonitionType, admonitionTitle, admonitionLines.join('\n')))
-      continue
-    }
-
-    if (inAdmonition) {
-      admonitionLines.push(line)
-    } else {
-      result.push(line)
-    }
-  }
-
-  if (inAdmonition) {
-    result.push(`:::${admonitionType}${admonitionTitle ? `[${admonitionTitle}]` : ''}`, ...admonitionLines)
-  }
-
-  return result.join('\n')
 }
 
 function preprocessSpoilers(raw: string): string {
@@ -700,7 +650,6 @@ export function preprocessMarkdown(raw: string): string {
   processed = preprocessMarkdownBlocks(processed)
   processed = preprocessImageGrids(processed)
   processed = preprocessGithubCards(processed)
-  processed = preprocessAdmonitions(processed)
   processed = preprocessSpoilers(processed)
   return processed
 }

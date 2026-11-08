@@ -1,120 +1,55 @@
-import type {
-  RecurrenceType,
-  Todo,
-  TodoStatus,
-  TodoTransferItem,
-  TodoTransferPayload,
-} from '../types'
+import { z } from 'zod'
+import type { Todo, TodoTransferItem, TodoTransferPayload } from '../types'
 
-const VALID_RECURRENCE_TYPES = new Set<RecurrenceType>([
-  'none',
-  'daily',
-  'weekly',
-  'monthly',
-  'yearly',
-  'workday',
-  'weekend',
-  'holiday',
-  'custom',
+const 可选文本 = z.string().trim().transform((value) => value || undefined).optional().catch(undefined)
+const 可选日期 = z.string().transform((value) => {
+  const date = value.trim() ? new Date(value) : new Date(Number.NaN)
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
+}).optional().catch(undefined)
+
+function 数值字段(fallback: number, min: number, max: number) {
+  return z.number().finite().transform((value) => Math.min(max, Math.max(min, Math.round(value)))).catch(fallback).default(fallback)
+}
+
+const 待办传输项结构 = z.object({
+  title: z.string().trim().min(1),
+  description: 可选文本,
+  status: z.enum(['todo', 'done']).catch('todo').default('todo'),
+  importance: 数值字段(33, 0, 100),
+  urgency: 数值字段(33, 0, 100),
+  start_date: 可选日期,
+  end_date: 可选日期,
+  is_pinned: z.coerce.boolean().catch(false).default(false),
+  tags: z.array(z.unknown()).catch([]).default([]).transform((tags) =>
+    tags.filter((tag): tag is string => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean)),
+  recurrence_type: z.enum(['none', 'daily', 'weekly', 'monthly', 'yearly', 'workday', 'weekend', 'holiday', 'custom']).catch('none').default('none'),
+  recurrence_interval: 数值字段(1, 1, 365),
+  recurrence_count: 数值字段(0, -1, 999),
+  times_per_interval: 数值字段(1, 1, 999),
+  interval_progress: 数值字段(0, 0, 999),
+  is_deleted: z.coerce.boolean().catch(false).default(false),
+}).transform((item): TodoTransferItem => ({
+  ...item,
+  recurrence_count: item.recurrence_type === 'none' ? 0 : item.recurrence_count,
+  times_per_interval: item.recurrence_type === 'none' ? 1 : item.times_per_interval,
+  interval_progress: item.recurrence_type === 'none' ? 0 : Math.min(item.interval_progress, item.times_per_interval),
+}))
+
+const 待办传输负载结构 = z.union([
+  z.array(z.unknown()),
+  z.object({ todos: z.array(z.unknown()) }).transform((value) => value.todos),
 ])
 
-function normalizeTodoStatus(value: unknown): TodoStatus {
-  return value === 'done' ? 'done' : 'todo'
-}
-
-function normalizeRecurrenceType(value: unknown): RecurrenceType {
-  if (typeof value === 'string' && VALID_RECURRENCE_TYPES.has(value as RecurrenceType)) {
-    return value as RecurrenceType
-  }
-  return 'none'
-}
-
-function normalizeNumber(value: unknown, fallback: number, options?: { min?: number; max?: number }): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return fallback
-  }
-  const min = options?.min ?? Number.NEGATIVE_INFINITY
-  const max = options?.max ?? Number.POSITIVE_INFINITY
-  return Math.min(max, Math.max(min, Math.round(value)))
-}
-
-function normalizeOptionalDate(value: unknown): string | undefined {
-  if (typeof value !== 'string' || !value.trim()) {
-    return undefined
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return undefined
-  }
-  return date.toISOString()
-}
-
-function normalizeTags(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-  return value
-    .filter((tag): tag is string => typeof tag === 'string')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-}
-
 export function 标准化待办传输项(item: unknown): TodoTransferItem | null {
-  if (!item || typeof item !== 'object') {
-    return null
-  }
-  const record = item as Record<string, unknown>
-  const title = typeof record.title === 'string' ? record.title.trim() : ''
-  if (!title) {
-    return null
-  }
-
-  const recurrenceType = normalizeRecurrenceType(record.recurrence_type)
-  const timesPerInterval = normalizeNumber(record.times_per_interval, 1, { min: 1, max: 999 })
-
-  return {
-    title,
-    description: typeof record.description === 'string' && record.description.trim() ? record.description.trim() : undefined,
-    status: normalizeTodoStatus(record.status),
-    importance: normalizeNumber(record.importance, 33, { min: 0, max: 100 }),
-    urgency: normalizeNumber(record.urgency, 33, { min: 0, max: 100 }),
-    start_date: normalizeOptionalDate(record.start_date),
-    end_date: normalizeOptionalDate(record.end_date),
-    is_pinned: Boolean(record.is_pinned),
-    tags: normalizeTags(record.tags),
-    recurrence_type: recurrenceType,
-    recurrence_interval: normalizeNumber(record.recurrence_interval, 1, { min: 1, max: 365 }),
-    recurrence_count: recurrenceType === 'none'
-      ? 0
-      : normalizeNumber(record.recurrence_count, 0, { min: -1, max: 999 }),
-    times_per_interval: recurrenceType === 'none' ? 1 : timesPerInterval,
-    interval_progress: recurrenceType === 'none'
-      ? 0
-      : normalizeNumber(record.interval_progress, 0, { min: 0, max: timesPerInterval }),
-    is_deleted: Boolean(record.is_deleted),
-  }
+  const result = 待办传输项结构.safeParse(item)
+  return result.success ? result.data : null
 }
 
 export function 解析待办传输负载(rawText: string): TodoTransferItem[] {
-  const parsed = JSON.parse(rawText) as unknown
-  const items = Array.isArray(parsed)
-    ? parsed
-    : parsed && typeof parsed === 'object' && Array.isArray((parsed as { todos?: unknown }).todos)
-      ? (parsed as { todos: unknown[] }).todos
-      : null
-
-  if (!items) {
-    throw new Error('导入文件格式不正确')
-  }
-
-  const normalized = items
-    .map((item) => 标准化待办传输项(item))
-    .filter((item): item is TodoTransferItem => item !== null)
-
-  if (normalized.length === 0) {
-    throw new Error('导入文件中没有可用的待办事项')
-  }
-
+  const result = 待办传输负载结构.safeParse(JSON.parse(rawText))
+  if (!result.success) throw new Error('导入文件格式不正确')
+  const normalized = result.data.map(标准化待办传输项).filter((item): item is TodoTransferItem => item !== null)
+  if (!normalized.length) throw new Error('导入文件中没有可用的待办事项')
   return normalized
 }
 
@@ -139,7 +74,7 @@ export function 转为待办传输项(todo: Todo): TodoTransferItem {
 }
 
 function normalizeFingerprintDate(value: string | undefined): string {
-  return normalizeOptionalDate(value) || ''
+  return 可选日期.parse(value) || ''
 }
 
 export function 获取待办传输指纹(todo: TodoTransferItem): string {

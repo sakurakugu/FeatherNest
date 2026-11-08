@@ -91,7 +91,20 @@ python ./tools/1.启动项目.py --cloud --start
 ```bash
 npm run lint
 npm run typecheck
+npm run test:unit
+# 依赖替换相关的待办、上传并发和缓存测试
+npm run test:unit:dependencies
+# Markdown 容器测试（会启动一次临时 Vite SSR 测试服务）
+npm run test:unit:markdown
 ```
+
+图片裁剪的功能回归使用 Python Playwright。在开发前端启动后执行（需要安装 Python 的 `playwright` 和 Chromium）：
+
+```bash
+python apps/cloud/frontend/tests/test_image_cropper.py --url http://localhost:5173
+```
+
+该测试通过独立页面验证鼠标与触屏裁剪、比例、坐标换算、导出和资源清理；桌面能力使用测试替身，不写入真实桌面文件。页面样式仍由人工检查。
 
 云端后端：
 
@@ -105,6 +118,21 @@ python -m mypy
 ```
 
 </details>
+
+## 接口类型生成
+
+已迁移模块的前端接口 TypeScript 类型由后端真实路由的 OpenAPI 契约生成，不再手动维护重复的 DTO 字段。
+
+```bash
+npm run generate:api
+npm run check:api
+```
+
+- 修改后端接口的请求、响应或枚举后，运行 `npm run generate:api`，并提交生成文件。
+- `npm run check:api` 检查生成文件是否过期，不会覆盖文件。
+- 生成命令需要已安装后端 Python 依赖，但不需要启动服务或连接数据库；可通过 `PYTHON` 环境变量指定解释器。
+- 输出位于 `packages/api/src/generated/todos.ts` 和 `packages/api/src/generated/system.ts`；领域层只引用生成类型，导入导出等本地业务类型仍单独维护。
+- 现有 Axios 客户端继续负责 API 环境、认证及 CSRF，生成类型不引入第二套请求实现。
 
 ## 后端约定
 

@@ -7,24 +7,16 @@ import type {
   TodoUpdateParams,
 } from './types'
 
-function 构建待办查询字符串(query: TodoListQuery & { is_deleted?: boolean }): string {
-  const params = new URLSearchParams()
-  params.append('is_deleted', String(query.is_deleted ?? false))
-  if (query.status) params.append('status', query.status)
-  if (query.is_pinned !== undefined) params.append('is_pinned', String(query.is_pinned))
-  if (query.sort_by) params.append('sort_by', query.sort_by)
-  if (query.sort_desc !== undefined) params.append('sort_desc', String(query.sort_desc))
-  return params.toString()
-}
-
-export async function 获取待办列表(query: TodoListQuery = {}): Promise<Todo[]> {
-  const { data } = await api.get<Todo[]>(`/todos?${构建待办查询字符串(query)}`)
+export async function 获取待办列表(query: TodoListQuery = {}, signal?: AbortSignal): Promise<Todo[]> {
+  const { data } = await api.get<Todo[]>('/todos', {
+    params: { ...query, is_deleted: query.is_deleted ?? false },
+    signal,
+  })
   return data
 }
 
-export async function 获取已删除待办(): Promise<Todo[]> {
-  const { data } = await api.get<Todo[]>(`/todos?${构建待办查询字符串({ is_deleted: true })}`)
-  return data
+export async function 获取已删除待办(signal?: AbortSignal): Promise<Todo[]> {
+  return 获取待办列表({ is_deleted: true }, signal)
 }
 
 export async function 创建待办(payload: TodoCreateParams): Promise<Todo> {

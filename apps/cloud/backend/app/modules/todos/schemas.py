@@ -7,6 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.modules.todos.models import RecurrenceType, TodoStatus
+
 
 class TodoCreate(BaseModel):
     """创建待办事项请求。"""
@@ -19,7 +21,7 @@ class TodoCreate(BaseModel):
     end_date: datetime | None = None
     is_pinned: bool = False
     tags: list[str] | None = None
-    recurrence_type: str = "none"
+    recurrence_type: RecurrenceType = RecurrenceType.none
     recurrence_interval: int = Field(default=1, ge=1, le=365)
     recurrence_count: int = Field(default=0, ge=-1, le=999)
     times_per_interval: int = Field(default=1, ge=1, le=999)
@@ -34,15 +36,6 @@ class TodoCreate(BaseModel):
             value = value.replace("，", ",").split(",")
         tags = [tag.strip() for tag in value if tag.strip()]
         return list(dict.fromkeys(tags)) or None
-
-    @field_validator("recurrence_type")
-    @classmethod
-    def validate_recurrence_type(cls, value: str) -> str:
-        """校验循环类型。"""
-        allowed = {"none", "daily", "weekly", "monthly", "yearly", "workday", "weekend", "holiday", "custom"}
-        if value not in allowed:
-            raise ValueError("循环类型不合法")
-        return value
 
     @model_validator(mode="after")
     def validate_recurrence_fields(self) -> "TodoCreate":
@@ -60,7 +53,7 @@ class TodoUpdate(BaseModel):
 
     title: str | None = None
     description: str | None = None
-    status: str | None = None
+    status: TodoStatus | None = None
     importance: int | None = Field(default=None, ge=0, le=100)
     urgency: int | None = Field(default=None, ge=0, le=100)
     start_date: datetime | None = None
@@ -68,7 +61,7 @@ class TodoUpdate(BaseModel):
     is_pinned: bool | None = None
     is_deleted: bool | None = None
     tags: list[str] | None = None
-    recurrence_type: str | None = None
+    recurrence_type: RecurrenceType | None = None
     recurrence_interval: int | None = Field(default=None, ge=1, le=365)
     recurrence_count: int | None = Field(default=None, ge=-1, le=999)
     times_per_interval: int | None = Field(default=None, ge=1, le=999)
@@ -84,17 +77,6 @@ class TodoUpdate(BaseModel):
             value = value.replace("，", ",").split(",")
         tags = [tag.strip() for tag in value if tag.strip()]
         return list(dict.fromkeys(tags)) or None
-
-    @field_validator("recurrence_type")
-    @classmethod
-    def validate_recurrence_type(cls, value: str | None) -> str | None:
-        """校验循环类型。"""
-        if value is None:
-            return None
-        allowed = {"none", "daily", "weekly", "monthly", "yearly", "workday", "weekend", "holiday", "custom"}
-        if value not in allowed:
-            raise ValueError("循环类型不合法")
-        return value
 
     @model_validator(mode="after")
     def validate_progress_fields(self) -> "TodoUpdate":
@@ -113,12 +95,12 @@ class TodoUpdate(BaseModel):
 class TodoRead(BaseModel):
     """待办事项数据响应。"""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, json_schema_serialization_defaults_required=True)
 
     id: UUID
     title: str
     description: str | None = None
-    status: str
+    status: TodoStatus
     importance: int
     urgency: int
     start_date: datetime | None = None
@@ -127,7 +109,7 @@ class TodoRead(BaseModel):
     is_deleted: bool
     deleted_at: datetime | None = None
     tags: list[str] | None = None
-    recurrence_type: str = "none"
+    recurrence_type: RecurrenceType = RecurrenceType.none
     recurrence_interval: int = 1
     recurrence_count: int = 0
     times_per_interval: int = 1

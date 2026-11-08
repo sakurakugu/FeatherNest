@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useIntersectionObserver } from '@vueuse/core'
 /* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -88,7 +89,6 @@ const ARTICLE_LIST_PAGE_SIZE = 10
 
 let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
 let ignoreNextCreateClick = false
-let loadMoreObserver: IntersectionObserver | null = null
 
 const hasMoreArticles = computed(() => pagination.value.page < pagination.value.pageCount)
 const showSkeleton = computed(() => initialLoading.value && articles.value.length === 0)
@@ -191,12 +191,7 @@ async function reloadCategories() {
   重置无效分类筛选()
 }
 
-function disconnectLoadMoreObserver() {
-  if (loadMoreObserver) {
-    loadMoreObserver.disconnect()
-    loadMoreObserver = null
-  }
-}
+
 
 async function requestArticlePage(page: number, append: boolean) {
   const data = await 获取我的文章列表(
@@ -467,7 +462,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearCreateButtonLongPress()
-  disconnectLoadMoreObserver()
 })
 
 watch(
@@ -496,29 +490,9 @@ watch(
   },
 )
 
-watch(
-  () => [pageContainerRef.value, loadMoreTriggerRef.value] as const,
-  ([container, trigger]) => {
-    disconnectLoadMoreObserver()
-    if (!container || !trigger) {
-      return
-    }
-    loadMoreObserver = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) {
-          return
-        }
-        void fetchNextPage()
-      },
-      {
-        root: container,
-        rootMargin: '0px 0px 240px 0px',
-      },
-    )
-    loadMoreObserver.observe(trigger)
-  },
-  { flush: 'post' },
-)
+useIntersectionObserver(loadMoreTriggerRef, (entries) => {
+  if (entries.some((entry) => entry.isIntersecting)) void fetchNextPage()
+}, { root: pageContainerRef, rootMargin: '0px 0px 240px 0px' })
 </script>
 
 <template>

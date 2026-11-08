@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片裁剪功能测试</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import { createApp } from 'vue'
+      import 'element-plus/dist/index.css'
+      import ImageEditor from '../src/modules/工具/src/components/图片编辑工作台.vue'
+
+      const app = createApp(ImageEditor)
+      app.mount('#app')
+      window.卸载测试组件 = () => app.unmount()
+    </script>
+  </body>
+</html>

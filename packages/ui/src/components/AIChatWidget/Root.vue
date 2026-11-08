@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useEventListener, useWindowSize } from '@vueuse/core'
 import ChatToggleButton from './ChatToggleButton.vue'
 import Composer from './Composer.vue'
 import MessageList from './MessageList.vue'
 import WidgetPanel from './WidgetPanel.vue'
 import {
-    提取JSON文本,
     是否支持附件,
     生成消息ID,
     生成附件,
-    解析数据流行,
+    读取聊天事件流,
     转为接口消息,
     释放附件地址,
 } from './chat'
@@ -44,7 +44,8 @@ const 消息列表 = ref<聊天消息[]>([])
 const 状态 = ref<聊天状态>('空闲')
 const 错误消息 = ref('')
 const 附件错误 = ref<string | null>(null)
-const 是否移动端 = ref(false)
+const { width: 窗口宽度 } = useWindowSize({ initialWidth: 0 })
+const 是否移动端 = computed(() => 窗口宽度.value <= 768)
 const 视口高度 = ref(0)
 const 视口顶部偏移 = ref(0)
 const 输入组件 = ref<InstanceType<typeof Composer> | null>(null)
@@ -77,10 +78,6 @@ async function 滚动到底部() {
     top: container.scrollHeight,
     behavior: 是否请求中.value ? 'auto' : 'smooth',
   })
-}
-
-function 更新移动端状态() {
-  是否移动端.value = window.innerWidth <= 768
 }
 
 function 更新视觉视口() {
@@ -173,31 +170,10 @@ function 移除附件(index: number) {
 }
 
 async function 读取流式响应(response: Response, assistantMessage: 聊天消息) {
-  const reader = response.body?.getReader()
-  if (!reader) {
-    assistantMessage.content = await response.text()
-    return
-  }
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split(/\r?\n/)
-    buffer = lines.pop() ?? ''
-    for (const line of lines) {
-      assistantMessage.content += 解析数据流行(line)
-    }
+  await 读取聊天事件流(response, async (text) => {
+    assistantMessage.content += text
     await 滚动到底部()
-  }
-
-  const tail = buffer + decoder.decode()
-  if (tail.trim()) {
-    assistantMessage.content += 解析数据流行(tail)
-  }
+  })
 }
 
 function 生成请求体(messages: 聊天消息[], attachments: readonly 聊天附件[]): BodyInit {
@@ -217,7 +193,7 @@ function 生成请求体(messages: 聊天消息[], attachments: readonly 聊天�
 
 function 生成请求头(hasAttachments: boolean): HeadersInit {
   const headers = new Headers({
-    Accept: 'text/event-stream, application/x-ndjson, application/json, text/plain',
+    Accept: 'text/event-stream',
   })
   if (props.headers) {
     new Headers(props.headers).forEach((value, key) => headers.set(key, value))
@@ -285,12 +261,7 @@ async function 发送消息() {
       throw new Error(`聊天接口返回 ${response.status}`)
     }
 
-    const contentType = response.headers.get('content-type') || ''
-    if (contentType.includes('application/json')) {
-      assistantMessage.content = 提取JSON文本(await response.json())
-    } else {
-      await 读取流式响应(response, assistantMessage)
-    }
+    await 读取流式响应(response, assistantMessage)
 
     if (!assistantMessage.content.trim()) {
       assistantMessage.content = '接口已响应，但没有返回可显示内容。'
@@ -359,14 +330,13 @@ function 同步移动端滚动锁定() {
 }
 
 onMounted(() => {
-  更新移动端状态()
   更新视觉视口()
-  window.addEventListener('resize', 更新移动端状态)
-  window.addEventListener('resize', 更新视觉视口)
-  window.visualViewport?.addEventListener('resize', 更新视觉视口)
-  window.visualViewport?.addEventListener('scroll', 更新视觉视口)
-  document.addEventListener('pointerdown', 处理外部点击)
 })
+
+useEventListener('resize', 更新视觉视口)
+useEventListener(() => window.visualViewport, 'resize', 更新视觉视口)
+useEventListener(() => window.visualViewport, 'scroll', 更新视觉视口)
+useEventListener(() => document, 'pointerdown', 处理外部点击)
 
 watch([是否打开, 是否移动端], 同步移动端滚动锁定)
 
@@ -374,11 +344,6 @@ onBeforeUnmount(() => {
   停止生成()
   释放消息附件()
   释放附件地址(附件列表.value)
-  window.removeEventListener('resize', 更新移动端状态)
-  window.removeEventListener('resize', 更新视觉视口)
-  window.visualViewport?.removeEventListener('resize', 更新视觉视口)
-  window.visualViewport?.removeEventListener('scroll', 更新视觉视口)
-  document.removeEventListener('pointerdown', 处理外部点击)
   恢复移动端滚动锁定()
 })
 </script>

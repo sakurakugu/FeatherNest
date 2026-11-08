@@ -1,102 +1,15 @@
-export type RecurrenceType =
-  | 'none'
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'yearly'
-  | 'workday'
-  | 'weekend'
-  | 'holiday'
-  | 'custom'
+import type { components, paths } from '@personal-system/api/generated/todos'
 
-export type TodoStatus = 'todo' | 'done'
-
-export interface Todo {
-  id: string
-  title: string
-  description: string | null
-  status: TodoStatus
-  importance: number
-  urgency: number
-  start_date: string | null
-  end_date: string | null
-  is_pinned: boolean
-  is_deleted: boolean
-  deleted_at: string | null
-  tags: string[] | null
-  recurrence_type: RecurrenceType
-  recurrence_interval: number
-  recurrence_count: number
-  times_per_interval: number
-  interval_progress: number
-  progress_reset_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface TodoCreateParams {
-  title: string
-  description?: string
-  importance?: number
-  urgency?: number
-  start_date?: string
-  end_date?: string
-  is_pinned?: boolean
-  tags?: string[]
-  recurrence_type?: RecurrenceType
-  recurrence_interval?: number
-  recurrence_count?: number
-  times_per_interval?: number
-}
-
-export interface TodoUpdateParams {
-  title?: string
-  description?: string
-  status?: TodoStatus
-  importance?: number
-  urgency?: number
-  start_date?: string
-  end_date?: string
-  is_pinned?: boolean
-  is_deleted?: boolean
-  tags?: string[]
-  recurrence_type?: RecurrenceType
-  recurrence_interval?: number
-  recurrence_count?: number
-  times_per_interval?: number
-  interval_progress?: number
-}
-
-export interface TodoListQuery {
-  status?: TodoStatus
-  is_pinned?: boolean
-  sort_by?: string
-  sort_desc?: boolean
-}
-
-export interface CompletionHistoryItem {
-  todo_id: string
-  title: string
-  completed_count: number
-  normalized_score: number
-}
-
-export interface CompletionHistoryDay {
-  date: string
-  completed_count: number
-  score: number
-  items: CompletionHistoryItem[]
-}
-
-export interface CompletionHistoryResponse {
-  start_date: string
-  end_date: string
-  max_completed_count: number
-  total_completed_count: number
-  max_score: number
-  total_score: number
-  days: CompletionHistoryDay[]
-}
+export type RecurrenceType = components['schemas']['RecurrenceType']
+export type TodoStatus = components['schemas']['TodoStatus']
+export type Todo = components['schemas']['TodoRead']
+export type TodoCreateParams = components['schemas']['TodoCreate']
+export type TodoUpdateParams = components['schemas']['TodoUpdate']
+export type TodoListQuery = NonNullable<paths['/todos']['get']['parameters']['query']>
+export type CompletionHistoryResponse =
+  paths['/stats/todos/completion-history']['get']['responses'][200]['content']['application/json']
+export type CompletionHistoryDay = CompletionHistoryResponse['days'][number]
+export type CompletionHistoryItem = CompletionHistoryDay['items'][number]
 
 export interface TodoTransferItem {
   title: string

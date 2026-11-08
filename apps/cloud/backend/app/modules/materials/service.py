@@ -69,11 +69,11 @@ def 构建资料读取(material: 资料) -> 资料信息:
     """构造资料库详情响应。"""
     return 资料信息(
         id=material.id,
-        type=material.type.value,
+        type=material.type,
         title=material.title,
         content_text=material.content_text,
         note=material.note,
-        status=material.status.value,
+        status=material.status,
         tags=material.tags,
         assets=[构建资料资产读取(asset) for asset in material.assets],
         archived_at=material.archived_at,

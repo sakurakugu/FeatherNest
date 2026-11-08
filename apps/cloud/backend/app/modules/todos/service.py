@@ -16,6 +16,8 @@ from app.modules.todos.schemas import TodoCreate, TodoTagRead, TodoUpdate
 from app.integrations.holiday.service import 最大向后查找天数, 是否工作日, 是否节假日
 from app.shared.kernel.config import settings
 
+from .recurrence import 常规重复频率, 日历规则当日活跃, 日历规则下次日期
+
 回收站保留天数 = 90
 
 
@@ -121,30 +123,14 @@ def _该日重复是否活跃(todo: Todo, check_date: date) -> bool:
         return False
 
     interval = max(1, todo.recurrence_interval)
-    diff_days = (check_date - start_date).days
-
-    if recurrence_type == "daily":
-        return diff_days % interval == 0
-    if recurrence_type == "weekly":
-        return check_date.weekday() == start_date.weekday() and (diff_days // 7) % interval == 0
-    if recurrence_type == "monthly":
-        if check_date.day != start_date.day:
-            return False
-        month_delta = (check_date.year - start_date.year) * 12 + (check_date.month - start_date.month)
-        return month_delta >= 0 and month_delta % interval == 0
-    if recurrence_type == "yearly":
-        if (check_date.month, check_date.day) != (start_date.month, start_date.day):
-            return False
-        year_delta = check_date.year - start_date.year
-        return year_delta >= 0 and year_delta % interval == 0
+    if recurrence_type in 常规重复频率:
+        return 日历规则当日活跃(start_date, recurrence_type, interval, check_date)
     if recurrence_type == "workday":
         return 是否工作日(check_date)
     if recurrence_type == "weekend":
         return check_date.weekday() >= 5
     if recurrence_type == "holiday":
         return 是否节假日(check_date)
-    if recurrence_type == "custom":
-        return diff_days % interval == 0
     return False
 
 
@@ -156,6 +142,12 @@ def _计算下次重置时间(todo: Todo, *, reference_at: datetime | None = Non
     reference_date = _local_day_start(reference_at or _utcnow()).date()
     candidate_date = max(reference_date + timedelta(days=1), _重复锚定日期(todo))
     local_tz = _local_timezone()
+    recurrence_type = _recurrence_value(todo.recurrence_type)
+    if recurrence_type in 常规重复频率:
+        next_day = 日历规则下次日期(_重复锚定日期(todo), recurrence_type, todo.recurrence_interval, candidate_date)
+        if next_day is not None and (next_day - candidate_date).days < 最大向后查找天数:
+            return _本地日期转UTC起始(next_day)
+        return None
 
     for _ in range(最大向后查找天数):
         if _该日重复是否活跃(todo, candidate_date):
