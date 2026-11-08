@@ -68,7 +68,7 @@ class 桌面端令牌Schema测试(unittest.TestCase):
 
     def test_默认设备名称(self) -> None:
         body = 桌面端令牌创建请求()
-        self.assertEqual(body.device_name, "FeatherNest 桌面小工具")
+        self.assertEqual(body.device_name, "栖羽桌面小工具")
 
     def test_设备名称会去掉首尾空格(self) -> None:
         body = 桌面端令牌创建请求(device_name="  我的小工具  ")
@@ -79,9 +79,9 @@ class 吊销同名桌面设备会话测试(unittest.IsolatedAsyncioTestCase):
     """同名旧会话吊销逻辑测试。"""
 
     async def test_只吊销未吊销的同名桌面会话(self) -> None:
-        active_session = build_device_session(device_name="FeatherNest 桌面小工具")
+        active_session = build_device_session(device_name="栖羽桌面小工具")
         revoked_session = build_device_session(
-            device_name="FeatherNest 桌面小工具",
+            device_name="栖羽桌面小工具",
             revoked_at=utc_dt(2026, 9, 1),
         )
         db = FakeDb([active_session, revoked_session])
@@ -89,7 +89,7 @@ class 吊销同名桌面设备会话测试(unittest.IsolatedAsyncioTestCase):
         revoked_count = await 吊销同名桌面设备会话(
             db,
             user_id=uuid4(),
-            device_name="FeatherNest 桌面小工具",
+            device_name="栖羽桌面小工具",
         )
 
         self.assertEqual(revoked_count, 1)
@@ -102,7 +102,7 @@ class 创建桌面端令牌接口测试(unittest.IsolatedAsyncioTestCase):
 
     async def test_返回设备令牌与会话信息(self) -> None:
         user_id = uuid4()
-        session = build_device_session(device_name="FeatherNest 桌面小工具")
+        session = build_device_session(device_name="栖羽桌面小工具")
         session.user_id = user_id
         expires_at = datetime.now(timezone.utc) + timedelta(days=30)
 
@@ -128,13 +128,13 @@ class 创建桌面端令牌接口测试(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(response.token, "pst_dev_demo")
-        self.assertEqual(response.session.device_name, "FeatherNest 桌面小工具")
+        self.assertEqual(response.session.device_name, "栖羽桌面小工具")
         self.assertEqual(response.session.device_type, "desktop")
         self.assertEqual(response.session.scope, "full_client")
         revoke_mock.assert_awaited_once()
         self.assertEqual(
             revoke_mock.await_args.kwargs["device_name"],
-            "FeatherNest 桌面小工具",
+            "栖羽桌面小工具",
         )
         self.assertEqual(create_mock.await_args.kwargs["device_type"], 设备会话类型.desktop)
         self.assertEqual(create_mock.await_args.kwargs["scope"], 设备会话范围.full_client)

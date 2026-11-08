@@ -75,7 +75,7 @@ async def _调用MCP工具(
 mcp_server: Server[Any] = Server(
     "feathernest-cloud",
     version=settings.APP_VERSION,
-    instructions="通过受限工具读取和操作FeatherNest云端能力。",
+    instructions="通过受限工具读取和操作栖羽云端能力。",
     on_list_tools=_列出MCP工具,
     on_call_tool=_调用MCP工具,
 )

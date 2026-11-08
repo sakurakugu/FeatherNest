@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Close, Hide, Lock, Right, User, View } from '@element-plus/icons-vue'
-import { 使用认证入口 } from '@feathernest/module-auth/使用认证入口'
-import { 开发者登录操作 } from '../../modules/认证/dev-login'
+import { Close, Hide, Lock, Right, User, View } from '@element-plus/icons-vue';
+import { 使用认证入口 } from '@feathernest/module-auth/使用认证入口';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { 开发者登录操作 } from '../../modules/认证/dev-login';
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()

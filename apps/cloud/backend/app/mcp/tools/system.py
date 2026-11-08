@@ -27,7 +27,7 @@ async def system_status(_args: dict[str, Any], _context: MCP调用上下文) -> 
 注册工具(
     MCP工具定义(
         name="system.ping",
-        description="检查FeatherNest云端 MCP 是否可用。",
+        description="检查栖羽云端 MCP 是否可用。",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         permission="readonly",
         handler=system_ping,

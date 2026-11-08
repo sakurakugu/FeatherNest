@@ -34,7 +34,7 @@ export function 初始化应用外壳(pinia: Pinia): Promise<void> {
     })
     配置认证存储上下文({
       sessionDriver: 创建设备令牌会话驱动({
-        deviceName: 'FeatherNest',
+        deviceName: '栖羽桌面端',
         deviceType: 'desktop',
         scope: 'full_client',
         clientVersion: '0.1.0',

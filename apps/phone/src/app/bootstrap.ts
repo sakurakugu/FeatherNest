@@ -45,7 +45,7 @@ export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<voi
     })
     配置认证存储上下文({
       sessionDriver: 创建设备令牌会话驱动({
-        deviceName: 'FeatherNest Phone',
+        deviceName: '栖羽手机端',
         deviceType: 'phone',
         scope: 'full_client',
         platform: navigator.platform || 'phone',

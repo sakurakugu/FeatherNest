@@ -31,7 +31,7 @@ const windowsBuildTargets = 解析Windows构建目标()
 
 const buildConfig = {
   appId: 'top.sakurakugu.feathernest.desktop.electron',
-  productName: 'FeatherNest',
+  productName: '栖羽',
   electronVersion: '42.1.0',
   publish: null,
   directories: {
@@ -47,7 +47,7 @@ const buildConfig = {
   // 自定义协议注册：macOS 写入 Info.plist；Windows 由主进程运行时注册 + 安装器关联。
   protocols: [
     {
-      name: 'FeatherNest',
+      name: '栖羽',
       // 协议 scheme 集中在 electron/shared/protocol.mjs，改名时只改一处。
       schemes: [APP_PROTOCOL_SCHEME],
     },

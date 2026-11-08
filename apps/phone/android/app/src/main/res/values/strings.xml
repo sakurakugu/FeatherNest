@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">FeatherNest</string>
-    <string name="title_activity_main">FeatherNest</string>
+    <string name="app_name">栖羽</string>
+    <string name="title_activity_main">栖羽</string>
     <string name="package_name">com.sakurakugu.feathernest</string>
     <string name="custom_url_scheme">com.sakurakugu.feathernest</string>
 </resources>

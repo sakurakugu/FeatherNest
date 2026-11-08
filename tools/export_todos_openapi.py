@@ -30,7 +30,7 @@ def 导出全部接口契约() -> dict:
     from fastapi import FastAPI
     from app.api.v1.router import API_V1_PREFIX, register_v1_routers
 
-    app = FastAPI(title="FeatherNest接口契约", version="1.0.0")
+    app = FastAPI(title="栖羽接口契约", version="1.0.0")
     register_v1_routers(app, include_dev_auth=False)
     schema = app.openapi()
     schema["paths"] = {path.removeprefix(API_V1_PREFIX): value for path, value in schema["paths"].items()}

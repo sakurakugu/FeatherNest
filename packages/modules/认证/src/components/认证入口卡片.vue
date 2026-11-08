@@ -167,7 +167,7 @@ function handleActionButtonClick() {
 
       <div class="auth-entry-panel__title">
         <slot name="title">
-          <h1 class="page-title">FeatherNest</h1>
+          <h1 class="page-title">栖羽</h1>
         </slot>
       </div>
 

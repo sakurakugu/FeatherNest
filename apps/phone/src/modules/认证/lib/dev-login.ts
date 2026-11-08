@@ -5,7 +5,7 @@ import { 设置存储的手机令牌 } from '@/shared/auth/device-token'
 
 export async function 开发者快捷登录(): Promise<void> {
   const { data } = await api.post<DeviceLoginResponse>('/auth/device/dev-login', {
-    device_name: 'FeatherNest Phone',
+    device_name: '栖羽手机端',
     device_type: 'phone',
     scope: 'full_client',
     platform: navigator.platform || 'phone',

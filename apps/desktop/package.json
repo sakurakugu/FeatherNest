@@ -2,7 +2,7 @@
   "name": "desktop",
   "private": true,
   "version": "0.1.0",
-  "description": "FeatherNest 桌面端小工具，提供桌面常驻待办与网页后台唤起能力。",
+  "description": "栖羽桌面端小工具，提供桌面常驻待办与网页后台唤起能力。",
   "author": "sakurakugu",
   "repository": {
     "type": "git",
