@@ -75,3 +75,15 @@ qinglong.sakurakugu.com, qinglong.sakurakugu.top {
     encode zstd gzip
     reverse_proxy qinglong:5700
 }
+
+# Magpie 配置同步的 S3 端点（MinIO TLS，9002）
+# 保留 Host 头并直连 https://minio:9002，SigV4 签名才能通过
+s3.sakurakugu.com {
+    reverse_proxy https://minio:9002 {
+        header_up Host {host}
+        transport http {
+            tls
+            tls_insecure_skip_verify
+        }
+    }
+}

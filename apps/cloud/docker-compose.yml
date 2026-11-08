@@ -38,17 +38,23 @@ services:
   minio:
     image: minio/minio
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    command: server /data --address ":9002" --console-address ":9001" --certs-dir /certs
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      # 仅 TLS 端口使用证书；明文 9000 继续服务内部 backend
+      MINIO_SKIP_TLS_PLAINTEXT: "on"
+      MINIO_PUBLIC_IPS: "127.0.0.1"
+      MINIO_BROWSER_REDIRECT_URL: "https://s3.sakurakugu.com/console"
     volumes:
       - miniodata:/data
+      - ./minio-certs:/certs:ro
     ports:
-      - "127.0.0.1:9000:9000" # MinIO API 端口
+      - "127.0.0.1:9000:9000" # MinIO API 端口（明文，供内部 backend 使用）
+      - "127.0.0.1:9002:9002" # MinIO API 端口（TLS，供 magpie 同步使用）
       - "127.0.0.1:9001:9001" # MinIO 控制台端口
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-fk", "https://localhost:9002/minio/health/live"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -63,9 +69,14 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
-      MINIO_ENDPOINT: minio:9000
+      MINIO_ENDPOINT: minio:9002
+      MINIO_USE_SSL: "true"
+      # 让 Python requests/urllib3 信任 MinIO 自签证书
+      REQUESTS_CA_BUNDLE: /certs/public.crt
+      SSL_CERT_FILE: /certs/public.crt
       APP_TIMEZONE: Asia/Shanghai
     volumes:
+      - ./minio-certs/public.crt:/certs/public.crt:ro
       - ./frontend/public/banner:/app/banner:ro
       - twikoodata:/app/twikoo-data
       - /var/run/docker.sock:/var/run/docker.sock
