@@ -1,4 +1,4 @@
-import type { RecurrenceType, Todo, TodoStatus } from '@personal-system/domain/todos'
+import type { RecurrenceType, Todo, TodoStatus } from '@feathernest/domain/todos'
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000
 

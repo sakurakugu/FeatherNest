@@ -1,4 +1,4 @@
-name: personal-system
+name: feathernest
 
 services:
   # ── PostgreSQL ────────────────────────────────────────

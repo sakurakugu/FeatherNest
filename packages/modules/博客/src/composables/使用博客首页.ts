@@ -1,9 +1,9 @@
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import { 追踪页面访问 } from '@personal-system/domain/system'
-import { 使用文章分类存储 } from '@personal-system/module-articles'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import { 追踪页面访问 } from '@feathernest/domain/system'
+import { 使用文章分类存储 } from '@feathernest/module-articles'
 import { 使用博客外观存储 } from '../store'
 import {
   构建博客Feed查询,

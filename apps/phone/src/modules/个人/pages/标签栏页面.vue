@@ -2,7 +2,7 @@
 /* global PointerEvent, HTMLElement */
 import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import type { AppTabId } from '@/shared/tab-bar'
-import { PageSectionShell } from '@personal-system/ui'
+import { PageSectionShell } from '@feathernest/ui'
 import { computed, reactive, ref } from 'vue'
 
 const tabBar = 使用标签栏存储()

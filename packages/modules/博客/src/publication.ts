@@ -1,5 +1,5 @@
-import api from '@personal-system/api'
-import type { ArticleRecord } from '@personal-system/module-articles'
+import api from '@feathernest/api'
+import type { ArticleRecord } from '@feathernest/module-articles'
 
 export type BlogVisibility = 'public' | 'login_required'
 export type BlogManageState = 'all' | 'published' | 'unpublished' | 'changed'

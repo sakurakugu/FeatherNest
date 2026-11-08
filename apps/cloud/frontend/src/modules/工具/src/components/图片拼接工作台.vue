@@ -7,7 +7,7 @@ import {
   type 图片工具服务,
   type 图片资源句柄,
   type 桌面文件结果,
-} from '@personal-system/platform/image-tools'
+} from '@feathernest/platform/image-tools'
 import {
   ArrowDown,
   ArrowUp,

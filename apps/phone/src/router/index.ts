@@ -1,5 +1,5 @@
-import { 收集模块路由, 注册标准认证守卫 } from '@personal-system/app-core'
-import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
+import { 收集模块路由, 注册标准认证守卫 } from '@feathernest/app-core'
+import { 使用认证存储, 使用登录门禁存储 } from '@feathernest/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 import { phoneModules } from '../app/modules'
 
@@ -9,7 +9,7 @@ const router = createRouter({
     {
       path: '/blog/manage',
       name: 'PhoneBlogManage',
-      component: () => import('@personal-system/module-blog').then((module) => module.BlogManagePage),
+      component: () => import('@feathernest/module-blog').then((module) => module.BlogManagePage),
       meta: { requiresAuth: true, hideTabBar: true },
     },
     ...收集模块路由(phoneModules),
@@ -130,7 +130,7 @@ const router = createRouter({
     {
       path: '/me/account',
       name: 'ProfileAccount',
-      component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
+      component: () => import('@feathernest/module-profile').then((module) => module.ProfilePage),
       props: {
         sessionEndRedirect: { path: '/' },
       },

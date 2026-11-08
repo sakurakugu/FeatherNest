@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { CategoryRecord, TagRecord } from '@personal-system/module-articles'
-import { BlogCategoryListWidget, BlogTagCloudWidget } from '@personal-system/module-blog/widgets'
-import { MusicPlayerWidget } from '@personal-system/module-music'
+import type { CategoryRecord, TagRecord } from '@feathernest/module-articles'
+import { BlogCategoryListWidget, BlogTagCloudWidget } from '@feathernest/module-blog/widgets'
+import { MusicPlayerWidget } from '@feathernest/module-music'
 import NavCard from './导航卡片.vue'
 import ProfileCard from './个人资料卡.vue'
 

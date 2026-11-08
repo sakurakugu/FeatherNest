@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RefreshLeft } from '@element-plus/icons-vue'
-import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
+import { GlassRangeSlider, ThemeHuePanel } from '@feathernest/ui'
 import { ElSwitch } from 'element-plus'
 import { computed } from 'vue'
 import WidgetButton from './小工具按钮.vue'

@@ -2,7 +2,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ComputedRef } from 'vue'
 import { nextStatusLabel, statusOrder } from '../helpers/todo-item'
 import type { Todo, TodoStatus, TodoUpdateParams } from '../store'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 
 export function 使用待办页面批量操作(options: {
   selectedTodos: ComputedRef<Todo[]>

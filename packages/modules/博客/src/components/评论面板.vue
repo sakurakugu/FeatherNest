@@ -2,7 +2,7 @@
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { CommentVisibilityMode } from '@personal-system/domain/system'
+import type { CommentVisibilityMode } from '@feathernest/domain/system'
 import {
   读取Twikoo环境ID,
   读取Twikoo区域,

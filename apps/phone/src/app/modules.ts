@@ -1,5 +1,5 @@
-import { 创建认证模块 } from '@personal-system/module-auth'
-import type { AppModule } from '@personal-system/app-core'
+import { 创建认证模块 } from '@feathernest/module-auth'
+import type { AppModule } from '@feathernest/app-core'
 
 export const phoneModules: AppModule[] = [
   创建认证模块({

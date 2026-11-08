@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import {
   下载归档 as requestDownloadArchive,
   下载文件 as requestDownloadFile,

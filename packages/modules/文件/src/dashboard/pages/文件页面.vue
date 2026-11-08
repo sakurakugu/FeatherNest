@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { 使用路由搜索同步 } from '@personal-system/ui'
+import { 使用路由搜索同步 } from '@feathernest/ui'
 import type { TreeInstance } from 'element-plus'
 import FilesBatchRenameDialog from '../components/文件批量重命名.vue'
 import FilesBreadcrumbTrail from '../components/文件面包屑.vue'
@@ -59,7 +59,7 @@ import {
   ElMessage,
   ElMessageBox,
 } from 'element-plus'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import {
   恢复文件,
   恢复文件夹,

@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/theme",
+  "name": "@feathernest/theme",
   "private": true,
   "type": "module",
   "exports": {

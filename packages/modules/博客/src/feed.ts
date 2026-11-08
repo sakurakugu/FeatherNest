@@ -1,6 +1,6 @@
-import api from '@personal-system/api'
-import type { MomentImageRecord } from '@personal-system/module-moments'
-import type { ArticleAuthor, CategoryRecord, TagRecord } from '@personal-system/module-articles'
+import api from '@feathernest/api'
+import type { MomentImageRecord } from '@feathernest/module-moments'
+import type { ArticleAuthor, CategoryRecord, TagRecord } from '@feathernest/module-articles'
 
 const DEFAULT_PAGE_SIZE = 10
 

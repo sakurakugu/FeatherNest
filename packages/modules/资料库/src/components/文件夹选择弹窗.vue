@@ -10,8 +10,8 @@ import {
   ElMessage,
 } from 'element-plus'
 import { Folder } from '@element-plus/icons-vue'
-import { BaseDialog } from '@personal-system/ui'
-import { 获取API错误消息 } from '@personal-system/api'
+import { BaseDialog } from '@feathernest/ui'
+import { 获取API错误消息 } from '@feathernest/api'
 import { 创建文件夹, 获取文件浏览器数据 } from '../files-api'
 import type { FileBreadcrumbItem, FileExplorerData, FileFolderItem } from '../files-types'
 

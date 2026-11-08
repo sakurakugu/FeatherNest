@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { HomeFilled, House, Monitor, Moon, Plus, Sunny, SwitchButton } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import { 使用博客外观存储 } from '@personal-system/module-blog/store'
-import { 使用下拉面板, 顶栏搜索框 as TopbarSearchInput } from '@personal-system/ui'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import { 使用博客外观存储 } from '@feathernest/module-blog/store'
+import { 使用下拉面板, 顶栏搜索框 as TopbarSearchInput } from '@feathernest/ui'
 import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon } from 'element-plus'
 import type { Component } from 'vue'
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -380,8 +380,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
-@import '@personal-system/ui/styles/dropdown.css';
+@import '@feathernest/ui/styles/media.css';
+@import '@feathernest/ui/styles/dropdown.css';
 
 /* ========== Firefly 风格导航栏 ========== */
 

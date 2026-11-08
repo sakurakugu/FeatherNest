@@ -1,15 +1,15 @@
 import { Capacitor } from '@capacitor/core'
-import { 是否启用API环境切换, 是否为原生开发服务器模式, 解析原生开发服务器API基地址 } from '@personal-system/api'
+import { 是否启用API环境切换, 是否为原生开发服务器模式, 解析原生开发服务器API基地址 } from '@feathernest/api'
 import {
   创建API环境存储,
   创建内置API环境,
   获取默认API环境ID,
   规范化API环境基础URL,
   type ApiEnvironmentItem,
-} from '@personal-system/domain/api-environment'
+} from '@feathernest/domain/api-environment'
 
-const STORAGE_KEY_CUSTOM = 'personal-system:api-env:custom'
-const STORAGE_KEY_ACTIVE = 'personal-system:api-env:active'
+const STORAGE_KEY_CUSTOM = 'feathernest:api-env:custom'
+const STORAGE_KEY_ACTIVE = 'feathernest:api-env:active'
 const DEFAULT_ANDROID_LOCAL_API_BASE = 'http://10.0.2.2:8000/api/v1'
 const DEFAULT_IOS_LOCAL_API_BASE = 'http://127.0.0.1:8000/api/v1'
 

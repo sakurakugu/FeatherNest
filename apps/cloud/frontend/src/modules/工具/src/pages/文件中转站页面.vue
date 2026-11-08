@@ -7,7 +7,7 @@ import {
   RefreshRight,
   Upload,
 } from '@element-plus/icons-vue'
-import { 解析当前API基地址 } from '@personal-system/api'
+import { 解析当前API基地址 } from '@feathernest/api'
 import { ElButton, ElCard, ElEmpty, ElInput, ElMessage, ElProgress, ElTag } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

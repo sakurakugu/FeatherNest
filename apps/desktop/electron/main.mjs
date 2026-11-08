@@ -2,7 +2,7 @@
  * 桌面端主进程入口。
  *
  * 桌面端只保留小工具窗口：启动即创建并显示小工具，不再创建主窗口。
- * 同时注册自定义协议 personal-system://widget?token=...，供网页后台一键唤起并写入设备令牌。
+ * 同时注册自定义协议 feathernest://widget?token=...，供网页后台一键唤起并写入设备令牌。
  */
 import { app, BrowserWindow, Menu } from 'electron'
 import path from 'node:path'

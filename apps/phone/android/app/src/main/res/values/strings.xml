@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Personal System</string>
-    <string name="title_activity_main">Personal System</string>
-    <string name="package_name">com.sakurakugu.personal_system</string>
-    <string name="custom_url_scheme">com.sakurakugu.personal_system</string>
+    <string name="app_name">FeatherNest</string>
+    <string name="title_activity_main">FeatherNest</string>
+    <string name="package_name">com.sakurakugu.feathernest</string>
+    <string name="custom_url_scheme">com.sakurakugu.feathernest</string>
 </resources>

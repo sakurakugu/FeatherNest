@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/module-articles",
+  "name": "@feathernest/module-articles",
   "private": true,
   "type": "module",
   "exports": {
@@ -22,8 +22,8 @@
     "@milkdown/preset-gfm": "^7.22.3",
     "@milkdown/prose": "^7.22.3",
     "@milkdown/utils": "^7.22.3",
-    "@personal-system/api": "*",
-    "@personal-system/ui": "*",
+    "@feathernest/api": "*",
+    "@feathernest/ui": "*",
     "@vueuse/core": "^15.0.0",
     "markdown-it-container": "^4.0.0"
   },

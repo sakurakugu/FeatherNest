@@ -28,7 +28,7 @@ import {
   Timer,
   WarningFilled,
 } from '@element-plus/icons-vue'
-import { PageSectionShell } from '@personal-system/ui'
+import { PageSectionShell } from '@feathernest/ui'
 import { 获取系统状态 } from '../../api'
 import type { SystemRequestAggregate, SystemRequestEvent, SystemStatus } from '../../types'
 import type { HealthComponentStatus } from '../../../../modules/系统/types'
@@ -778,7 +778,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .page-container {
   height: 100%;

@@ -4,7 +4,7 @@ import { reactive } from 'vue'
 import { ElCard, ElTag, ElTooltip, ElIcon, ElButton, ElEmpty } from 'element-plus'
 import { Star, RefreshRight, Delete, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../store'
-import { 使用长按选择 } from '@personal-system/ui'
+import { 使用长按选择 } from '@feathernest/ui'
 import {
   解析标签,
   获取优先级标签类型,
@@ -363,7 +363,7 @@ function getImportanceStyle(importance: number) {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .todo-list {
   display: flex;

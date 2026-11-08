@@ -23,7 +23,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { Delete, Document, Download, Grid, List } from '@element-plus/icons-vue'
-import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@personal-system/ui'
+import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@feathernest/ui'
 import {
   删除文章 as removeArticle,
   创建文章草稿,
@@ -40,7 +40,7 @@ import {
 import { 构建文章传输负载 } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord, CategoryRecord, ArticleOrganizationState } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import { 使用视口 } from '../../使用视口'
 
 const props = withDefaults(defineProps<{
@@ -774,7 +774,7 @@ useIntersectionObserver(loadMoreTriggerRef, (entries) => {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .page-container {
   height: 100%;

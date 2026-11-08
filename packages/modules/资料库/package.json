@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/module-materials",
+  "name": "@feathernest/module-materials",
   "private": true,
   "type": "module",
   "exports": {
@@ -7,10 +7,10 @@
     "./components/*": "./src/components/*"
   },
   "dependencies": {
-    "@personal-system/api": "*",
-    "@personal-system/ui": "*",
+    "@feathernest/api": "*",
+    "@feathernest/ui": "*",
     "@vueuse/core": "^15.0.0",
-    "@personal-system/module-files": "*"
+    "@feathernest/module-files": "*"
   },
   "peerDependencies": {
     "@element-plus/icons-vue": "^2.0.0",

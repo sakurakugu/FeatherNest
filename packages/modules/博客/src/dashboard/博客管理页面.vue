@@ -31,10 +31,10 @@ import {
   ElTag,
   ElTooltip,
 } from 'element-plus'
-import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
-import { 获取API错误消息 } from '@personal-system/api'
-import { 根据ID获取我的文章, type ArticleRecord } from '@personal-system/module-articles'
-import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
+import { PageSectionShell, SegmentedSwitch } from '@feathernest/ui'
+import { 获取API错误消息 } from '@feathernest/api'
+import { 根据ID获取我的文章, type ArticleRecord } from '@feathernest/module-articles'
+import MarkdownRenderer from '@feathernest/module-articles/components/Markdown渲染器.vue'
 import {
   获取博客管理列表,
   获取博客发布快照,

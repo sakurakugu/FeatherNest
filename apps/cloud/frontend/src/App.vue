@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import type { 聊天请求配置 } from '@personal-system/ui'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import type { 聊天请求配置 } from '@feathernest/ui'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from './app/components/header/应用顶栏.vue'
 import { 使用点击效果 } from './app/composables/使用点击效果'
@@ -12,7 +12,7 @@ const LoginModal = defineAsyncComponent(() => import('./app/components/登录弹
 const FloatingControls = defineAsyncComponent(() => import('./app/components/浮动控制.vue'))
 const SakuraEffect = defineAsyncComponent(() => import('./app/components/樱花特效.vue'))
 const AIChatWidget = defineAsyncComponent(() =>
-  import('@personal-system/ui').then((module) => module.AIChatWidget),
+  import('@feathernest/ui').then((module) => module.AIChatWidget),
 )
 
 使用点击效果()

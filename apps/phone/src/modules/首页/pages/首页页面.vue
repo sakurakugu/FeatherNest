@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BlogHomeMainContent, 使用博客首页 } from '@personal-system/module-blog/home'
+import { BlogHomeMainContent, 使用博客首页 } from '@feathernest/module-blog/home'
 import PhoneHomeFloatingControls from '../components/首页浮动控制.vue'
 
 const {

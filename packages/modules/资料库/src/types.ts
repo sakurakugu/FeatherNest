@@ -1,4 +1,4 @@
-import type { paths } from '@personal-system/api/generated/system'
+import type { paths } from '@feathernest/api/generated/system'
 
 export type MaterialListResponse = paths['/materials']['get']['responses'][200]['content']['application/json']
 export type MaterialRecord = MaterialListResponse['items'][number]

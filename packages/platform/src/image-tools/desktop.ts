@@ -43,8 +43,8 @@ function 将桌面资源映射为句柄(resources: 图片资源句柄[]) {
 
 export function 获取桌面图片工具运行时(): 桌面图片工具运行时 | null {
   const runtime = (window as Window & {
-    personalSystemDesktop?: unknown
-  }).personalSystemDesktop ?? null
+    featherNestDesktop?: unknown
+  }).featherNestDesktop ?? null
 
   if (!isDesktopRuntime(runtime)) {
     return null

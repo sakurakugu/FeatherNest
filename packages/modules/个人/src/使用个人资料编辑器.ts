@@ -1,4 +1,4 @@
-import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@feathernest/domain/auth'
 import { computed, ref } from 'vue'
 
 export interface ProfileEditorMessages {

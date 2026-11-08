@@ -6,7 +6,7 @@ import {
   ElSelect,
 } from 'element-plus'
 import { FolderOpened, Search } from '@element-plus/icons-vue'
-import { PageSectionShell } from '@personal-system/ui'
+import { PageSectionShell } from '@feathernest/ui'
 
 defineProps<{
   正在上传: boolean

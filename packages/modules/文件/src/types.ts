@@ -1,4 +1,4 @@
-import type { components } from '@personal-system/api/generated/system'
+import type { components } from '@feathernest/api/generated/system'
 
 export type FileItem = components['schemas']['FileRead']
 export type FileFolderItem = components['schemas']['FileFolderRead']

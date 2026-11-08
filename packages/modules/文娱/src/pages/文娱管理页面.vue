@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Delete, Edit, Link, Plus, Search, Star, Upload } from '@element-plus/icons-vue'
-import { 获取API错误消息 } from '@personal-system/api'
-import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步 } from '@personal-system/ui'
+import { 获取API错误消息 } from '@feathernest/api'
+import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步 } from '@feathernest/ui'
 import {
   ElAutocomplete,
   ElButton,

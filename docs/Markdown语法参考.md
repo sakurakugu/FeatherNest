@@ -315,7 +315,7 @@ $$
 自定义语法的结构定义集中在 `packages/modules/文章/src/markdown-schema.ts`，运行时渲染器也会读取这份 schema。其他模块如果需要做编辑器补全、语法提示、校验或文档生成，可以通过以下入口复用：
 
 ```ts
-import { Markdown自定义语法Schema } from '@personal-system/module-articles/markdown-schema'
+import { Markdown自定义语法Schema } from '@feathernest/module-articles/markdown-schema'
 ```
 
 维护规则：

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChatDotRound, RefreshRight } from '@element-plus/icons-vue'
-import { 解析当前API基地址 } from '@personal-system/api'
-import { PageSectionShell } from '@personal-system/ui'
+import { 解析当前API基地址 } from '@feathernest/api'
+import { PageSectionShell } from '@feathernest/ui'
 import {
   ElAlert,
   ElButton,
@@ -105,7 +105,7 @@ const mcpEndpoint = computed(() => {
 })
 const mcpClientConfig = computed(() => JSON.stringify({
   mcpServers: {
-    'personal-system-cloud': {
+    'feathernest-cloud': {
       type: 'http',
       url: mcpEndpoint.value,
       headers: {
@@ -490,7 +490,7 @@ onMounted(refreshAll)
                     </ElButton>
                   </div>
                   <div class="mcp-field__hint">
-                    如果 CC Switch 中已存在 personal-system-cloud，深链只会合并应用开关；需要更新令牌时请先删除旧项或手动编辑。
+                    如果 CC Switch 中已存在 feathernest-cloud，深链只会合并应用开关；需要更新令牌时请先删除旧项或手动编辑。
                   </div>
                 </div>
                 <ElDescriptions :column="1" border>
@@ -545,7 +545,7 @@ onMounted(refreshAll)
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .ai-page {
   height: 100%;

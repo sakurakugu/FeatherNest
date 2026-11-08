@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
+import { BlogTwikooPanel } from '@feathernest/module-blog/widgets'
 import { ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'

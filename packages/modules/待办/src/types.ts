@@ -10,4 +10,4 @@ export type {
   TodoTransferItem,
   TodoTransferPayload,
   TodoUpdateParams,
-} from '@personal-system/domain/todos'
+} from '@feathernest/domain/todos'

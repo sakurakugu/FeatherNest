@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElEmpty } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { 获取所有文章元数据, type ArticleMetaRecord } from '@personal-system/module-articles'
+import { 获取所有文章元数据, type ArticleMetaRecord } from '@feathernest/module-articles'
 
 const emit = defineEmits<{
   click: [slug: string]

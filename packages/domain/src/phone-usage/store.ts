@@ -1,5 +1,5 @@
 import { useStorage } from '@vueuse/core'
-import { 创建手机使用采集平台服务 } from '@personal-system/platform/phone-usage'
+import { 创建手机使用采集平台服务 } from '@feathernest/platform/phone-usage'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
@@ -17,7 +17,7 @@ import type {
   手机使用采集元数据,
 } from './types'
 
-const 存储键 = 'personal-system:phone-usage:v1'
+const 存储键 = 'feathernest:phone-usage:v1'
 const 原始事件保留天数 = 365
 const 默认回溯天数 = 原始事件保留天数
 const 历史汇总展示天数 = 原始事件保留天数

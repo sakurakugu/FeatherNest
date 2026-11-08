@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Plus } from '@element-plus/icons-vue'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import { UniversalAvatar } from '@personal-system/ui'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import { UniversalAvatar } from '@feathernest/ui'
 import { ElButton, ElCard, ElInput, ElMessage, ElPopconfirm, ElSkeleton, ElSpace } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

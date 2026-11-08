@@ -1,4 +1,4 @@
-package com.sakurakugu.personal_system.plugins;
+package com.sakurakugu.feathernest.plugins;
 
 import android.app.AppOpsManager;
 import android.app.usage.UsageEvents;

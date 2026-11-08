@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BlogCalendarWidget, BlogSiteStatsWidget, BlogTocWidget } from '@personal-system/module-blog/widgets'
+import { BlogCalendarWidget, BlogSiteStatsWidget, BlogTocWidget } from '@feathernest/module-blog/widgets'
 
 interface BlogTocItem {
   id: string

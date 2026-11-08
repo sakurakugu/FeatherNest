@@ -1,4 +1,4 @@
-import api from '@personal-system/api'
+import api from '@feathernest/api'
 import type {
   ExternalCoverImportPayload,
   ExternalMediaCandidate,

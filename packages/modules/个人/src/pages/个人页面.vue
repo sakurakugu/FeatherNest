@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { SwitchButton, User } from '@element-plus/icons-vue'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import { PageSectionShell, UniversalAvatar } from '@personal-system/ui'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import { PageSectionShell, UniversalAvatar } from '@feathernest/ui'
 import {
   ElButton,
   ElCard,

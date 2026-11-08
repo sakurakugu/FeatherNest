@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Todo } from '@personal-system/domain/todos'
+import type { Todo } from '@feathernest/domain/todos'
 import type { WidgetUtilityPanel } from '../types'
 import { Refresh } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'

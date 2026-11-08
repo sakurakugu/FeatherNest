@@ -12,7 +12,7 @@ import {
 import { ArrowLeft, ArrowRight, Star, Select } from '@element-plus/icons-vue'
 import { 获取待办完成历史 } from '../api'
 import type { Todo } from '../store'
-import { 使用长按选择 } from '@personal-system/ui'
+import { 使用长按选择 } from '@feathernest/ui'
 import {
   获取优先级强调色,
   是否逾期,
@@ -675,7 +675,7 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .todo-gantt {
   --gantt-day-width: 32px;

@@ -1,4 +1,4 @@
-import { 解析当前API基地址 } from '@personal-system/api'
+import { 解析当前API基地址 } from '@feathernest/api'
 
 const 站内文件路径前缀 = '/files/'
 

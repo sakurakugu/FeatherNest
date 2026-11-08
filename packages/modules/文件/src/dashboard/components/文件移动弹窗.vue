@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElButton, ElIcon, ElTree } from 'element-plus'
 import { Folder, FolderOpened } from '@element-plus/icons-vue'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog } from '@feathernest/ui'
 import type { 目录树节点 } from '../../core/shared'
 
 defineProps<{

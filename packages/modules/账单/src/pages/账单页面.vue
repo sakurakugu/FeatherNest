@@ -25,8 +25,8 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
-import { 获取API错误消息 } from '@personal-system/api'
-import { BaseDialog, PageSectionShell, SegmentedSwitch, 使用路由搜索同步 } from '@personal-system/ui'
+import { 获取API错误消息 } from '@feathernest/api'
+import { BaseDialog, PageSectionShell, SegmentedSwitch, 使用路由搜索同步 } from '@feathernest/ui'
 import {
   创建账单账户,
   创建账单分类,
@@ -1432,7 +1432,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .bills-page {
   height: 100%;

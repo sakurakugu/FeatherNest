@@ -1,14 +1,14 @@
 {
-  "name": "@personal-system/module-stats",
+  "name": "@feathernest/module-stats",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@personal-system/api": "*",
-    "@personal-system/domain": "*",
-    "@personal-system/ui": "*"
+    "@feathernest/api": "*",
+    "@feathernest/domain": "*",
+    "@feathernest/ui": "*"
   },
   "peerDependencies": {
     "@element-plus/icons-vue": "^2.0.0",

@@ -6,7 +6,7 @@ import {
   ElInputNumber,
   ElText,
 } from 'element-plus'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog } from '@feathernest/ui'
 
 defineProps<{
   visible: boolean

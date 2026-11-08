@@ -1,14 +1,14 @@
 {
-  "name": "@personal-system/module-todos",
+  "name": "@feathernest/module-todos",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@personal-system/api": "*",
-    "@personal-system/domain": "*",
-    "@personal-system/ui": "*",
+    "@feathernest/api": "*",
+    "@feathernest/domain": "*",
+    "@feathernest/ui": "*",
     "rrule": "^2.8.1",
     "zod": "^4.6.7"
   },

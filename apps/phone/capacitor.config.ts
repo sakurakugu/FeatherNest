@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.sakurakugu.personal_system',
-  appName: 'Personal System',
+  appId: 'com.sakurakugu.feathernest',
+  appName: 'FeatherNest',
   webDir: 'dist',
   bundledWebRuntime: false,
 }

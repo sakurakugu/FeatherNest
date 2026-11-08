@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { 使用主题存储 } from '@/shared/stores/theme'
 import { 设置桌面小工具窗口内容高度 } from '@/shared/window-manager'
-import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@feathernest/domain/auth'
 import type { WidgetUtilityPanel } from '../types'
 import WidgetHeader from '../components/小工具标题栏.vue'
 import WidgetCollapse from '../components/小工具折叠容器.vue'

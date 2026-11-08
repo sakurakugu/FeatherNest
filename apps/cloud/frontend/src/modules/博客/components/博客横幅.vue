@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { 使用文章存储, type CategoryRecord } from '@personal-system/module-articles'
-import { 使用博客外观存储 } from '@personal-system/module-blog/store'
-import type { BlogViewMode } from '@personal-system/module-blog/view'
+import { 使用文章存储, type CategoryRecord } from '@feathernest/module-articles'
+import { 使用博客外观存储 } from '@feathernest/module-blog/store'
+import type { BlogViewMode } from '@feathernest/module-blog/view'
 import readingTime from 'reading-time/lib/reading-time'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowDown } from '@element-plus/icons-vue'
-import { 获取公开公告, type AnnouncementRecord } from '@personal-system/domain/system'
+import { 获取公开公告, type AnnouncementRecord } from '@feathernest/domain/system'
 import { ElCard, ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import OverflowMarquee from './跑马灯.vue'

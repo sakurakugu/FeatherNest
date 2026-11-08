@@ -1,4 +1,4 @@
-import type { 屏幕使用事件, 屏幕使用事件类型 } from '@personal-system/platform/phone-usage'
+import type { 屏幕使用事件, 屏幕使用事件类型 } from '@feathernest/platform/phone-usage'
 
 export type { 屏幕使用事件, 屏幕使用事件类型 }
 

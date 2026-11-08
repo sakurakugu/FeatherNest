@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/ui",
+  "name": "@feathernest/ui",
   "private": true,
   "type": "module",
   "exports": {
@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "@floating-ui/vue": "^2.0.1",
-    "@personal-system/domain": "*",
-    "@personal-system/theme": "*",
+    "@feathernest/domain": "*",
+    "@feathernest/theme": "*",
     "@vueuse/core": "^15.0.0",
     "eventsource-parser": "^4.1.3"
   },

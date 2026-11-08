@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/app-core",
+  "name": "@feathernest/app-core",
   "private": true,
   "type": "module",
   "exports": {

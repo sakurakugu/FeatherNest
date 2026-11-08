@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import type { 上传执行结果 } from './upload'
 
 interface 上传流程参数<TFile extends globalThis.File> {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Delete, DocumentAdd, EditPen, MagicStick, Select } from '@element-plus/icons-vue'
-import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell } from '@personal-system/ui'
+import { 获取API错误消息 } from '@feathernest/api'
+import { PageSectionShell } from '@feathernest/ui'
 import {
   ElButton,
   ElDrawer,
@@ -2002,7 +2002,7 @@ async function 删除选中未使用文章图片() {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .page-container {
   height: 100%;

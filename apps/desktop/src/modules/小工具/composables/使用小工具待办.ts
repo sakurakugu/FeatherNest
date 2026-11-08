@@ -1,6 +1,6 @@
 import { 获取公开小工具摘要 } from '@/shared/widget-summary'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import { type Todo, 使用待办存储 } from '@personal-system/domain/todos'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import { type Todo, 使用待办存储 } from '@feathernest/domain/todos'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
-import { 获取文章列表, type ArticleQuery, type ArticleRecord } from '@personal-system/module-articles'
-import { MomentComposeCard } from '@personal-system/module-moments'
+import { 获取文章列表, type ArticleQuery, type ArticleRecord } from '@feathernest/module-articles'
+import { MomentComposeCard } from '@feathernest/module-moments'
 import { ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import type { ComponentPublicInstance } from 'vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'

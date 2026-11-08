@@ -2,8 +2,8 @@
 import { computed, ref } from 'vue'
 import { ElAlert, ElButton, ElForm } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { 使用API环境连接性 } from '@personal-system/domain/api-environment'
-import { ApiEnvironmentManager, AppIconButton } from '@personal-system/ui'
+import { 使用API环境连接性 } from '@feathernest/domain/api-environment'
+import { ApiEnvironmentManager, AppIconButton } from '@feathernest/ui'
 import type { DeveloperLoginAction } from '../dev-login'
 import type { AuthEntryMessages, AuthEntryRedirectHandler } from '../使用认证入口'
 import { 使用认证入口 } from '../使用认证入口'
@@ -167,7 +167,7 @@ function handleActionButtonClick() {
 
       <div class="auth-entry-panel__title">
         <slot name="title">
-          <h1 class="page-title">Personal System</h1>
+          <h1 class="page-title">FeatherNest</h1>
         </slot>
       </div>
 

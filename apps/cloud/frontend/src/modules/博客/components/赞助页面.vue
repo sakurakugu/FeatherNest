@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { sponsorConfig } from '@personal-system/module-blog/widgets'
-import { UniversalAvatar } from '@personal-system/ui'
+import { sponsorConfig } from '@feathernest/module-blog/widgets'
+import { UniversalAvatar } from '@feathernest/ui'
 import { ElCard, ElEmpty } from 'element-plus'
 import { computed } from 'vue'
 

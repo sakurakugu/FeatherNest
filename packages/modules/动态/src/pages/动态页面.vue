@@ -5,8 +5,8 @@ import {
   ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTag, ElTooltip,
 } from 'element-plus'
 import { ChatDotRound, Delete, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
-import { 获取API错误消息 } from '@personal-system/api'
-import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@personal-system/ui'
+import { 获取API错误消息 } from '@feathernest/api'
+import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@feathernest/ui'
 import {
   删除动态图片,
   获取动态图片,

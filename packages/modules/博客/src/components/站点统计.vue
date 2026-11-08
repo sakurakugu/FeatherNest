@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
-import { 获取博客统计, type BlogStats } from '@personal-system/domain/system'
+import { 获取博客统计, type BlogStats } from '@feathernest/domain/system'
 
 // 站点开始日期，可配置
 const SITE_START_DATE = '2026-03-26'

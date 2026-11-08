@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { 使用手机使用统计存储 } from '@personal-system/domain/phone-usage'
-import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
+import { 使用手机使用统计存储 } from '@feathernest/domain/phone-usage'
+import { PageSectionShell, SegmentedSwitch } from '@feathernest/ui'
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, ref } from 'vue'
 

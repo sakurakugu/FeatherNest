@@ -1,1 +1,1 @@
-export type { FilePurpose, FileItem, FileFolderItem, FileTreeNode, FileBreadcrumbItem, FileExplorerData, FileSearchFolderItem, FileSearchFileItem, FileSearchData } from '@personal-system/module-files'
+export type { FilePurpose, FileItem, FileFolderItem, FileTreeNode, FileBreadcrumbItem, FileExplorerData, FileSearchFolderItem, FileSearchFileItem, FileSearchData } from '@feathernest/module-files'

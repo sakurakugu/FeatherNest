@@ -12,13 +12,13 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'blog',
         name: 'DashboardBlogManage',
-        component: () => import('@personal-system/module-blog').then((module) => module.BlogManagePage),
+        component: () => import('@feathernest/module-blog').then((module) => module.BlogManagePage),
         meta: { title: '博客管理' },
       },
       {
         path: 'profile',
         name: 'DashboardProfile',
-        component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
+        component: () => import('@feathernest/module-profile').then((module) => module.ProfilePage),
         meta: { title: '个人资料' },
         props: {
           sessionEndRedirect: { name: 'BlogHome', query: { login: '1' } },
@@ -27,55 +27,55 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'device-sessions',
         name: 'DashboardDeviceSessions',
-        component: () => import('@personal-system/module-auth').then((module) => module.DeviceSessionsPage),
+        component: () => import('@feathernest/module-auth').then((module) => module.DeviceSessionsPage),
         meta: { title: '登录设备' },
       },
       {
         path: 'todos',
         name: 'DashboardTodos',
-        component: () => import('@personal-system/module-todos').then((module) => module.TodosPage),
+        component: () => import('@feathernest/module-todos').then((module) => module.TodosPage),
         meta: { title: '待办事项', searchPlaceholder: '搜索待办', searchTarget: 'current' },
       },
       {
         path: 'bills',
         name: 'DashboardBills',
-        component: () => import('@personal-system/module-bills').then((module) => module.BillsPage),
+        component: () => import('@feathernest/module-bills').then((module) => module.BillsPage),
         meta: { title: '账单管理', searchPlaceholder: '搜索账单', searchTarget: 'current' },
       },
       {
         path: 'moments',
         name: 'DashboardMoments',
-        component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
+        component: () => import('@feathernest/module-moments').then((module) => module.MomentsPage),
         meta: { title: '动态管理' },
       },
       {
         path: 'materials',
         name: 'DashboardCollections',
-        component: () => import('@personal-system/module-materials').then((module) => module.MaterialsPage),
+        component: () => import('@feathernest/module-materials').then((module) => module.MaterialsPage),
         meta: { title: '资料库', searchPlaceholder: '搜索资料', searchTarget: 'current' },
       },
       {
         path: 'articles',
         name: 'DashboardArticles',
-        component: () => import('@personal-system/module-articles').then((module) => module.ArticlesPage),
+        component: () => import('@feathernest/module-articles').then((module) => module.ArticlesPage),
         meta: { title: '文章管理' },
       },
       {
         path: 'articles/edit/:id?',
         name: 'ArticleEditor',
-        component: () => import('@personal-system/module-articles').then((module) => module.ArticleEditorPage),
+        component: () => import('@feathernest/module-articles').then((module) => module.ArticleEditorPage),
         meta: { title: '文章编辑' },
       },
       {
         path: 'files',
         name: 'DashboardFiles',
-        component: () => import('@personal-system/module-files').then((module) => module.FilesPage),
+        component: () => import('@feathernest/module-files').then((module) => module.FilesPage),
         meta: { title: '文件管理', searchPlaceholder: '搜索文件', searchTarget: 'current' },
       },
       {
         path: 'media',
         name: 'DashboardMedia',
-        component: () => import('@personal-system/module-media').then((module) => module.MediaPage),
+        component: () => import('@feathernest/module-media').then((module) => module.MediaPage),
         meta: { title: '作品推荐', searchPlaceholder: '搜索文娱作品', searchTarget: 'current' },
       },
       {
@@ -93,7 +93,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'stats/other',
         name: 'DashboardDataStats',
-        component: () => import('@personal-system/module-stats').then((module) => module.DataStatsPage),
+        component: () => import('@feathernest/module-stats').then((module) => module.DataStatsPage),
         meta: { title: '数据统计' },
       },
       {

@@ -9,4 +9,4 @@ export {
   切换待办置顶,
   取消完成待办,
   更新待办,
-} from '@personal-system/domain/todos'
+} from '@feathernest/domain/todos'

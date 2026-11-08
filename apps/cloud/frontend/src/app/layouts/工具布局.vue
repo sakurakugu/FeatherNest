@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { 过滤工具侧栏菜单项 } from '../../modules/工具/src'
-import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@feathernest/domain/auth'
 import { 使用设置存储 } from '../../shared/stores/settings'
 import { computed } from 'vue'
 import { RouterView } from 'vue-router'

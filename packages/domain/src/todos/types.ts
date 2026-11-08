@@ -1,4 +1,4 @@
-import type { components, paths } from '@personal-system/api/generated/todos'
+import type { components, paths } from '@feathernest/api/generated/todos'
 
 export type RecurrenceType = components['schemas']['RecurrenceType']
 export type TodoStatus = components['schemas']['TodoStatus']

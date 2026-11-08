@@ -2,12 +2,12 @@ import type { 桌面运行时Api } from './desktop-runtime-contract'
 
 declare global {
   interface Window {
-    personalSystemDesktop?: 桌面运行时Api
+    featherNestDesktop?: 桌面运行时Api
   }
 }
 
 export function 获取桌面运行时() {
-  return window.personalSystemDesktop ?? null
+  return window.featherNestDesktop ?? null
 }
 
 export function 获取必需桌面运行时(errorMessage: string): 桌面运行时Api {

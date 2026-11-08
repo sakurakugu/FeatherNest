@@ -14,7 +14,7 @@ import {
 } from '../../api'
 import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../types'
 import { 获取API错误消息 } from '../../../../shared/api'
-import { BaseDialog, PageSectionShell } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell } from '@feathernest/ui'
 
 const initialLoading = ref(true)
 const refreshing = ref(false)

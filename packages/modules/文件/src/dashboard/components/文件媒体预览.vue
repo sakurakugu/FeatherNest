@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElButton, ElSpace, ElText } from 'element-plus'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog } from '@feathernest/ui'
 import type { 文件展示项 } from '../../core/shared'
 import {
   获取可预览文件链接,

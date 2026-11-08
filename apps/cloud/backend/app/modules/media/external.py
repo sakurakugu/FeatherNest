@@ -35,7 +35,7 @@ from app.shared.kernel.config import settings
 from app.shared.storage.client import 构建存储键, 尽力删除对象, 尽力删除多个对象, upload_bytes
 
 logger = logging.getLogger(__name__)
-默认外部请求头 = {"User-Agent": "personal-system/1.0"}
+默认外部请求头 = {"User-Agent": "feathernest/1.0"}
 最大文娱封面上传字节数 = 10 * 1024 * 1024
 
 

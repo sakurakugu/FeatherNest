@@ -4,7 +4,7 @@ import {
   MediaRating,
   获取评分展示,
   type MediaRecord,
-} from '@personal-system/module-media';
+} from '@feathernest/module-media';
 import { ElSpace, ElTag } from 'element-plus';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { 使用视口 } from '../../../shared/composables/使用视口';

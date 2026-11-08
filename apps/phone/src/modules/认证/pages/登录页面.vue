@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { 开发者登录操作 } from '@/modules/认证/lib/dev-login'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
-import { AuthEntryCard } from '@personal-system/module-auth'
+import { AuthEntryCard } from '@feathernest/module-auth'
 </script>
 
 <template>

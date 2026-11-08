@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Close, Hide, Lock, Right, User, View } from '@element-plus/icons-vue'
-import { 使用认证入口 } from '@personal-system/module-auth/使用认证入口'
+import { 使用认证入口 } from '@feathernest/module-auth/使用认证入口'
 import { 开发者登录操作 } from '../../modules/认证/dev-login'
 
 const props = defineProps<{ show: boolean }>()
@@ -79,7 +79,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', 处理键盘事件))
         <aside class="login-modal__rail" aria-hidden="true">
           <span class="login-modal__rail-brand">PS<span>.</span></span>
           <span class="login-modal__rail-copy">一个属于你的<br />私人空间。</span>
-          <span class="login-modal__rail-foot">PERSONAL SYSTEM<br />EST. 2026</span>
+          <span class="login-modal__rail-foot">FeatherNest<br />EST. 2026</span>
         </aside>
 
         <div class="login-modal__body">
@@ -91,7 +91,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', 处理键盘事件))
           </div>
 
           <header class="login-modal__welcome">
-            <span class="login-modal__eyebrow">PERSONAL SYSTEM</span>
+            <span class="login-modal__eyebrow">FeatherNest</span>
             <h2 id="login-modal-title">回到这里</h2>
             <p id="login-modal-subtitle">继续你的日常记录。</p>
           </header>

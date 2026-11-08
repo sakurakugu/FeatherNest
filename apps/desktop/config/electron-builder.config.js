@@ -4,7 +4,7 @@ const processEnv = globalThis.process?.env ?? {}
 const 支持的Windows构建目标 = new Set(['nsis', 'msi', 'portable'])
 
 function 解析Windows构建目标() {
-  const rawTargets = processEnv.PERSONAL_SYSTEM_DESKTOP_BUILD_TARGETS
+  const rawTargets = processEnv.FEATHERNEST_DESKTOP_BUILD_TARGETS
   if (!rawTargets) {
     return ['nsis']
   }
@@ -30,8 +30,8 @@ function 解析Windows构建目标() {
 const windowsBuildTargets = 解析Windows构建目标()
 
 const buildConfig = {
-  appId: 'top.sakurakugu.personal-system.desktop.electron',
-  productName: 'Personal System',
+  appId: 'top.sakurakugu.feathernest.desktop.electron',
+  productName: 'FeatherNest',
   electronVersion: '42.1.0',
   publish: null,
   directories: {
@@ -47,7 +47,7 @@ const buildConfig = {
   // 自定义协议注册：macOS 写入 Info.plist；Windows 由主进程运行时注册 + 安装器关联。
   protocols: [
     {
-      name: 'Personal System',
+      name: 'FeatherNest',
       // 协议 scheme 集中在 electron/shared/protocol.mjs，改名时只改一处。
       schemes: [APP_PROTOCOL_SCHEME],
     },

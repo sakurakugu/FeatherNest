@@ -5,4 +5,4 @@ export {
   获取公开公告,
   获取公开设置,
   追踪页面访问,
-} from '@personal-system/domain/system'
+} from '@feathernest/domain/system'

@@ -20,8 +20,8 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
-import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步, 使用长按选择 } from '@personal-system/ui'
-import { 获取API错误消息 } from '@personal-system/api'
+import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步, 使用长按选择 } from '@feathernest/ui'
+import { 获取API错误消息 } from '@feathernest/api'
 import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
   创建资料,
@@ -1475,7 +1475,7 @@ watch(showDialog, (visible) => {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .page-container {
   height: 100%;

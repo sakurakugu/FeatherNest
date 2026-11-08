@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import type { 文件夹展示项 } from './shared'
 
 interface 文件夹删除编排参数 {

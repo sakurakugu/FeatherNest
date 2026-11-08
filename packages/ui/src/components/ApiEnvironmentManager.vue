@@ -6,7 +6,7 @@ import {
   type ApiEnvironmentItem,
   type ApiEnvironmentManagerSubmitPayload,
   使用API环境管理器,
-} from '@personal-system/domain/api-environment'
+} from '@feathernest/domain/api-environment'
 
 interface Props {
   environments: ApiEnvironmentItem[]

@@ -1,4 +1,4 @@
-# 个人系统（Personal System）
+# FeatherNest
 
 个人使用的多端系统，当前包含云端站点、手机端应用、桌面端应用、共享前端包、云端后端和开发辅助脚本。主要能力包括博客展示、后台管理、待办、文章、文件、账单、收藏、动态、文娱数据、系统统计，以及后续 AI 与 MCP 工具接入。
 
@@ -14,8 +14,8 @@
 ## 快速开始
 
 ```bash
-git clone git@github.com:sakurakugu/personal-system.git
-cd personal-system
+git clone git@github.com:sakurakugu/FeatherNest.git
+cd FeatherNest
 ```
 
 安装 Node workspace 依赖：
@@ -333,8 +333,8 @@ python ./tools/1.启动项目.py --phone --host 192.168.1.23
 python ./tools/1.启动项目.py --phone --port 5176
 ```
 
-`--phone` 安装的 Debug 应用包名为 `com.sakurakugu.personal_system.dev`，可与包名为
-`com.sakurakugu.personal_system` 的 Release 应用同时安装；两者的数据相互独立。
+`--phone` 安装的 Debug 应用包名为 `com.sakurakugu.feathernest.dev`，可与包名为
+`com.sakurakugu.feathernest` 的 Release 应用同时安装；两者的数据相互独立。
 真机通过局域网热更新时需指定电脑的局域网 IP，并保持手机和电脑在同一网络。
 
 Android APK 构建：

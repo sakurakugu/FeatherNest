@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { 使用主题存储 } from '@/shared/stores/theme'
-import { PageSectionShell, ThemeHuePanel, ThemeModePanel } from '@personal-system/ui'
+import { PageSectionShell, ThemeHuePanel, ThemeModePanel } from '@feathernest/ui'
 
 const theme = 使用主题存储()
 </script>

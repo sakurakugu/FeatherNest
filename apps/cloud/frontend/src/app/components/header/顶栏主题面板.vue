@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ThemeModePanel } from '@personal-system/ui'
+import { ThemeModePanel } from '@feathernest/ui'
 import { 使用主题存储 } from '../../../shared/stores/theme'
 
 withDefaults(defineProps<{

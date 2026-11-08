@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import type {
   列表重命名草稿,
   右侧新建文件夹草稿,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChatLineRound } from '@element-plus/icons-vue'
-import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
-import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
+import MarkdownRenderer from '@feathernest/module-articles/components/Markdown渲染器.vue'
+import { BlogTwikooPanel } from '@feathernest/module-blog/widgets'
 import { ElIcon } from 'element-plus'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 

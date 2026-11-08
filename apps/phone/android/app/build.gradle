@@ -38,10 +38,10 @@ if (hasAnyReleaseSigning && !hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.sakurakugu.personal_system"
+    namespace = "com.sakurakugu.feathernest"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.sakurakugu.personal_system"
+        applicationId "com.sakurakugu.feathernest"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

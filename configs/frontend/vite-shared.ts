@@ -81,7 +81,7 @@ function 读取工作区包别名(directoryPath: string): AliasEntry[] {
 
   const rawContent = fs.readFileSync(packageJsonPath, 'utf8')
   const packageJson = JSON.parse(rawContent) as WorkspacePackageJson
-  if (!packageJson.name?.startsWith('@personal-system/')) {
+  if (!packageJson.name?.startsWith('@feathernest/')) {
     return []
   }
 

@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { SecureStorage } from '@aparajita/capacitor-secure-storage'
 
-const PHONE_AUTH_TOKEN_STORAGE_KEY = 'personal-system:phone-auth-token'
+const PHONE_AUTH_TOKEN_STORAGE_KEY = 'feathernest:phone-auth-token'
 
 let cachedPhoneAuthToken: string | null = null
 let phoneAuthTokenInitialized = false

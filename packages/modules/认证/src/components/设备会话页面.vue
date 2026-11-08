@@ -21,10 +21,10 @@ import {
   撤销所有设备会话,
   撤销设备会话,
   使用认证存储,
-} from '@personal-system/domain/auth'
-import type { DeviceSessionInfo } from '@personal-system/domain/auth'
-import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell } from '@personal-system/ui'
+} from '@feathernest/domain/auth'
+import type { DeviceSessionInfo } from '@feathernest/domain/auth'
+import { 获取API错误消息 } from '@feathernest/api'
+import { PageSectionShell } from '@feathernest/ui'
 
 type DeviceSessionTableItem = DeviceSessionInfo & {
   is_current: boolean

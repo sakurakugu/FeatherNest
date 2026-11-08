@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import { 拖拽数据类型 } from './shared'
 import { 是否可移动文件 } from './resource'
 import type {

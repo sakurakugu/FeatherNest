@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/module-files",
+  "name": "@feathernest/module-files",
   "private": true,
   "type": "module",
   "exports": {
@@ -8,8 +8,8 @@
     "./dashboard/*": "./src/dashboard/*"
   },
   "dependencies": {
-    "@personal-system/api": "*",
-    "@personal-system/ui": "*",
+    "@feathernest/api": "*",
+    "@feathernest/ui": "*",
     "p-limit": "^3.1.0"
   },
   "peerDependencies": {

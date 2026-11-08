@@ -3,7 +3,7 @@ import { computed, effectScope, onBeforeUnmount, onMounted, readonly, ref } from
 import { 默认音乐播放列表, 默认音乐播放模式, 默认音乐音量 } from '../config'
 import type { MusicLyricLine, MusicPlayMode, MusicTrack } from '../types'
 
-const 音量存储键 = 'personal-system-music-volume'
+const 音量存储键 = 'feathernest-music-volume'
 
 type 播放器状态 = {
   playlist: MusicTrack[]

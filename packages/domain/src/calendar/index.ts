@@ -1,4 +1,4 @@
-import api from '@personal-system/api'
+import api from '@feathernest/api'
 
 export interface HolidayCalendarYear {
   year: number

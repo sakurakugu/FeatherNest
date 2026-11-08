@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import type { CategoryRecord, TagRecord } from '@personal-system/module-articles'
+import type { CategoryRecord, TagRecord } from '@feathernest/module-articles'
 import {
   BlogCalendarWidget,
   BlogCategoryListWidget,
   BlogSiteStatsWidget,
   BlogTagCloudWidget,
-} from '@personal-system/module-blog/widgets'
-import { MusicPlayerWidget } from '@personal-system/module-music'
+} from '@feathernest/module-blog/widgets'
+import { MusicPlayerWidget } from '@feathernest/module-music'
 import ProfileCard from './个人资料卡.vue'
 
 defineProps<{

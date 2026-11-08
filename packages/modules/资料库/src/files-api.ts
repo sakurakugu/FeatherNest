@@ -1,5 +1,5 @@
 import axios from 'axios'
-import api, { 解析当前API基地址 } from '@personal-system/api'
+import api, { 解析当前API基地址 } from '@feathernest/api'
 import { 解析管理文件URL地址 } from './managedFile'
 import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData } from './files-types'
 

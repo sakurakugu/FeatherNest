@@ -28,7 +28,7 @@ import {
 } from '../../api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../types'
 import { 获取API错误消息 } from '../../../../shared/api'
-import { BaseDialog, PageSectionShell } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell } from '@feathernest/ui'
 
 const loading = ref(false)
 const announcements = ref<AnnouncementRecord[]>([])
@@ -591,7 +591,7 @@ function toggleRecycleBin() {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .page-container {
   height: 100%;

@@ -1,11 +1,11 @@
-import { 初始化主题存储, 仅运行一次引导任务 } from '@personal-system/app-core'
+import { 初始化主题存储, 仅运行一次引导任务 } from '@feathernest/app-core'
 import type { Pinia } from 'pinia'
-import { 配置API客户端上下文 } from '@personal-system/api'
+import { 配置API客户端上下文 } from '@feathernest/api'
 import {
   配置认证存储上下文,
   创建设备令牌会话驱动,
   使用认证存储,
-} from '@personal-system/domain/auth'
+} from '@feathernest/domain/auth'
 import { 使用主题存储 } from '../shared/stores/theme'
 import {
   获取存储的桌面令牌,
@@ -34,7 +34,7 @@ export function 初始化应用外壳(pinia: Pinia): Promise<void> {
     })
     配置认证存储上下文({
       sessionDriver: 创建设备令牌会话驱动({
-        deviceName: 'Personal System',
+        deviceName: 'FeatherNest',
         deviceType: 'desktop',
         scope: 'full_client',
         clientVersion: '0.1.0',

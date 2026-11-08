@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { UniversalAvatar } from '@personal-system/ui'
+import { UniversalAvatar } from '@feathernest/ui'
 import { ElButton, ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
 import axios from 'axios'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { 根据ID获取公开动态, 点赞动态, 记录动态浏览, 取消点赞动态 } from '@personal-system/module-moments'
-import type { PublishedMoment } from '@personal-system/module-moments'
-import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
-import { 使用设置存储 } from '@personal-system/domain/system'
-import { 解析管理文件URL地址 } from '@personal-system/module-files'
+import { 根据ID获取公开动态, 点赞动态, 记录动态浏览, 取消点赞动态 } from '@feathernest/module-moments'
+import type { PublishedMoment } from '@feathernest/module-moments'
+import MarkdownRenderer from '@feathernest/module-articles/components/Markdown渲染器.vue'
+import { 使用设置存储 } from '@feathernest/domain/system'
+import { 解析管理文件URL地址 } from '@feathernest/module-files'
 import TwikooPanel from './评论面板.vue'
 
 const props = defineProps<{

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Histogram, Refresh } from '@element-plus/icons-vue'
-import { 获取API错误消息 } from '@personal-system/api'
-import { 获取仪表盘统计, type DashboardStats } from '@personal-system/domain/system'
-import { AppIconButton, PageSectionShell } from '@personal-system/ui'
+import { 获取API错误消息 } from '@feathernest/api'
+import { 获取仪表盘统计, type DashboardStats } from '@feathernest/domain/system'
+import { AppIconButton, PageSectionShell } from '@feathernest/ui'
 import { ElAlert, ElCard, ElSkeleton, ElStatistic, ElTooltip } from 'element-plus'
 import { onMounted, ref } from 'vue'
 

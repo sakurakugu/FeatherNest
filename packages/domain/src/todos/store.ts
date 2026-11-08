@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { onScopeDispose, ref, watch } from 'vue'
 import { isCancelledError } from '@tanstack/query-core'
-import { 解析当前API基地址 } from '@personal-system/api'
+import { 解析当前API基地址 } from '@feathernest/api'
 import { 使用认证存储 } from '../auth/store'
 import { 待办查询缓存 } from './query-cache'
 import {

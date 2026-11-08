@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, clearTimeout, HTMLInputElement */
 import { ArrowLeft, Calendar, CircleCheckFilled, CloseBold, Delete, Download, Filter, Grid, List, Menu, RefreshRight, Search, Select, Star, Timer, Upload, WarningFilled } from '@element-plus/icons-vue'
-import { BaseDialog, PageSectionShell, SegmentedSwitch, TagInlineInput, 使用路由搜索同步 } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, SegmentedSwitch, TagInlineInput, 使用路由搜索同步 } from '@feathernest/ui'
 import {
   ElButton,
   ElCheckbox,

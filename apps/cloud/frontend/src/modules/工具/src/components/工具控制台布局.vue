@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ConsoleSidebarLayout } from '@personal-system/ui'
+import { ConsoleSidebarLayout } from '@feathernest/ui'
 import type { 工具菜单项 } from '../ConsoleLayout'
 
 defineProps<{

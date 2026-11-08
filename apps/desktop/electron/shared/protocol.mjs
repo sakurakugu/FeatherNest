@@ -2,11 +2,11 @@
  * 桌面端自定义协议常量与解析逻辑。
  *
  * 协议地址集中在这里定义，后续需要改名时只改本文件与 electron-builder 配置中的引用。
- * 当前协议形如：personal-system://widget?token=<urlencoded token>
+ * 当前协议形如：feathernest://widget?token=<urlencoded token>
  */
 
 /** 自定义协议 scheme。 */
-const APP_PROTOCOL_SCHEME = 'personal-system'
+const APP_PROTOCOL_SCHEME = 'feathernest'
 
 /** 小工具协议地址的 hostname。 */
 const APP_PROTOCOL_WIDGET_HOST = 'widget'
@@ -38,7 +38,7 @@ function 从启动参数查找协议URL(argv) {
 
 /**
  * 解析小工具协议地址。
- * 仅接受 personal-system://widget 主机，其余地址返回 null，避免误处理其他协议路由。
+ * 仅接受 feathernest://widget 主机，其余地址返回 null，避免误处理其他协议路由。
  * @param {string} rawUrl 协议地址
  * @returns {{ token: string | null } | null}
  */

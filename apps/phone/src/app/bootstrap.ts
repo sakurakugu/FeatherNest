@@ -1,4 +1,4 @@
-import { 初始化主题存储, 仅运行一次引导任务 } from '@personal-system/app-core'
+import { 初始化主题存储, 仅运行一次引导任务 } from '@feathernest/app-core'
 import type { Pinia } from 'pinia'
 import { App } from '@capacitor/app'
 import {
@@ -6,10 +6,10 @@ import {
   创建设备令牌会话驱动,
   是否启用开发者登录,
   使用认证存储,
-} from '@personal-system/domain/auth'
-import { 使用手机使用统计存储 } from '@personal-system/domain/phone-usage'
-import { 配置API客户端上下文 } from '@personal-system/api'
-import { 使用设置存储 } from '@personal-system/domain/system'
+} from '@feathernest/domain/auth'
+import { 使用手机使用统计存储 } from '@feathernest/domain/phone-usage'
+import { 配置API客户端上下文 } from '@feathernest/api'
+import { 使用设置存储 } from '@feathernest/domain/system'
 import type { Router } from 'vue-router'
 import { watch } from 'vue'
 import { 初始化原生外壳, 是否为原生应用, 同步原生主题 } from './native-shell'
@@ -45,7 +45,7 @@ export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<voi
     })
     配置认证存储上下文({
       sessionDriver: 创建设备令牌会话驱动({
-        deviceName: 'Personal System Phone',
+        deviceName: 'FeatherNest Phone',
         deviceType: 'phone',
         scope: 'full_client',
         platform: navigator.platform || 'phone',

@@ -1,6 +1,6 @@
 export {
   使用待办存储,
-} from '@personal-system/domain/todos'
+} from '@feathernest/domain/todos'
 export type {
   CompletionHistoryDay,
   CompletionHistoryItem,
@@ -12,4 +12,4 @@ export type {
   TodoTransferItem,
   TodoTransferPayload,
   TodoUpdateParams,
-} from '@personal-system/domain/todos'
+} from '@feathernest/domain/todos'

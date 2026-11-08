@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 import type { 批量删除执行结果, 批量执行结果 } from './actions'
 import type { 资源标识 } from './shared'
 

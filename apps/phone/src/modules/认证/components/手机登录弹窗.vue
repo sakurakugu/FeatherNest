@@ -2,9 +2,9 @@
 import { Close } from '@element-plus/icons-vue'
 import { 开发者登录操作 } from '@/modules/认证/lib/dev-login'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
-import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
-import { AuthEntryCard } from '@personal-system/module-auth'
-import { AppIconButton, BaseDialog } from '@personal-system/ui'
+import { 使用认证存储, 使用登录门禁存储 } from '@feathernest/domain/auth'
+import { AuthEntryCard } from '@feathernest/module-auth'
+import { AppIconButton, BaseDialog } from '@feathernest/ui'
 import { computed, watch } from 'vue'
 
 const auth = 使用认证存储()
@@ -55,7 +55,7 @@ watch(
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/dropdown.css';
+@import '@feathernest/ui/styles/dropdown.css';
 
 :deep(.phone-login-dialog .el-dialog) {
   max-width: calc(100vw - 24px);

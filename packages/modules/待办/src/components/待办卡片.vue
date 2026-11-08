@@ -3,7 +3,7 @@
 import { ElCard, ElCheckbox, ElTag, ElTooltip, ElIcon } from 'element-plus'
 import { Star, Calendar, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../store'
-import { 使用长按选择 } from '@personal-system/ui'
+import { 使用长按选择 } from '@feathernest/ui'
 import {
   解析标签,
   获取优先级标签类型,

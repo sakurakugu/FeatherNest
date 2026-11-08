@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/domain",
+  "name": "@feathernest/domain",
   "private": true,
   "type": "module",
   "exports": {
@@ -11,8 +11,8 @@
     "./todos": "./src/todos/index.ts"
   },
   "dependencies": {
-    "@personal-system/api": "*",
-    "@personal-system/platform": "*",
+    "@feathernest/api": "*",
+    "@feathernest/platform": "*",
     "@tanstack/query-core": "^5.105.0",
     "@vueuse/core": "^15.0.0"
   },

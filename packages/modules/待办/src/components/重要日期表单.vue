@@ -13,7 +13,7 @@ import {
 } from 'element-plus'
 import type { Todo } from '../store'
 import { recurrenceOptions } from '../helpers/todo-item'
-import { BaseDialog, SegmentedSwitch } from '@personal-system/ui'
+import { BaseDialog, SegmentedSwitch } from '@feathernest/ui'
 
 interface Props {
   modelValue: boolean

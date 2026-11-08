@@ -1,4 +1,4 @@
-import { 是否启用开发者登录, 使用认证存储 } from '@personal-system/domain/auth'
+import { 是否启用开发者登录, 使用认证存储 } from '@feathernest/domain/auth'
 import { reactive, ref } from 'vue'
 export interface AuthEntryRedirectHandler { getRedirectPath: () => string; navigate: (path: string) => Promise<unknown> }
 export interface AuthEntryMessages { developerLoginFailed?: string; loginFailed?: string; redirectFailed?: string }

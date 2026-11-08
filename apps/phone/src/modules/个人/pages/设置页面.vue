@@ -2,8 +2,8 @@
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { Brush, Connection, Grid, Monitor } from '@element-plus/icons-vue'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import { PageSectionShell } from '@personal-system/ui'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import { PageSectionShell } from '@feathernest/ui'
 import { computed } from 'vue'
 
 const auth = 使用认证存储()

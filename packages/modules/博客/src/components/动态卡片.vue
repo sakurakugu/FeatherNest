@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from '@vueuse/core'
 import { Icon } from '@iconify/vue'
-import { UniversalAvatar } from '@personal-system/ui'
+import { UniversalAvatar } from '@feathernest/ui'
 import { ElButton, ElMessage, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
-import { 点赞动态, 记录动态浏览, 取消点赞动态 } from '@personal-system/module-moments'
-import { 解析管理文件URL地址 } from '@personal-system/module-files'
+import { 点赞动态, 记录动态浏览, 取消点赞动态 } from '@feathernest/module-moments'
+import { 解析管理文件URL地址 } from '@feathernest/module-files'
 import type { FeedMomentRecord } from '../feed'
 
 const props = defineProps<{

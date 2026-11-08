@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import type { ArticleMetaRecord } from '@personal-system/module-articles'
+import type { ArticleMetaRecord } from '@feathernest/module-articles'
 
 defineProps<{
   relatedArticles: ArticleMetaRecord[]

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { 是否API未授权错误 } from '@personal-system/api'
+import { 是否API未授权错误 } from '@feathernest/api'
 import {
   修改当前用户密码,
   更新当前用户,

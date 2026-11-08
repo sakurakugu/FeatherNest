@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
-import { 使用认证存储 } from '@personal-system/domain/auth'
-import { 使用API环境页面 } from '@personal-system/domain/api-environment'
-import { ApiEnvironmentManager, PageSectionShell } from '@personal-system/ui'
+import { 使用认证存储 } from '@feathernest/domain/auth'
+import { 使用API环境页面 } from '@feathernest/domain/api-environment'
+import { ApiEnvironmentManager, PageSectionShell } from '@feathernest/ui'
 
 const auth = 使用认证存储()
 const apiEnvironmentStore = 使用API环境存储()

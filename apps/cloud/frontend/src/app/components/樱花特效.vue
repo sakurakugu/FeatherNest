@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* global HTMLImageElement, CanvasRenderingContext2D, HTMLCanvasElement, Image, requestAnimationFrame, cancelAnimationFrame */
-import { 使用博客外观存储 } from '@personal-system/module-blog/store'
+import { 使用博客外观存储 } from '@feathernest/module-blog/store'
 import { onMounted, onUnmounted, watch } from 'vue'
 
 interface SakuraConfig {

@@ -3,7 +3,7 @@
 import { Icon } from '@iconify/vue'
 import { ElBadge } from 'element-plus'
 import { nextTick, onMounted, ref, watch } from 'vue'
-import type { CategoryRecord } from '@personal-system/module-articles'
+import type { CategoryRecord } from '@feathernest/module-articles'
 import type { BlogViewMode } from '../view'
 import { 使用公告中心 } from '../stores/announcement-center'
 

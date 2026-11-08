@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@feathernest/domain/auth'
 import { siBilibili, siGithub } from 'simple-icons'
 import { onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

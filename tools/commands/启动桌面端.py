@@ -226,7 +226,7 @@ def 构建桌面端(
     desktop_env = 获取桌面端环境变量()
     selected_targets = build_targets or list(桌面端默认构建目标)
     target_text = 获取桌面端构建目标文案(selected_targets)
-    desktop_env["PERSONAL_SYSTEM_DESKTOP_BUILD_TARGETS"] = ",".join(selected_targets)
+    desktop_env["FEATHERNEST_DESKTOP_BUILD_TARGETS"] = ",".join(selected_targets)
     echo(f"正在构建桌面端 Electron Windows 产物: {target_text}")
     subprocess.run([*npm_cmd, "run", "electron:build"], check=True, cwd=DESKTOP_DIR, env=desktop_env)
     release_dir = DESKTOP_DIR / "build" / "release"

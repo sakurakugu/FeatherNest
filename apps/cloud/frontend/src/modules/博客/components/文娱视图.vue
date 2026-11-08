@@ -7,9 +7,9 @@ import {
   type MediaRecord,
   type MediaStatus,
   type MediaType,
-} from '@personal-system/module-media'
-import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
-import { ContentTabs, type ContentTabItem } from '@personal-system/ui'
+} from '@feathernest/module-media'
+import { BlogTwikooPanel } from '@feathernest/module-blog/widgets'
+import { ContentTabs, type ContentTabItem } from '@feathernest/ui'
 import { ElEmpty } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'

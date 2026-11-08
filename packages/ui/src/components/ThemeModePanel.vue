@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { ElSwitch } from 'element-plus'
-import type { ThemeMode } from '@personal-system/theme'
+import type { ThemeMode } from '@feathernest/theme'
 
 const props = withDefaults(defineProps<{
   modelValue: ThemeMode

@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { ElAlert, ElCard, ElCol, ElRow, ElSkeleton, ElStatistic } from 'element-plus'
 import { Histogram } from '@element-plus/icons-vue'
-import { PageSectionShell } from '@personal-system/ui'
+import { PageSectionShell } from '@feathernest/ui'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'

@@ -2,8 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { ElAlert, ElMessage, ElSwitch } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { SettingsItem, SettingsPageLayout, SettingsSectionCard } from '@personal-system/ui'
-import { 使用设置存储 } from '@personal-system/domain/system'
+import { SettingsItem, SettingsPageLayout, SettingsSectionCard } from '@feathernest/ui'
+import { 使用设置存储 } from '@feathernest/domain/system'
 import { 获取管理设置, 更新管理设置 } from '../../api'
 import { 获取API错误消息 } from '../../../../shared/api'
 

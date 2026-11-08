@@ -19,5 +19,5 @@ echo "  cd apps/cloud && docker compose up -d caddy"
 echo "  cd apps/cloud && docker compose logs -f caddy"
 echo
 echo "证书数据保存在 Docker volume："
-echo "  personal-system_caddydata"
-echo "  personal-system_caddyconfig"
+echo "  feathernest_caddydata"
+echo "  feathernest_caddyconfig"

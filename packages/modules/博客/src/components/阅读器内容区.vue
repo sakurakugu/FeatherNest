@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
-import type { RenderedArticleMarkdown } from '@personal-system/module-articles/markdown'
+import MarkdownRenderer from '@feathernest/module-articles/components/Markdown渲染器.vue'
+import type { RenderedArticleMarkdown } from '@feathernest/module-articles/markdown'
 
 defineProps<{
   title: string
@@ -14,7 +14,7 @@ const emit = defineEmits<{
   rendered: [result: RenderedArticleMarkdown]
 }>()
 
-const MarkdownMindmap = defineAsyncComponent(() => import('@personal-system/module-articles/components/Markdown思维导图.vue'))
+const MarkdownMindmap = defineAsyncComponent(() => import('@feathernest/module-articles/components/Markdown思维导图.vue'))
 </script>
 
 <template>

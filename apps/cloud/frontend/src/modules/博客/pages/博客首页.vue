@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
-import { BlogHomeMainContent, 使用博客首页 } from '@personal-system/module-blog/home'
+import { BlogHomeMainContent, 使用博客首页 } from '@feathernest/module-blog/home'
 import AppFooter from '../../../app/components/应用页脚.vue'
 import BlogBanner from '../components/博客横幅.vue'
 import BlogHomeMobileWidgets from '../components/首页移动端组件.vue'

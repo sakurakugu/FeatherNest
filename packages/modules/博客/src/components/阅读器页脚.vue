@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ArticleMetaRecord, ArticleNavigationRecord } from '@personal-system/module-articles'
+import type { ArticleMetaRecord, ArticleNavigationRecord } from '@feathernest/module-articles'
 import ArticleLicense from './文章许可.vue'
 import ArticleNav from './文章导航.vue'
 import ArticleRelated from './相关文章.vue'

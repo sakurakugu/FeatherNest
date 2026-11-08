@@ -8,7 +8,7 @@ import {
   解析待办传输负载,
 } from '../helpers/transfer'
 import type { Todo, TodoCreateParams, TodoUpdateParams } from '../store'
-import { 获取API错误消息 } from '@personal-system/api'
+import { 获取API错误消息 } from '@feathernest/api'
 
 export function 使用待办页面传输(options: {
   todos: Ref<Todo[]>

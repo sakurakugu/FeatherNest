@@ -1,4 +1,4 @@
-import api from '@personal-system/api'
+import api from '@feathernest/api'
 import type { HolidayCalendarYear } from './types'
 
 export async function 获取节假日年份(year: number): Promise<HolidayCalendarYear> {

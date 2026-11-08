@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CategoryRecord } from '@personal-system/module-articles'
+import type { CategoryRecord } from '@feathernest/module-articles'
 
 defineProps<{
   categories: CategoryRecord[]

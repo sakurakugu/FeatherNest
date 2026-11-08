@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, type Component, type ComponentPublicInstance } from 'vue'
-import type { CategoryRecord } from '@personal-system/module-articles'
+import type { CategoryRecord } from '@feathernest/module-articles'
 import type { BlogSortMode, BlogViewMode } from '../view'
 import BlogFeed from './文章流.vue'
 import CategoryBar from './分类栏.vue'

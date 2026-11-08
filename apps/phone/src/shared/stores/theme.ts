@@ -8,7 +8,7 @@ import {
   从模式解析是否为暗色,
   解析系统暗色,
   type ThemeMode,
-} from '@personal-system/theme'
+} from '@feathernest/theme'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 

@@ -8,7 +8,7 @@ import {
   type 图片工具服务,
   type 图片资源句柄,
   type 图片工具能力,
-} from '@personal-system/platform/image-tools'
+} from '@feathernest/platform/image-tools'
 import { ElButton, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider, ElTag } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import WorkbenchSectionCard from './工作台卡片.vue'

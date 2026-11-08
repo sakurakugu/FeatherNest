@@ -16,7 +16,7 @@ interface TabBarPreferencesPayload {
   visibleTabIds?: unknown
 }
 
-const STORAGE_KEY = 'personal-system:phone:tab-bar'
+const STORAGE_KEY = 'feathernest:phone:tab-bar'
 
 function 标准化有序标签页ID(ids: readonly AppTabId[]): AppTabId[] {
   const uniqueIds: AppTabId[] = []

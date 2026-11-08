@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { SwitchButton } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { 使用下拉面板 } from '@personal-system/ui'
+import { 使用下拉面板 } from '@feathernest/ui'
 import { ElButton, ElIcon } from 'element-plus'
 import type { Component } from 'vue'
 import { computed, ref, useSlots } from 'vue'
@@ -121,7 +121,7 @@ function handleGuestSelect(key: 'login') {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/dropdown.css';
+@import '@feathernest/ui/styles/dropdown.css';
 
 .header-btn {
   --dropdown-panel-min-width: 140px;

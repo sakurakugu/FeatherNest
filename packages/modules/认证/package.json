@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/module-auth",
+  "name": "@feathernest/module-auth",
   "private": true,
   "type": "module",
   "exports": {
@@ -9,10 +9,10 @@
     "./使用认证入口": "./src/使用认证入口.ts"
   },
   "dependencies": {
-    "@personal-system/api": "*",
-    "@personal-system/app-core": "*",
-    "@personal-system/domain": "*",
-    "@personal-system/ui": "*"
+    "@feathernest/api": "*",
+    "@feathernest/app-core": "*",
+    "@feathernest/domain": "*",
+    "@feathernest/ui": "*"
   },
   "peerDependencies": {
     "@element-plus/icons-vue": "^2.0.0",

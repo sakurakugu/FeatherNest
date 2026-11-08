@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { 追踪页面访问 } from '@personal-system/domain/system'
+import { 追踪页面访问 } from '@feathernest/domain/system'
 import {
   获取相关文章,
   点赞文章,
@@ -10,8 +10,8 @@ import {
   使用文章存储,
   type ArticleMetaRecord,
   type ArticleNavigationRecord,
-} from '@personal-system/module-articles'
-import type { RenderedArticleMarkdown } from '@personal-system/module-articles/markdown'
+} from '@feathernest/module-articles'
+import type { RenderedArticleMarkdown } from '@feathernest/module-articles/markdown'
 
 export interface TocItem {
   id: string

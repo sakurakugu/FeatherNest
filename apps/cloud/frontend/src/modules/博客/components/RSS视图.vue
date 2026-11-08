@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { onMounted, ref } from 'vue'
-import { fetchFeedList, type FeedArticleRecord, type FeedItemRecord } from '@personal-system/module-blog/feed'
+import { fetchFeedList, type FeedArticleRecord, type FeedItemRecord } from '@feathernest/module-blog/feed'
 import { 解析当前API基地址 } from '../../../shared/api/runtime'
 import CopyButton from './复制按钮.vue'
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { RefreshLeft } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { 使用博客外观存储 } from '@personal-system/module-blog/store'
-import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
+import { 使用博客外观存储 } from '@feathernest/module-blog/store'
+import { GlassRangeSlider, ThemeHuePanel } from '@feathernest/ui'
 import { ElIcon, ElSwitch } from 'element-plus'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'

@@ -2,8 +2,8 @@ import { computed, ref } from 'vue'
 import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
 import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
 
-const 常用Emoji存储键 = 'personal-system:article:markdown-editor:common-emojis'
-const 常用颜文字存储键 = 'personal-system:article:markdown-editor:common-kaomoji'
+const 常用Emoji存储键 = 'feathernest:article:markdown-editor:common-emojis'
+const 常用颜文字存储键 = 'feathernest:article:markdown-editor:common-kaomoji'
 const 常用Emoji最大数量 = 16
 const 常用颜文字最大数量 = 8
 const 默认常用Emoji短码 = [

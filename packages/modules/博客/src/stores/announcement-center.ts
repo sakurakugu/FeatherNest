@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { 获取公开公告, type AnnouncementRecord } from '@personal-system/domain/system'
+import { 获取公开公告, type AnnouncementRecord } from '@feathernest/domain/system'
 
 const 已关闭公告存储键 = 'blogClosedAnnouncements'
 const 公告状态变更事件 = 'blog-announcement-closed'

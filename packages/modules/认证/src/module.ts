@@ -1,4 +1,4 @@
-import type { AppModule } from '@personal-system/app-core'
+import type { AppModule } from '@feathernest/app-core'
 import type { RouteComponent, RouteMeta, RouteRecordRaw, RouteRecordNameGeneric } from 'vue-router'
 
 export interface AuthModuleOptions {

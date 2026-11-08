@@ -4,8 +4,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElEmpty, ElTag } from 'element-plus'
 import { 获取待办完成历史 } from '../api'
 import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse, Todo } from '../store'
-import { BaseDialog } from '@personal-system/ui'
-import { 获取API错误消息 } from '@personal-system/api'
+import { BaseDialog } from '@feathernest/ui'
+import { 获取API错误消息 } from '@feathernest/api'
 
 const props = defineProps<{
   todos: Todo[]
@@ -408,7 +408,7 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .todo-heatmap {
   padding: 20px;

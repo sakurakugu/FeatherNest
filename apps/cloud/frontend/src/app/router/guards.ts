@@ -1,5 +1,5 @@
-import { 解析标准认证守卫重定向 } from '@personal-system/app-core'
-import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 解析标准认证守卫重定向 } from '@feathernest/app-core'
+import { 使用认证存储 } from '@feathernest/domain/auth'
 import type { Router } from 'vue-router'
 import { 使用设置存储 } from '../../shared/stores/settings'
 

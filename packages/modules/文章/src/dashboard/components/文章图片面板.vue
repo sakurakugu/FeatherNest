@@ -139,7 +139,7 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/media.css';
+@import '@feathernest/ui/styles/media.css';
 
 .article-image-panel {
   display: grid;

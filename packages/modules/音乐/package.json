@@ -1,5 +1,5 @@
 {
-  "name": "@personal-system/module-music",
+  "name": "@feathernest/module-music",
   "private": true,
   "type": "module",
   "exports": {

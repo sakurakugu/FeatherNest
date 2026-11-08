@@ -8,5 +8,5 @@ export type {
   PageViewPayload,
   PublicSettings,
   RecentViewItem,
-} from '@personal-system/domain/system'
-export { DEFAULT_PUBLIC_SETTINGS } from '@personal-system/domain/system'
+} from '@feathernest/domain/system'
+export { DEFAULT_PUBLIC_SETTINGS } from '@feathernest/domain/system'

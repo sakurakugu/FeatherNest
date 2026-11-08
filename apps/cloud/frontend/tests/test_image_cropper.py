@@ -167,7 +167,7 @@ def main() -> None:
             """(preview => {
               window.桌面导出请求 = null;
               window.已释放资源 = [];
-              window.personalSystemDesktop = {
+              window.featherNestDesktop = {
                 runtime: 'electron',
                 imageToolsGetCapabilities: async () => ({运行时:'desktop',支持后端增强:true}),
                 imageToolsSelectInputs: async () => ['测试图片.png'],

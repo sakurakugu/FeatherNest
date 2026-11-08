@@ -1,4 +1,4 @@
-import type { TodoStatus } from '@personal-system/domain/todos'
+import type { TodoStatus } from '@feathernest/domain/todos'
 import { ref } from 'vue'
 
 export interface TodoListActionStore {
