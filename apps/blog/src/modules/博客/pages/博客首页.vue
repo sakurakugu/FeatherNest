@@ -152,7 +152,7 @@ const {
 </template>
 
 <style scoped>
-/* Firefly 主题变量 */
+/* 主题变量 */
 .blog-home {
   --radius-large: 1rem;
   --primary: var(--el-color-primary);
@@ -219,7 +219,7 @@ const {
   --card-bg-transparent: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 
-/* Main Panel - Firefly 风格 */
+/* Main Panel */
 .main-panel {
   position: relative;
   width: 100%;
@@ -241,7 +241,7 @@ const {
   padding: 0 16px;
 }
 
-/* Main Grid - Firefly 响应式布局 */
+/* Main Grid 响应式布局 */
 .main-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -289,7 +289,7 @@ const {
   grid-column: 1 / -1;
 }
 
-/* Firefly 切换动画与入场动画 */
+/* 切换动画与入场动画 */
 :deep(.transition-main) {
   transition:
     opacity var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -348,7 +348,7 @@ const {
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
-/* 平板端 (768px+) - Firefly 风格：显示左侧栏 */
+/* 平板端 (768px+)：显示左侧栏 */
 @media (min-width: 768px) {
   .main-grid {
     grid-template-columns: 17.5rem 1fr;
@@ -386,7 +386,7 @@ const {
   }
 }
 
-/* 桌面端 (1280px+) - Firefly 风格：双侧栏 */
+/* 桌面端 (1280px+)：双侧栏 */
 @media (min-width: 1280px) {
   .main-grid {
     grid-template-columns: 17.5rem 1fr 17.5rem;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChatLineRound } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
 import Markdown渲染器 from '@feathernest/module-articles/components/Markdown渲染器.vue'
+import { ElIcon } from 'element-plus'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 
 const settings = 使用设置存储()
@@ -40,7 +40,7 @@ const aboutContent = `
           <small>如果你想打个招呼、提建议或者单纯留个脚印，可以直接去留言页。</small>
         </span>
       </router-link>
-      <!-- <GitHubCard repo="CuteLeaf/Firefly" /> -->
+      <!-- <GitHubCard repo="sakurakugu/FeatherNest" /> -->
       <!-- <GitHubCard repo="saicaca/fuwari" /> -->
     </div>
   </div>

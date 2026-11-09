@@ -272,7 +272,7 @@ onBeforeUnmount(() => {
                 v-for="item in navLinksWithTools"
                 :key="item.to"
                 :to="item.to"
-                class="nav-link-firefly"
+                class="nav-link"
                 :class="{ 'is-active': isNavLinkActive(item.to) }"
               >
                 {{ item.label }}
@@ -383,7 +383,7 @@ onBeforeUnmount(() => {
 @import '@feathernest/ui/styles/media.css';
 @import '@feathernest/ui/styles/dropdown.css';
 
-/* ========== Firefly 风格导航栏 ========== */
+/* ========== 导航栏 ========== */
 
 .header-top-row {
   position: sticky;
@@ -517,7 +517,7 @@ onBeforeUnmount(() => {
   margin-left: 0;
 }
 
-/* 通用按钮风格 - Firefly btn-plain */
+/* 通用按钮风格 - btn-plain */
 .header-btn {
   position: relative;
   z-index: 0;

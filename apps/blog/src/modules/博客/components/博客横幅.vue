@@ -92,7 +92,7 @@ const categoryName = computed(() => {
   return cat?.name || props.activeCategory
 })
 
-/* ==================== Typewriter 打字机效果 (Firefly 风格) ==================== */
+/* ==================== Typewriter 打字机效果 ==================== */
 const defaultTypewriterTexts = [
   '欢迎来到我的小窝',
   '记录生活，分享技术',
@@ -648,7 +648,7 @@ function formatDate(date: string | null | undefined) {
   }
 }
 
-/* 移动端 Banner 高度优化 - Firefly 风格 */
+/* 移动端 Banner 高度优化 */
 @media (max-width: 480px) {
   #wallpaper-wrapper.banner-mode {
     height: 70vh !important;

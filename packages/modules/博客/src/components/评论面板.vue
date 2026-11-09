@@ -11,7 +11,7 @@ import {
   type TwikooInitOptions,
   type TwikooInstance,
 } from '../constants/twikooConfig'
-import twikooCustomStyleText from '../styles/twikoo-firefly.css?raw'
+import twikooCustomStyleText from '../styles/twikoo.css?raw'
 
 interface TwikooVueInstance {
   showAdmin?: boolean

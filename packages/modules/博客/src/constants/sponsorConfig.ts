@@ -48,7 +48,7 @@ export const sponsorConfig: SponsorConfig = {
       name: 'ko-fi',
       icon: 'simple-icons:kofi',
       link: '',
-      description: 'Buy a Coffee for Firefly',
+      description: 'Buy a Coffee for FeatherNest',
       enabled: true,
     },
     {

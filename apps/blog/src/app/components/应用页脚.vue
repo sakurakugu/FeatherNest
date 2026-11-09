@@ -4,9 +4,9 @@ import { ElIcon, ElTooltip } from 'element-plus';
 import { computed, ref } from 'vue';
 
 withDefaults(defineProps<{
-  showFirefly?: boolean
+  showFeatherNest?: boolean
 }>(), {
-  showFirefly: true,
+  showFeatherNest: true,
 })
 
 const currentYear = new Date().getFullYear()
@@ -74,9 +74,9 @@ function 切换备案域名() {
         <div class="footer-line powered-by">
           Powered by
           <a class="footer-link" href="https://cn.vuejs.org/" target="_blank" rel="noopener noreferrer">Vue3</a>
-          <template v-if="showFirefly">
+          <template v-if="showFeatherNest">
             &
-            <a class="footer-link" href="https://github.com/CuteLeaf/Firefly" target="_blank" rel="noopener noreferrer">Firefly</a>
+            <a class="footer-link" href="https://github.com/sakurakugu/FeatherNest" target="_blank" rel="noopener noreferrer">FeatherNest</a>
           </template>
         </div>
       </div>
