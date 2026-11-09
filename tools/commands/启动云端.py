@@ -339,7 +339,16 @@ def 启动开发版(use_venv: bool) -> None:
     验证DockerCompose镜像(compose_path)
 
     echo("开始安装 docker 依赖: postgres redis minio twikoo")
-    subprocess.run(组合Compose命令("up", "-d", "postgres", "redis", "minio", "twikoo"), check=True, cwd=ROOT_DIR)
+    subprocess.run(
+        组合Compose命令(
+            "--file", str(COMPOSE_FILE.with_name("docker-compose.dev.yml")),
+            "up", "-d", "postgres", "redis", "minio", "twikoo",
+        ),
+        check=True,
+        cwd=ROOT_DIR,
+    )
+    echo("等待本地 MinIO 健康检查通过")
+    等待DockerCompose服务就绪("minio", timeout=90)
 
     echo("停止本地开发进程")
     停止开发版进程(清除状态=False)
@@ -382,7 +391,7 @@ def 启动开发版(use_venv: bool) -> None:
         "--host", "0.0.0.0",
         "--port", "8000",
     ]
-    frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", str(FRONTEND_DEV_PORT)]
+    frontend_cmd = [*npm_cmd, "run", "dev"]
 
     # 每启动一个就立刻记一次状态：这两个进程会脱离父进程独立存活，
     # 一旦在启动过程中被中断，只有落盘的 PID 才能把它们找回来。

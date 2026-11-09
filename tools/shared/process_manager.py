@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import shutil
@@ -92,6 +93,15 @@ def 提取进程PID(state: dict, *keys: str) -> tuple[int, ...]:
 def 存在进程(pid: int) -> bool:
     if pid <= 0:
         return False
+    if os.name == "nt":
+        # Windows 上 os.kill(pid, 0) 会终止进程，不能用作存在性检查。
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return any(len(row) > 1 and row[1] == str(pid) for row in csv.reader(result.stdout.splitlines()))
     try:
         os.kill(pid, 0)
     except OSError:

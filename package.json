@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "npm@11.19.1",
   "workspaces": [
-    "apps/cloud/frontend",
+    "apps/blog",
+    "apps/console",
     "apps/desktop",
     "apps/phone",
     "packages/app-core",
@@ -17,17 +18,18 @@
   "scripts": {
     "generate:api": "node tools/generate-api-types.mjs",
     "check:api": "node tools/generate-api-types.mjs --check",
-    "test:unit": "node --test packages/ui/tests/*.test.mjs apps/cloud/frontend/tests/*.test.mjs packages/domain/tests/*.test.mjs",
+    "test:unit": "node --test packages/ui/tests/*.test.mjs apps/console/tests/*.test.mjs packages/domain/tests/*.test.mjs",
     "test:unit:dependencies": "node --test packages/modules/待办/tests/*.test.mjs packages/modules/文件/tests/*.test.mjs packages/domain/tests/*.test.mjs",
     "test:unit:markdown": "node --test packages/modules/文章/tests/markdown-container.test.mjs",
-    "lint": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone,packages \"npm run lint --workspace frontend\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\" \"npm run lint:packages\"",
-    "lint:frontend": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone \"npm run lint --workspace frontend\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\"",
+    "lint": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone,packages \"npm run lint --workspace console\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\" \"npm run lint:packages\" && npm run lint --workspace blog",
+    "lint:frontend": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone \"npm run lint --workspace console\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\" && npm run lint --workspace blog",
     "lint:packages": "eslint \"packages/**/*.{ts,tsx,vue,d.ts}\" --config ./configs/eslint.packages.mjs --cache --cache-location .cache/eslint/packages-cache",
     "format": "prettier . --write",
-    "typecheck": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone,packages \"npm run typecheck --workspace frontend\" \"npm run typecheck --workspace desktop\" \"npm run typecheck --workspace phone\" \"npm run typecheck:packages\"",
-    "typecheck:frontend": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone \"npm run typecheck --workspace frontend\" \"npm run typecheck --workspace desktop\" \"npm run typecheck --workspace phone\"",
+    "typecheck": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone,packages \"npm run typecheck --workspace console\" \"npm run typecheck --workspace desktop\" \"npm run typecheck --workspace phone\" \"npm run typecheck:packages\" && npm run typecheck --workspace blog",
+    "typecheck:frontend": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone \"npm run typecheck --workspace console\" \"npm run typecheck --workspace desktop\" \"npm run typecheck --workspace phone\" && npm run typecheck --workspace blog",
     "typecheck:packages": "vue-tsc -p ./configs/tsconfig.packages.json --noEmit",
-    "check:frontend": "npm run lint:frontend && npm run typecheck:frontend"
+    "check:frontend": "npm run lint:frontend && npm run typecheck:frontend",
+    "build:web": "npm run build --workspace blog && npm run build --workspace console"
   },
   "prettier": {
     "semi": false,

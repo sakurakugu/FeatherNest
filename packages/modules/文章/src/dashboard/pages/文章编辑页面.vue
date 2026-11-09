@@ -70,7 +70,7 @@ const route = useRoute()
 const router = useRouter()
 const themeStore = 使用文章主题状态()
 const articleTaxonomyStore = 使用文章分类存储()
-const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
+const 路由前缀 = computed(() => route.path.startsWith('/admin') ? '/admin' : '')
 
 const MarkdownMindmap = defineAsyncComponent(() => import('../../components/Markdown思维导图.vue'))
 
@@ -933,7 +933,7 @@ async function syncEditorStateFromRoute(force = false) {
 
 /**
  * 判断本次离开是否来自控制台标签切换（一次性标记，读取后立即消费）。
- * 标记由 apps/cloud/frontend 的控制台标签栏写入，键名与那边保持一致；
+ * 标记由 apps/console 的控制台标签栏写入，键名与那边保持一致；
  * 标签切换时本页会被 KeepAlive 保留，不应弹出未保存确认。
  */
 function 是否为控制台标签切换(): boolean {

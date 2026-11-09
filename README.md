@@ -50,7 +50,8 @@ python ./tools/1.启动项目.py --cloud --start
 | PostgreSQL | `15432` |
 | 后端 API   | `8000`  |
 | Twikoo     | `8001`  |
-| 云端前端   | `5173`  |
+| 博客及后台统一入口 | `5173` |
+| 后台内部开发服务 | `5176` |
 | 手机端前端 | `5174`  |
 | 桌面端前端 | `5175`  |
 
@@ -64,7 +65,8 @@ python ./tools/1.启动项目.py --cloud --start
 | 目录                   | 技术栈                                                                 | 说明                                                   |
 | ---------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------ |
 | `apps/cloud/`          | Docker Compose + Caddy + PostgreSQL + Redis + MinIO                    | 云端部署入口、本地依赖服务、生产编排                   |
-| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + UnoCSS + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示和后台管理                       |
+| `apps/blog/` | Vue 3 + Vite + Python Playwright SSG | 公开博客、站点公共外壳与静态页面 |
+| `apps/console/` | Vue 3 + Vite + Element Plus | 后台模块清单、登录和工具，入口 `/admin/` |
 | `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                           | 云端后端，提供 API、认证、存储和后台能力               |
 | `apps/phone/`          | Vue 3 + TypeScript + Vite + UnoCSS + Capacitor + Element Plus          | 手机端应用，基于 Web 技术封装 Android                  |
 | `apps/desktop/`        | Vue 3 + TypeScript + Vite + UnoCSS + Electron + Element Plus           | 桌面端应用，提供桌面壳与本地能力接入                   |
@@ -101,7 +103,7 @@ npm run test:unit:markdown
 图片裁剪的功能回归使用 Python Playwright。在开发前端启动后执行（需要安装 Python 的 `playwright` 和 Chromium）：
 
 ```bash
-python apps/cloud/frontend/tests/test_image_cropper.py --url http://localhost:5173
+python apps/console/tests/test_image_cropper.py --url http://localhost:5173/admin
 ```
 
 该测试通过独立页面验证鼠标与触屏裁剪、比例、坐标换算、导出和资源清理；桌面能力使用测试替身，不写入真实桌面文件。页面样式仍由人工检查。
@@ -296,18 +298,49 @@ CORS_ORIGINS=["https://www.sakurakugu.com","https://sakurakugu.com","http://loca
 ```bash
 # 1. 启动依赖服务
 cd apps/cloud
-docker compose up -d postgres redis minio twikoo
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis minio twikoo
 
 # 2. 后端开发服务器
 cd backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# 3. 云端前端开发服务器
-cd ../frontend
-npm run dev -- --host 0.0.0.0 --port 5173
+# 3. 博客和后台开发服务器（另开终端，在仓库根目录执行）
+npm run dev --workspace blog
 ```
 
 </details>
+
+## 博客与后台
+
+云端开发启动器自动加载 `apps/cloud/docker-compose.dev.yml`，让本地 MinIO 使用 HTTP 9000，并在健康检查通过后启动后端。生产环境继续使用主 Compose 中的 S3 TLS 配置。
+
+博客由 `apps/blog` 提供，后台页面和模块装配由 `apps/console` 提供。同域名下 `/` 为博客，`/admin/` 为后台，`/admin/login` 为后台登录入口，`/admin/tools` 为工具。两个 HTML 入口共用 `apps/blog` 的 Vue 外壳、路由和顶栏，站内通过客户端路由切换，后台页面按需加载；切换时保留顶栏 DOM，通过 CSS 完成过渡，不进行整页刷新。博客中的登录入口直接打开共享认证弹窗。手机端和桌面端继续使用 `packages/modules` 的共享业务页面及平台适配。
+
+开发时使用原有启动器，或在根目录执行 `npm run dev --workspace blog`。该命令同时启动博客 5173 和后台内部服务 5176；通过 `http://localhost:5173/admin/` 访问后台，保持 API Cookie 和文件服务同源。5176 为内部代理端口，不用于对外入口。
+
+后台从 `packages/modules/*/src/manifest.ts` 和 `apps/console/src/modules/*/manifest.ts` 收集路由与导航。共享业务模块导出 `AppModule` 清单，本地管理与工具也使用同一格式；添加符合清单格式的模块后无需修改后台路由和侧边栏。业务授权仍由后端接口执行。
+
+主题明暗逻辑与存储统一在 `packages/theme`，根元素使用 `data-theme` 和配套的 `dark` 类，色相与设计变量由共享主题维护；`base.css` 定义独立设计令牌，`element-plus.css` 负责映射组件库变量。两个入口使用同一份全局样式和顶栏，博客装饰及后台布局由路由状态控制；现有博客组件仍按需依赖 Element Plus。
+
+### 静态生成与发布
+
+博客采用构建期匿名浏览器预渲染：生成栏目、公开文章和公开动态的完整 HTML，以及 `sitemap.xml`、`robots.txt`、`ssg-manifest.json`。无需 JavaScript 即可读取文章正文，加载 JavaScript 后继续使用搜索、评论等交互。构建不会登录，也不会发送页面访问统计。
+
+本机首次构建先安装 Python Playwright 与浏览器：
+
+```powershell
+python -m pip install -r apps/blog/scripts/requirements.txt
+python -m playwright install chromium
+$env:SSG_API_BASE_URL = 'http://localhost:8000/api/v1'
+$env:SITE_URL = 'https://www.sakurakugu.com'
+npm run build:web
+```
+
+`SSG_API_BASE_URL` 是构建期可访问的公开 API，默认本机后端；`SITE_URL` 用于 canonical 和站点地图，默认正式域名。公开 API 不可达或页面执行失败时构建失败。生成过程记录每个页面及失效源文件，方便定位数据问题。
+
+产物分别为 `apps/blog/dist` 和 `apps/console/dist`。`apps/cloud/Dockerfile` 会构建两者，Nginx 将后台放入 `/admin/`，博客优先返回对应静态页面。Compose 可通过 `apps/cloud/.env` 中的 `SSG_API_BASE_URL`、`SITE_URL` 覆盖构建参数；默认使用正式站点公开 API。首次部署须先准备可访问的后端数据源，构建容器不能依赖尚未启动的后端容器。
+
+**公开内容发布、修改、删除或可见性变更后，须重新构建并部署前端，才能更新已有静态页面和站点地图。** 静态文件不包含登录内容。文件资源优先使用后端仍会检查公开权限的稳定链接；仅支持签名访问的公开资源会随构建保存到 `ssg-assets`，与静态正文一起更新。源站已经丢失的资源会记录日志，其链接仍保持失效，需在内容管理中修复。
 
 ## 手机端开发
 
@@ -330,7 +363,7 @@ python ./tools/1.启动项目.py --phone --target emulator-5554
 python ./tools/1.启动项目.py --phone --host 192.168.1.23
 
 # 指定手机端前端端口
-python ./tools/1.启动项目.py --phone --port 5176
+python ./tools/1.启动项目.py --phone --port 5177
 ```
 
 `--phone` 安装的 Debug 应用包名为 `com.sakurakugu.feathernest.dev`，可与包名为

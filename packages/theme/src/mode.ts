@@ -32,3 +32,9 @@ export function 获取切换后的主题模式(mode: ThemeMode, isDark: boolean)
   }
   return mode === 'dark' ? 'light' : 'dark'
 }
+
+export function 应用明暗模式到根元素(isDark: boolean) {
+  document.documentElement.dataset.theme = isDark ? 'dark' : 'light'
+  document.documentElement.classList.toggle('dark', isDark)
+  document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+}

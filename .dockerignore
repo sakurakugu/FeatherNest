@@ -1,3 +1,14 @@
+# 云端镜像只包含两个 Web 入口。
+apps/**
+!apps/
+!apps/cloud/
+!apps/cloud/Dockerfile
+!apps/cloud/nginx.conf
+!apps/blog/
+!apps/blog/**
+!apps/console/
+!apps/console/**
+
 node_modules
 **/node_modules
 .git
@@ -17,10 +28,3 @@ coverage
 **/*.log
 *.tsbuildinfo
 **/*.tsbuildinfo
-
-# 云端前端镜像只需要 apps/cloud/frontend，默认排除 apps 下其他内容。
-apps/**
-!apps/
-!apps/cloud/
-!apps/cloud/frontend/
-!apps/cloud/frontend/**

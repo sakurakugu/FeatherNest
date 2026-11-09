@@ -1,0 +1,8 @@
+services:
+  minio:
+    # 本地后端使用 HTTP 9000，不加载生产环境的 S3 证书。
+    command: server /data --address ":9000" --console-address ":9001"
+    environment:
+      MINIO_BROWSER_REDIRECT_URL: "http://localhost:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]

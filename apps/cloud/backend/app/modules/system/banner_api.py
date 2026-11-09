@@ -19,7 +19,7 @@ def _解析横幅目录() -> str | None:
 
     dev_path = os.path.join(
         os.path.dirname(__file__),
-        "../../../../frontend/public/banner",
+        "../../../../../blog/public/banner",
     )
     dev_path = os.path.normpath(dev_path)
     if os.path.isdir(dev_path):

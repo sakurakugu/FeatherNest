@@ -101,7 +101,7 @@ const articleTableStatusWidth = computed(() => (isMobileViewport.value ? 84 : 98
 const articleTableActionWidth = computed(() => (isMobileViewport.value ? 156 : 180))
 const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : allArticleTotal.value))
 const emptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有文章' : '还没有文章'))
-const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
+const 路由前缀 = computed(() => route.path.startsWith('/admin') ? '/admin' : '')
 const uncategorizedArticleTotal = computed(() => {
   const categorizedTotal = categories.value.reduce((total, category) => total + (category.article_count ?? 0), 0)
   return Math.max(allArticleTotal.value - categorizedTotal, 0)

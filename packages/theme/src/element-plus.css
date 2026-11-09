@@ -1,0 +1,13 @@
+/* 将设计令牌映射到组件库，主题本身不依赖组件库变量。 */
+:root,
+:root[data-theme="dark"] {
+  --el-color-primary: var(--theme-primary);
+  --el-color-primary-rgb: var(--theme-primary-rgb);
+  --el-color-primary-light-3: var(--theme-primary-light-3);
+  --el-color-primary-light-5: var(--theme-primary-light-5);
+  --el-color-primary-light-7: var(--theme-primary-light-7);
+  --el-color-primary-light-8: var(--theme-primary-light-8);
+  --el-color-primary-light-9: var(--theme-primary-light-9);
+  --el-color-primary-dark-2: var(--theme-primary-dark-2);
+  --el-color-primary-dark-8: var(--theme-primary-dark-8);
+}

@@ -8,7 +8,8 @@
     "./home": "./src/home.ts",
     "./store": "./src/store.ts",
     "./view": "./src/view.ts",
-    "./widgets": "./src/widgets.ts"
+    "./widgets": "./src/widgets.ts",
+    "./friend-links/*": "./src/friend-links/*.ts"
   },
   "dependencies": {
     "@feathernest/api": "*",

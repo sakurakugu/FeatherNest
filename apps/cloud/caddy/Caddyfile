@@ -19,6 +19,15 @@ www.sakurakugu.top {
 www.sakurakugu.com {
     encode zstd gzip
 
+    handle /twikoo {
+        rewrite * /
+        reverse_proxy twikoo:8080
+    }
+
+    handle_path /twikoo/* {
+        reverse_proxy twikoo:8080
+    }
+
     handle /api/* {
         reverse_proxy backend:8000
     }

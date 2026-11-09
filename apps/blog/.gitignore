@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.local
+
+# 本地媒体资源由部署时提供。
+*.jpg
+*.jpeg
+*.png
+*.gif
+!public/sakura.png
+!public/备案图标.png
+public/banner/
+
+# 站点地图由静态生成流程写入 dist。
+public/sitemap.xml

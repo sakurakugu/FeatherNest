@@ -6,6 +6,7 @@ import {
   解析存储的色相,
   解析存储的主题模式,
   从模式解析是否为暗色,
+  应用明暗模式到根元素,
   解析系统暗色,
   type ThemeMode,
 } from '@feathernest/theme'
@@ -31,7 +32,7 @@ export const 使用主题存储 = defineStore('desktop-theme', () => {
   const modeLabel = computed(() => 获取主题模式标签(mode.value))
 
   function 应用主题() {
-    document.documentElement.classList.toggle('dark', isDark.value)
+    应用明暗模式到根元素(isDark.value)
   }
 
   function 同步主题模式() {

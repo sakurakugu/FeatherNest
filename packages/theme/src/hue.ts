@@ -77,16 +77,16 @@ export function 应用主题色相到根元素(options: {
   const normalizedHue = 标准化色相(options.hueValue)
   root.style.setProperty('--hue', String(normalizedHue))
   root.style.setProperty('--selection-hue', String(normalizedHue))
-  root.style.setProperty('--el-color-primary', 格式化OklchCss({ lightness: 0.7, chroma: 0.14 }, normalizedHue))
-  root.style.setProperty('--el-color-primary-light-3', 格式化OklchCss({ lightness: 0.78, chroma: 0.13 }, normalizedHue))
-  root.style.setProperty('--el-color-primary-light-5', 格式化OklchCss({ lightness: 0.84, chroma: 0.1 }, normalizedHue))
-  root.style.setProperty('--el-color-primary-light-7', 格式化OklchCss({ lightness: 0.88, chroma: 0.08 }, normalizedHue))
-  root.style.setProperty('--el-color-primary-light-8', 格式化OklchCss({ lightness: 0.94, chroma: 0.06 }, normalizedHue))
-  root.style.setProperty('--el-color-primary-light-9', 格式化OklchCss({ lightness: 0.98, chroma: 0.03 }, normalizedHue))
-  root.style.setProperty('--el-color-primary-dark-2', 格式化OklchCss({ lightness: 0.54, chroma: 0.14 }, normalizedHue))
-  root.style.setProperty('--el-color-primary-dark-8', 格式化OklchCss({ lightness: 0.34, chroma: 0.1 }, normalizedHue))
+  root.style.setProperty('--theme-primary', 格式化OklchCss({ lightness: 0.7, chroma: 0.14 }, normalizedHue))
+  root.style.setProperty('--theme-primary-light-3', 格式化OklchCss({ lightness: 0.78, chroma: 0.13 }, normalizedHue))
+  root.style.setProperty('--theme-primary-light-5', 格式化OklchCss({ lightness: 0.84, chroma: 0.1 }, normalizedHue))
+  root.style.setProperty('--theme-primary-light-7', 格式化OklchCss({ lightness: 0.88, chroma: 0.08 }, normalizedHue))
+  root.style.setProperty('--theme-primary-light-8', 格式化OklchCss({ lightness: 0.94, chroma: 0.06 }, normalizedHue))
+  root.style.setProperty('--theme-primary-light-9', 格式化OklchCss({ lightness: 0.98, chroma: 0.03 }, normalizedHue))
+  root.style.setProperty('--theme-primary-dark-2', 格式化OklchCss({ lightness: 0.54, chroma: 0.14 }, normalizedHue))
+  root.style.setProperty('--theme-primary-dark-8', 格式化OklchCss({ lightness: 0.34, chroma: 0.1 }, normalizedHue))
   root.style.setProperty(
-    '--el-color-primary-rgb',
+    '--theme-primary-rgb',
     从Oklch创建RGB三元组(options.primaryRgbToken, normalizedHue),
   )
   const themeColorMeta = ownerDocument.querySelector('meta[name="theme-color"]')

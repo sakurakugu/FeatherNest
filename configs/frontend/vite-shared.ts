@@ -135,6 +135,7 @@ export function createFrontendServerConfig(workspaceRoot: string) {
         changeOrigin: true,
         ws: true,
       },
+      '/twikoo': { target: 'http://localhost:8001', changeOrigin: true, rewrite: (url: string) => url.replace(/^\/twikoo/, '') || '/' },
       '/files': {
         target: 'http://localhost:8000',
         changeOrigin: true,

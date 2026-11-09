@@ -9,10 +9,10 @@ const isDev = !app.isPackaged
 const preloadPath = path.join(electronRoot, 'preload.mjs')
 
 /** 开发环境网页后台地址。 */
-const DEV_WEB_CONSOLE_URL = 'http://localhost:5173/dashboard'
+const DEV_WEB_CONSOLE_URL = 'http://localhost:5173/admin'
 
 /** 打包后网页后台地址（裸域会 301 到 www，直接使用 www 地址）。 */
-const PRODUCTION_WEB_CONSOLE_URL = 'https://www.sakurakugu.com/dashboard'
+const PRODUCTION_WEB_CONSOLE_URL = 'https://www.sakurakugu.com/admin'
 
 /**
  * 获取网页后台地址：开发环境指向本地 5173，打包后指向线上地址。

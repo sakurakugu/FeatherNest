@@ -8,7 +8,8 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 CLOUD_DIR = ROOT_DIR / "apps" / "cloud"
 BACKEND_DIR = CLOUD_DIR / "backend"
-FRONTEND_DIR = CLOUD_DIR / "frontend"
+FRONTEND_DIR = ROOT_DIR / "apps" / "blog"
+CONSOLE_DIR = ROOT_DIR / "apps" / "console"
 PHONE_DIR = ROOT_DIR / "apps" / "phone"
 PHONE_ENV_FILE = PHONE_DIR / ".env"
 PHONE_ENV_EXAMPLE_FILE = PHONE_DIR / ".env.example"

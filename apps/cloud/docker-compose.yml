@@ -77,7 +77,7 @@ services:
       APP_TIMEZONE: Asia/Shanghai
     volumes:
       - ./minio-certs/public.crt:/certs/public.crt:ro
-      - ./frontend/public/banner:/app/banner:ro
+      - ../blog/public/banner:/app/banner:ro
       - twikoodata:/app/twikoo-data
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
@@ -112,10 +112,10 @@ services:
   frontend:
     build:
       context: ../..
-      dockerfile: apps/cloud/frontend/Dockerfile
+      dockerfile: apps/cloud/Dockerfile
       args:
-        VITE_TWIKOO_ENV_ID: ${VITE_TWIKOO_ENV_ID:-}
-        VITE_TWIKOO_REGION: ${VITE_TWIKOO_REGION:-}
+        SSG_API_BASE_URL: ${SSG_API_BASE_URL:-https://www.sakurakugu.com/api/v1}
+        SITE_URL: ${SITE_URL:-https://www.sakurakugu.com}
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:80"

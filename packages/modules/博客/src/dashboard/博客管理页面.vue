@@ -48,7 +48,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
-const prefix = computed(() => (route.path.startsWith('/dashboard') ? '/dashboard' : ''))
+const prefix = computed(() => (route.path.startsWith('/admin') ? '/admin' : ''))
 const items = ref<BlogManageItem[]>([])
 const page = ref(1)
 const total = ref(0)

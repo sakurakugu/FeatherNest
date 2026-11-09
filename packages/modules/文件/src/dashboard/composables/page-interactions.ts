@@ -111,13 +111,13 @@ export function 使用文件页面交互(options: {
 
   function 打开文章编辑器(articleId: string) {
     options.关闭右键菜单()
-    void options.路由.push(`/dashboard/articles/edit/${articleId}`)
+    void options.路由.push(`/admin/articles/edit/${articleId}`)
   }
 
   function 打开作品推荐(mediaItemId: string) {
     options.关闭右键菜单()
     void options.路由.push({
-      path: '/dashboard/media',
+      path: '/admin/media',
       query: { media_id: mediaItemId },
     })
   }
