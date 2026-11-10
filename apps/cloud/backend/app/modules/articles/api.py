@@ -59,11 +59,24 @@ from app.modules.articles.schemas import (
     文章转待办请求,
     文章转资料请求,
     文章转换信息,
+    文章迁移请求,
+    文章迁移结果,
 )
+from app.modules.articles.transfer import 导入文章 as 导入文章_service
 from app.modules.articles.taxonomy import 列出我的有文章分类 as 列出我的有文章分类_service
 from app.shared.kernel.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/articles", tags=["articles"])
+
+
+@router.post("/import", response_model=文章迁移结果, status_code=status.HTTP_201_CREATED)
+async def 导入文章(
+    body: 文章迁移请求,
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """导入文章为私有内容，失败时由请求事务统一回滚。"""
+    return 文章迁移结果(imported=await 导入文章_service(db, body, user))
 
 
 @router.delete("/{article_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -135,7 +148,7 @@ async def 列出我的文章(
     organization_state: str | None = Query(None, pattern="^(inbox|organized|archived)$"),
     search: str | None = Query(None, max_length=200),
     status: str | None = Query(None, pattern="^(private|login_required|public|pending)$"),
-    tag_id: UUID | None = Query(None),
+    tag_ids: list[UUID] | None = Query(None),
     sort_by: str = Query("last_edited_at", pattern="^(title|status|organization_state|category|tags|word_count|last_edited_at)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     category: str = Query(
@@ -166,7 +179,7 @@ async def 列出我的文章(
         organization_state=organization_state,
         search=search,
         status=status,
-        tag_id=tag_id,
+        tag_ids=tag_ids,
         sort_by=sort_by,
         sort_order=sort_order,
         is_deleted=is_deleted,

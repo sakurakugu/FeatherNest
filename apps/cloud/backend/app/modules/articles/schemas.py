@@ -95,6 +95,49 @@ class 文章更新(BaseModel):
         return value
 
 
+class 迁移分类(BaseModel):
+    """备份中的分类名称。"""
+
+    name: str = Field(min_length=1, max_length=100)
+
+
+class 迁移标签(BaseModel):
+    """备份中的标签名称。"""
+
+    name: str = Field(min_length=1, max_length=60)
+
+
+class 文章迁移项(BaseModel):
+    """导入正文与原始元数据，发布信息只作为来源记录保存。"""
+
+    model_config = ConfigDict(extra="allow")
+
+    title: str = Field(max_length=300)
+    content: str
+    excerpt: str | None = Field(default=None, max_length=500)
+    cover_url: str | None = Field(default=None, max_length=500)
+    organization_state: Literal["inbox", "organized", "archived"] = "organized"
+    category: 迁移分类 | None = None
+    tags: list[迁移标签] = []
+    created_at: datetime | None = None
+    last_edited_at: datetime | None = None
+    updated_at: datetime | None = None
+    archived_at: datetime | None = None
+
+
+class 文章迁移请求(BaseModel):
+    """接收当前版本的 JSON 备份或 Markdown 转换结果。"""
+
+    version: Literal[2] = 2
+    articles: list[文章迁移项] = Field(min_length=1)
+
+
+class 文章迁移结果(BaseModel):
+    """本次成功导入的数量。"""
+
+    imported: int
+
+
 class 文章转换信息(BaseModel):
     """文章派生内容的关联信息。"""
 

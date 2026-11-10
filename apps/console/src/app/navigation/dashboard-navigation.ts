@@ -17,8 +17,6 @@ const 导航图标路径: Record<string, string> = {
   DashboardBlogStats: 'M4 3v17h17M8 15v-4M13 15V7M18 15V4',
   DashboardDataStats: 'M4 3v17h17M7 14l4-4 4 2 6-7',
   SystemStatus: 'M3 4h18v13H3ZM8 21h8M12 17v4M6 11h3l2-4 3 7 2-3h2',
-  DashboardSettings:
-    'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2',
   AnnouncementsManage: 'M6 9a6 6 0 0 1 12 0v5l2 3H4l2-3ZM10 21h4M12 1v2',
   FriendLinksManage:
     'M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2',

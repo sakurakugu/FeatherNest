@@ -241,6 +241,24 @@ async def 设置令牌状态(db: AsyncSession, token_id: UUID, enabled: bool) ->
     token.enabled = enabled
 
 
+async def 重置令牌(db: AsyncSession, token_id: UUID) -> dict:
+    token = await db.get(推送令牌, token_id)
+    if token is None:
+        raise HTTPException(status_code=404, detail="推送令牌不存在")
+    token_value = f"fn_push_{secrets.token_urlsafe(32)}"
+    token.token_hash = hashlib.sha256(token_value.encode()).hexdigest()
+    token.last_used_at = None
+    return {
+        "id": token.id,
+        "name": token.name,
+        "channel_ids": [UUID(value) for value in token.channel_ids],
+        "enabled": token.enabled,
+        "last_used_at": token.last_used_at,
+        "created_at": token.created_at,
+        "token": token_value,
+    }
+
+
 async def 删除令牌(db: AsyncSession, token_id: UUID) -> None:
     token = await db.get(推送令牌, token_id)
     if token is None:

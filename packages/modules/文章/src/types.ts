@@ -91,7 +91,7 @@ export type ArticleSortField =
   'title' | 'status' | 'organization_state' | 'category' | 'tags' | 'word_count' | 'last_edited_at'
 export interface ArticleManagerQuery {
   status?: ArticleStatus | 'pending'
-  tag_id?: string
+  tag_ids?: string[]
   sort_by?: ArticleSortField
   sort_order?: 'asc' | 'desc'
 }

@@ -304,6 +304,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/articles/import': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['\u5BFC\u5165\u6587\u7AE0_api_v1_articles_import_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/articles/{article_id}/images/{image_id}': {
     parameters: {
       query?: never
@@ -2256,6 +2272,22 @@ export interface paths {
     patch: operations['\u66F4\u6539\u63A8\u9001\u4EE4\u724C\u72B6\u6001_api_v1_notifications_tokens__token_id__patch']
     trace?: never
   }
+  '/notifications/tokens/{token_id}/reset': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['\u91CD\u7F6E\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens__token_id__reset_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/notifications/send': {
     parameters: {
       query?: never
@@ -2774,6 +2806,21 @@ export interface components {
       tag_names?: string[]
       reason?: string
     }
+    '_____-Input': {
+      title: string
+      content: string
+      excerpt?: string | null
+      cover_url?: string | null
+      organization_state?: 'inbox' | 'organized' | 'archived'
+      category?: components['schemas']['app__modules__articles__schemas________1'] | null
+      tags?: components['schemas']['app__modules__articles__schemas________2'][]
+      created_at?: string | null
+      last_edited_at?: string | null
+      updated_at?: string | null
+      archived_at?: string | null
+    } & {
+      [key: string]: unknown
+    }
     '_________-Input': {
       device_name?: string
       client_version?: string | null
@@ -2842,6 +2889,12 @@ export interface components {
       pages: number
     }
     app__modules__articles__schemas________1: {
+      name: string
+    }
+    app__modules__articles__schemas________2: {
+      name: string
+    }
+    app__modules__articles__schemas________3: {
       title: string
       content?: string
       excerpt?: string | null
@@ -2849,7 +2902,7 @@ export interface components {
       category_id?: string | null
       tag_ids?: string[]
     }
-    app__modules__articles__schemas________2: {
+    app__modules__articles__schemas________4: {
       title?: string | null
       content?: string | null
       excerpt?: string | null
@@ -2858,20 +2911,20 @@ export interface components {
       tag_ids?: string[] | null
       organization_state?: ('inbox' | 'organized' | 'archived') | null
     }
-    app__modules__articles__schemas________3: {
+    app__modules__articles__schemas________5: {
       name: string
       description?: string | null
     }
-    app__modules__articles__schemas________4: {
+    app__modules__articles__schemas________6: {
       name: string
     }
-    app__modules__articles__schemas________5: {
+    app__modules__articles__schemas________7: {
       id: string
       name: string
       slug: string
       created_at: string
     }
-    app__modules__articles__schemas________6: {
+    app__modules__articles__schemas________8: {
       id: string
       name: string
       slug: string
@@ -2879,7 +2932,7 @@ export interface components {
       article_count?: number
       created_at: string
     }
-    app__modules__articles__schemas________7: {
+    app__modules__articles__schemas________9: {
       id: string
       title: string
       slug: string
@@ -2889,7 +2942,7 @@ export interface components {
       } | null
       organization_state?: string
       archived_at?: string | null
-      converted_items?: components['schemas']['app__modules__articles__schemas__________3'][]
+      converted_items?: components['schemas']['app__modules__articles__schemas__________5'][]
       excerpt?: string | null
       cover_url?: string | null
       status: string
@@ -2898,8 +2951,8 @@ export interface components {
       liked?: boolean
       word_count: number
       author: components['schemas']['app__modules__users__schemas______-Output']
-      category?: components['schemas']['app__modules__articles__schemas________6'] | null
-      tags?: components['schemas']['app__modules__articles__schemas________5'][]
+      category?: components['schemas']['app__modules__articles__schemas________8'] | null
+      tags?: components['schemas']['app__modules__articles__schemas________7'][]
       is_deleted?: boolean
       deleted_at?: string | null
       published_at?: string | null
@@ -2917,14 +2970,18 @@ export interface components {
       view_count?: number
       like_count?: number
       author: components['schemas']['app__modules__users__schemas______-Output']
-      tags?: components['schemas']['app__modules__articles__schemas________5'][]
-      category?: components['schemas']['app__modules__articles__schemas________6'] | null
+      tags?: components['schemas']['app__modules__articles__schemas________7'][]
+      category?: components['schemas']['app__modules__articles__schemas________8'] | null
     }
     app__modules__articles__schemas__________1: {
+      version?: 2
+      articles: components['schemas']['_____-Input'][]
+    }
+    app__modules__articles__schemas__________2: {
       visibility?: 'public' | 'login_required'
       expected_revision: number
     }
-    app__modules__articles__schemas__________2: {
+    app__modules__articles__schemas__________3: {
       title?: string | null
       content?: string | null
       excerpt?: string | null
@@ -2933,28 +2990,31 @@ export interface components {
       tag_ids?: string[] | null
       organization_state?: 'inbox' | 'organized' | 'archived'
     }
-    app__modules__articles__schemas__________3: {
+    app__modules__articles__schemas__________4: {
+      imported: number
+    }
+    app__modules__articles__schemas__________5: {
       id: string
       target_type: string
       target_id: string
       created_at: string
     }
-    app__modules__articles__schemas__________4: {
+    app__modules__articles__schemas__________6: {
       like_count: number
       changed: boolean
       liked: boolean
     }
-    app__modules__articles__schemas__________5: {
+    app__modules__articles__schemas__________7: {
       title: string
       slug: string
     }
-    app__modules__articles__schemas__________6: {
-      prev?: components['schemas']['app__modules__articles__schemas__________5'] | null
-      next?: components['schemas']['app__modules__articles__schemas__________5'] | null
+    app__modules__articles__schemas__________8: {
+      prev?: components['schemas']['app__modules__articles__schemas__________7'] | null
+      next?: components['schemas']['app__modules__articles__schemas__________7'] | null
       related: components['schemas']['app__modules__articles__schemas_________-Output'][]
       random: components['schemas']['app__modules__articles__schemas_________-Output'][]
     }
-    app__modules__articles__schemas__________7: {
+    app__modules__articles__schemas__________9: {
       used_by_publication?: boolean
       id: string
       original_name: string
@@ -4168,6 +4228,37 @@ export interface operations {
       }
     }
   }
+  '\u5BFC\u5165\u6587\u7AE0_api_v1_articles_import_post': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['app__modules__articles__schemas__________1']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__articles__schemas__________4']
+        }
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   '\u5220\u9664\u6587\u7AE0\u56FE\u7247_api_v1_articles__article_id__images__image_id__delete': {
     parameters: {
       query?: never
@@ -4257,7 +4348,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['app__modules__articles__schemas________1']
+        'application/json': components['schemas']['app__modules__articles__schemas________3']
       }
     }
     responses: {
@@ -4266,7 +4357,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________7']
+          'application/json': components['schemas']['app__modules__articles__schemas________9']
         }
       }
       422: {
@@ -4288,7 +4379,7 @@ export interface operations {
         organization_state?: string | null
         search?: string | null
         status?: string | null
-        tag_id?: string | null
+        tag_ids?: string[] | null
         sort_by?: string
         sort_order?: string
         category?: string
@@ -4333,7 +4424,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________6'][]
+          'application/json': components['schemas']['app__modules__articles__schemas________8'][]
         }
       }
       422: {
@@ -4364,7 +4455,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________7']
+          'application/json': components['schemas']['app__modules__articles__schemas________9']
         }
       }
       422: {
@@ -4397,7 +4488,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas__________3']
+          'application/json': components['schemas']['app__modules__articles__schemas__________5']
         }
       }
       422: {
@@ -4430,7 +4521,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas__________3']
+          'application/json': components['schemas']['app__modules__articles__schemas__________5']
         }
       }
       422: {
@@ -4491,7 +4582,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________7']
+          'application/json': components['schemas']['app__modules__articles__schemas________9']
         }
       }
       422: {
@@ -4515,7 +4606,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['app__modules__articles__schemas__________1']
+        'application/json': components['schemas']['app__modules__articles__schemas__________2']
       }
     }
     responses: {
@@ -4615,7 +4706,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________7']
+          'application/json': components['schemas']['app__modules__articles__schemas________9']
         }
       }
       422: {
@@ -4644,7 +4735,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas__________4']
+          'application/json': components['schemas']['app__modules__articles__schemas__________6']
         }
       }
       422: {
@@ -4673,7 +4764,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas__________4']
+          'application/json': components['schemas']['app__modules__articles__schemas__________6']
         }
       }
       422: {
@@ -4702,7 +4793,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas__________6']
+          'application/json': components['schemas']['app__modules__articles__schemas__________8']
         }
       }
       422: {
@@ -4725,7 +4816,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json':
-          components['schemas']['app__modules__articles__schemas__________2'] | null
+          components['schemas']['app__modules__articles__schemas__________3'] | null
       }
     }
     responses: {
@@ -4734,7 +4825,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________7']
+          'application/json': components['schemas']['app__modules__articles__schemas________9']
         }
       }
       422: {
@@ -4787,7 +4878,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['app__modules__articles__schemas________2']
+        'application/json': components['schemas']['app__modules__articles__schemas________4']
       }
     }
     responses: {
@@ -4796,7 +4887,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________7']
+          'application/json': components['schemas']['app__modules__articles__schemas________9']
         }
       }
       422: {
@@ -4829,7 +4920,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas__________7']
+          'application/json': components['schemas']['app__modules__articles__schemas__________9']
         }
       }
       422: {
@@ -4858,7 +4949,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas__________7'][]
+          'application/json': components['schemas']['app__modules__articles__schemas__________9'][]
         }
       }
       422: {
@@ -4887,7 +4978,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________7']
+          'application/json': components['schemas']['app__modules__articles__schemas________9']
         }
       }
       422: {
@@ -4917,7 +5008,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________6'][]
+          'application/json': components['schemas']['app__modules__articles__schemas________8'][]
         }
       }
       422: {
@@ -4939,7 +5030,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['app__modules__articles__schemas________3']
+        'application/json': components['schemas']['app__modules__articles__schemas________5']
       }
     }
     responses: {
@@ -4948,7 +5039,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________6']
+          'application/json': components['schemas']['app__modules__articles__schemas________8']
         }
       }
       422: {
@@ -4975,7 +5066,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________6'][]
+          'application/json': components['schemas']['app__modules__articles__schemas________8'][]
         }
       }
     }
@@ -5024,7 +5115,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________5'][]
+          'application/json': components['schemas']['app__modules__articles__schemas________7'][]
         }
       }
       422: {
@@ -5046,7 +5137,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['app__modules__articles__schemas________4']
+        'application/json': components['schemas']['app__modules__articles__schemas________6']
       }
     }
     responses: {
@@ -5055,7 +5146,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________5']
+          'application/json': components['schemas']['app__modules__articles__schemas________7']
         }
       }
       422: {
@@ -5082,7 +5173,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__articles__schemas________5'][]
+          'application/json': components['schemas']['app__modules__articles__schemas________7'][]
         }
       }
     }
@@ -8760,6 +8851,35 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u91CD\u7F6E\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens__token_id__reset_post': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        token_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__schemas__________-Output']
+        }
       }
       422: {
         headers: {

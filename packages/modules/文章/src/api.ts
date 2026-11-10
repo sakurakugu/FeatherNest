@@ -1,4 +1,5 @@
 import api from '@feathernest/api'
+import type { ArticleImportItem } from './transfer'
 import type {
   ArticleDraftPayload,
   ArticleOrganizationState,
@@ -76,6 +77,7 @@ export async function 获取我的文章列表(
   query: ArticleManagerQuery = {},
 ): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
+    paramsSerializer: { indexes: null },
     params: {
       page,
       page_size: pageSize,
@@ -114,6 +116,14 @@ export async function 获取文章图片(articleId: string): Promise<ArticleImag
 
 export async function 创建文章(payload: ArticleEditorPayload): Promise<ArticleRecord> {
   const { data } = await api.post<ArticleRecord>('/articles', payload)
+  return data
+}
+
+export async function 导入文章(articles: ArticleImportItem[]): Promise<{ imported: number }> {
+  const { data } = await api.post<{ imported: number }>('/articles/import', {
+    version: 2,
+    articles,
+  })
   return data
 }
 

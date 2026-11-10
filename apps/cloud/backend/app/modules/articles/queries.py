@@ -164,7 +164,7 @@ async def 列出我的文章(
     organization_state: str | None = None,
     search: str | None = None,
     status: str | None = None,
-    tag_id: UUID | None = None,
+    tag_ids: list[UUID] | None = None,
     sort_by: str = "last_edited_at",
     sort_order: str = "desc",
     is_deleted: bool = False,
@@ -182,8 +182,8 @@ async def 列出我的文章(
         ))
     elif status:
         query = query.where(发布状态 == status)
-    if tag_id:
-        query = query.where(文章.tags.any(标签.id == tag_id))
+    if tag_ids:
+        query = query.where(文章.tags.any(标签.id.in_(tag_ids)))
     if organization_state:
         query = query.where(文章.organization_state == organization_state)
     if search and search.strip():

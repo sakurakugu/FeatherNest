@@ -2,19 +2,51 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import unittest
+from datetime import UTC, datetime
 from unittest.mock import patch
 from urllib.parse import parse_qs
+from uuid import UUID
 
 import httpx
 from fastapi import HTTPException
 
-from app.modules.notifications.models import 推送渠道
-from app.modules.notifications.service import _加密配置, _校验公开HTTPS地址, _响应成功, _构建请求, _发送单渠道, _解密配置
+from app.modules.notifications.models import 推送渠道, 推送令牌
+from app.modules.notifications.service import _加密配置, _校验公开HTTPS地址, _响应成功, _构建请求, _发送单渠道, _解密配置, 重置令牌
 
 
 class 推送服务测试(unittest.IsolatedAsyncioTestCase):
+    async def test_重置令牌会替换密钥并保留权限状态(self) -> None:
+        token_id = UUID("018f0000-0000-7000-8000-000000000004")
+        channel_id = UUID("018f0000-0000-7000-8000-000000000005")
+        created_at = datetime.now(UTC)
+        token = 推送令牌(
+            id=token_id,
+            name="备份脚本",
+            token_hash="a" * 64,
+            channel_ids=[str(channel_id)],
+            enabled=False,
+            last_used_at=created_at,
+            created_at=created_at,
+        )
+
+        class FakeSession:
+            async def get(self, model, item_id):
+                return token
+
+        with patch("app.modules.notifications.service.secrets.token_urlsafe", return_value="new-secret"):
+            result = await 重置令牌(FakeSession(), token_id)
+
+        self.assertEqual(token.token_hash, hashlib.sha256(b"fn_push_new-secret").hexdigest())
+        self.assertNotEqual(token.token_hash, "a" * 64)
+        self.assertFalse(token.enabled)
+        self.assertEqual(token.channel_ids, [str(channel_id)])
+        self.assertIsNone(token.last_used_at)
+        self.assertEqual(result["token"], "fn_push_new-secret")
+        self.assertEqual(result["channel_ids"], [channel_id])
+
     def test_渠道密钥配置加密后可还原(self) -> None:
         config = {"token": "secret-value", "template": "markdown"}
 

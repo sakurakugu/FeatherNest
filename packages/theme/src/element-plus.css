@@ -1,6 +1,6 @@
 /* 将设计令牌映射到组件库，主题本身不依赖组件库变量。 */
-:root,
-:root[data-theme="dark"] {
+html:root,
+html:root[data-theme="dark"] {
   --el-color-primary: var(--theme-primary);
   --el-color-primary-rgb: var(--theme-primary-rgb);
   --el-color-primary-light-3: var(--theme-primary-light-3);

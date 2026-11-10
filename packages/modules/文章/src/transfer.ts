@@ -47,6 +47,59 @@ export interface ArticleTransferPayload {
   articles: ArticleTransferItem[]
 }
 
+export interface ArticleImportItem {
+  title: string
+  content: string
+  [key: string]: unknown
+}
+
+export async function 读取文章迁移文件(files: File[]): Promise<ArticleImportItem[]> {
+  const articles: ArticleImportItem[] = []
+  for (const file of files) {
+    const text = (await file.text()).replace(/^\uFEFF/, '')
+    if (/\.json$/i.test(file.name)) {
+      let payload: unknown
+      try {
+        payload = JSON.parse(text)
+      } catch {
+        throw new Error(`文件“${file.name}”不是有效的 JSON`)
+      }
+      if (
+        typeof payload !== 'object' ||
+        payload === null ||
+        !('version' in payload) ||
+        payload.version !== 2 ||
+        !('articles' in payload) ||
+        !Array.isArray(payload.articles) ||
+        payload.articles.length === 0 ||
+        !payload.articles.every(
+          (item: unknown) =>
+            typeof item === 'object' &&
+            item !== null &&
+            'title' in item &&
+            typeof item.title === 'string' &&
+            'content' in item &&
+            typeof item.content === 'string',
+        )
+      ) {
+        throw new Error(`文件“${file.name}”不是有效的文章备份（版本 2）`)
+      }
+      articles.push(...payload.articles)
+    } else if (/\.(md|markdown)$/i.test(file.name)) {
+      if (!text.trim()) throw new Error(`文件“${file.name}”内容为空`)
+      const heading = text.match(/^#\s+(.+?)\s*#*\s*$/m)
+      articles.push({
+        title: heading?.[1] || file.name.replace(/\.(md|markdown)$/i, ''),
+        content: text,
+        organization_state: 'inbox',
+      })
+    } else {
+      throw new Error(`文件“${file.name}”格式不支持，请选择 Markdown 或 JSON`)
+    }
+  }
+  return articles
+}
+
 function 转换为传输分类(category: CategoryRecord | null): ArticleTransferCategory | null {
   if (!category) {
     return null

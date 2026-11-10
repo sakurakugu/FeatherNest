@@ -12,6 +12,7 @@ import {
   ElFormItem,
   ElInput,
   ElMessage,
+  ElMessageBox,
   ElOption,
   ElSelect,
   ElSwitch,
@@ -28,6 +29,7 @@ import {
   删除推送令牌,
   获取推送渠道,
   获取推送令牌,
+  重置推送令牌,
   测试推送渠道,
   更新推送渠道,
   更新推送令牌状态,
@@ -234,6 +236,22 @@ async function toggleToken(token: PushToken, enabled: boolean) {
   }
 }
 
+async function resetToken(token: PushToken) {
+  try {
+    await ElMessageBox.confirm(
+      `重置后，${token.name} 当前使用的令牌将立即失效。新令牌只显示一次，确定继续吗？`,
+      '重置调用令牌',
+      { type: 'warning', confirmButtonText: '重置令牌', cancelButtonText: '取消' },
+    )
+    createdToken.value = await 重置推送令牌(token.id)
+    ElMessage.success('令牌已重置，请立即复制并更新脚本')
+    await reload()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    ElMessage.error(获取API错误消息(error, '推送令牌重置失败'))
+  }
+}
+
 async function removeToken(token: PushToken) {
   try {
     await 删除推送令牌(token.id)
@@ -266,7 +284,7 @@ onMounted(reload)
       <ElAlert
         class="page-alert"
         type="info"
-        title="脚本统一调用 FeatherNest 的发送接口，第三方平台凭据由这里集中管理。令牌仅在创建时显示一次。"
+        title="脚本统一调用 FeatherNest 的发送接口，第三方平台凭据由这里集中管理。令牌仅在创建或重置时显示一次。"
         :closable="false"
       />
 
@@ -325,7 +343,7 @@ onMounted(reload)
           v-if="createdToken"
           class="token-result"
           type="warning"
-          title="新令牌只显示这一次，请立即复制并放入脚本的密钥管理中。"
+          title="新令牌只显示这一次，请立即复制并更新脚本的密钥管理。"
           :closable="false"
         >
           <div class="token-value"><code>{{ createdToken.token }}</code><ElButton size="small" @click="copy(createdToken.token)">复制令牌</ElButton></div>
@@ -343,8 +361,11 @@ onMounted(reload)
           <ElTableColumn label="状态" width="100">
             <template #default="scope"><ElSwitch :model-value="scope.row.enabled" @change="(value) => toggleToken(scope.row as PushToken, Boolean(value))" /></template>
           </ElTableColumn>
-          <ElTableColumn label="操作" width="90" fixed="right">
-            <template #default="scope"><ElButton link type="danger" @click="removeToken(scope.row as PushToken)">撤销</ElButton></template>
+          <ElTableColumn label="操作" width="140" fixed="right">
+            <template #default="scope">
+              <ElButton link type="primary" @click="resetToken(scope.row as PushToken)">重置</ElButton>
+              <ElButton link type="danger" @click="removeToken(scope.row as PushToken)">撤销</ElButton>
+            </template>
           </ElTableColumn>
           <template #empty><ElEmpty description="还没有调用令牌" /></template>
         </ElTable>

@@ -149,6 +149,11 @@ export async function 更新推送令牌状态(id: string, enabled: boolean): Pr
   await api.patch(`/notifications/tokens/${id}`, { enabled })
 }
 
+export async function 重置推送令牌(id: string): Promise<PushTokenCreated> {
+  const { data } = await api.post<PushTokenCreated>(`/notifications/tokens/${id}/reset`)
+  return data
+}
+
 export async function 删除推送令牌(id: string): Promise<void> {
   await api.delete(`/notifications/tokens/${id}`)
 }
