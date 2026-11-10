@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { 获取我的文章列表 } from '@feathernest/module-articles'
+import { 获取仪表盘统计 } from '@feathernest/domain/system'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import AppConsoleLayout from '../components/layout/应用控制台布局.vue'
 import ConsoleTabBar from '../components/layout/控制台标签栏.vue'
@@ -12,7 +14,33 @@ const route = useRoute()
 const router = useRouter()
 const tabsStore = 使用控制台标签存储()
 
-const menuOptions = computed<控制台菜单项[]>(() => 过滤仪表盘菜单项())
+const articleCount = ref<number>()
+const todoCount = ref<number>()
+const menuOptions = computed<控制台菜单项[]>(() =>
+  过滤仪表盘菜单项().map((item) => ({
+    ...item,
+    count:
+      item.key === '/admin/articles'
+        ? articleCount.value
+        : item.key === '/admin/todos'
+          ? todoCount.value
+          : undefined,
+  })),
+)
+
+watch(
+  () => route.path,
+  async () => {
+    try {
+      const [articles, stats] = await Promise.all([获取我的文章列表(1, 1), 获取仪表盘统计()])
+      articleCount.value = articles.total
+      todoCount.value = stats.total_todos
+    } catch (error) {
+      console.error('读取侧栏数量失败', error)
+    }
+  },
+  { immediate: true },
+)
 
 tabsStore.init(router, route)
 
@@ -40,17 +68,17 @@ const 标签缓存键 = computed(() => {
 </script>
 
 <template>
-  <AppConsoleLayout
-    title="控制台"
-    storage-key="dashboard_sider_mode"
-    :menu-items="menuOptions"
-  >
+  <AppConsoleLayout title="控制台" storage-key="dashboard_sider_mode" :menu-items="menuOptions">
     <div class="dashboard-workspace">
       <ConsoleTabBar />
       <div class="dashboard-workspace__body">
         <RouterView v-slot="{ Component }">
           <KeepAlive :max="控制台标签缓存上限">
-            <component :is="Component" :key="标签缓存键" />
+            <component
+              :is="Component"
+              :key="标签缓存键"
+              @article-count-change="articleCount = $event"
+            />
           </KeepAlive>
         </RouterView>
       </div>

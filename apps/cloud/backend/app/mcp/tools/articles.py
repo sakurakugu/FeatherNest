@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from datetime import datetime, timezone
 from time import perf_counter
 from typing import Any, Literal
@@ -88,6 +90,14 @@ class 文章列表参数(BaseModel):
 
     page: int = Field(default=1, ge=1, description="页码")
     page_size: int = Field(default=20, ge=1, le=100, description="每页数量")
+    category_filter: str = Field(default="all", description="分类 ID，all 为全部，uncategorized 为未分类")
+    organization_state: Literal["inbox", "organized", "archived"] | None = None
+    status: Literal["private", "login_required", "public", "pending"] | None = None
+    tag_id: UUID | None = None
+    search: str | None = Field(default=None, max_length=200)
+    sort_by: Literal["title", "status", "organization_state", "category", "tags", "word_count", "last_edited_at"] = "last_edited_at"
+    sort_order: Literal["asc", "desc"] = "desc"
+    is_deleted: bool = False
 
 
 class 文章ID参数(BaseModel):
@@ -246,7 +256,7 @@ def _元信息更新载荷(args: dict[str, Any]) -> 文章更新:
 async def articles_list(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """查询当前用户自己的文章列表。"""
     body = 文章列表参数.model_validate(args)
-    response = await 列出我的文章(_获取MCP会话(context), page=body.page, page_size=body.page_size, user=context.user)
+    response = await 列出我的文章(_获取MCP会话(context), user=context.user, **body.model_dump())
     return {
         "items": [item.model_dump(mode="json") for item in response.items],
         "total": response.total,

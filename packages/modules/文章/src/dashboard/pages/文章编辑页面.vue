@@ -2400,7 +2400,7 @@ async function 删除选中未使用文章图片() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
   min-width: min(100%, 420px);
 }
@@ -2409,9 +2409,13 @@ async function 删除选中未使用文章图片() {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
   flex-wrap: wrap;
+}
+
+.article-editor-buttons :deep(.el-icon + span) {
+  margin-left: 3px;
 }
 
 .article-ai-panel {

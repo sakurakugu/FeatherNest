@@ -12,6 +12,7 @@ import type {
   ArticleLikeResult,
   ArticleEditorPayload,
   ArticleListResponse,
+  ArticleManagerQuery,
   ArticleMetaRecord,
   ArticleQuery,
   ArticleRecord,
@@ -31,7 +32,10 @@ export async function 获取所有文章元数据(): Promise<ArticleMetaRecord[]
   return data
 }
 
-export async function 获取文章列表(page = 1, query: ArticleQuery = {}): Promise<ArticleListResponse> {
+export async function 获取文章列表(
+  page = 1,
+  query: ArticleQuery = {},
+): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles', {
     params: {
       page,
@@ -69,6 +73,7 @@ export async function 获取我的文章列表(
   category: ArticleCategoryFilter = 全部文章筛选值,
   organizationState?: ArticleOrganizationState,
   search?: string,
+  query: ArticleManagerQuery = {},
 ): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
     params: {
@@ -78,6 +83,7 @@ export async function 获取我的文章列表(
       category,
       organization_state: organizationState,
       search,
+      ...query,
     },
   })
   return data
@@ -121,12 +127,18 @@ export async function 更新文章(id: string, payload: ArticleUpdatePayload): P
   return data
 }
 
-export async function 文章转待办(id: string, payload: ArticleConvertTodoPayload): Promise<ArticleConversion> {
+export async function 文章转待办(
+  id: string,
+  payload: ArticleConvertTodoPayload,
+): Promise<ArticleConversion> {
   const { data } = await api.post<ArticleConversion>(`/articles/my/${id}/convert/todo`, payload)
   return data
 }
 
-export async function 文章转资料(id: string, payload: ArticleConvertMaterialPayload): Promise<ArticleConversion> {
+export async function 文章转资料(
+  id: string,
+  payload: ArticleConvertMaterialPayload,
+): Promise<ArticleConversion> {
   const { data } = await api.post<ArticleConversion>(`/articles/my/${id}/convert/material`, payload)
   return data
 }
@@ -188,17 +200,25 @@ export async function 创建标签(name: string): Promise<TagRecord> {
 export async function 生成文章AI元信息建议(
   payload: ArticleAIRequestPayload,
 ): Promise<ArticleAIMetadataSuggestion> {
-  const { data } = await api.post<ArticleAIMetadataSuggestion>('/articles/ai/suggest-metadata', payload, {
-    timeout: 120000,
-  })
+  const { data } = await api.post<ArticleAIMetadataSuggestion>(
+    '/articles/ai/suggest-metadata',
+    payload,
+    {
+      timeout: 120000,
+    },
+  )
   return data
 }
 
 export async function AI润色文章正文(
   payload: ArticleAIRequestPayload,
 ): Promise<ArticleAIContentPolishResult> {
-  const { data } = await api.post<ArticleAIContentPolishResult>('/articles/ai/polish-content', payload, {
-    timeout: 120000,
-  })
+  const { data } = await api.post<ArticleAIContentPolishResult>(
+    '/articles/ai/polish-content',
+    payload,
+    {
+      timeout: 120000,
+    },
+  )
   return data
 }

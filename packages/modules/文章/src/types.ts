@@ -87,6 +87,15 @@ export interface ArticleLikeResult {
   liked: boolean
 }
 
+export type ArticleSortField =
+  'title' | 'status' | 'organization_state' | 'category' | 'tags' | 'word_count' | 'last_edited_at'
+export interface ArticleManagerQuery {
+  status?: ArticleStatus | 'pending'
+  tag_id?: string
+  sort_by?: ArticleSortField
+  sort_order?: 'asc' | 'desc'
+}
+
 export interface ArticleListResponse {
   items: ArticleRecord[]
   total: number
@@ -111,7 +120,9 @@ export interface ArticleEditorPayload {
   tag_ids: string[]
 }
 
-export type ArticleUpdatePayload = Partial<ArticleEditorPayload> & { organization_state?: ArticleOrganizationState }
+export type ArticleUpdatePayload = Partial<ArticleEditorPayload> & {
+  organization_state?: ArticleOrganizationState
+}
 
 export interface ArticleDraftPayload {
   organization_state?: ArticleOrganizationState

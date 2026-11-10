@@ -157,3 +157,28 @@ export interface MCPTokenCreateResponse {
   expires_at: string
   session: MCPDeviceSession
 }
+
+export type PushProvider = 'bark' | 'serverchan' | 'pushplus' | 'wxpusher' | 'wecom' | 'feishu' | 'dingtalk' | 'webhook'
+
+export interface PushChannel {
+  id: string
+  name: string
+  provider: PushProvider
+  enabled: boolean
+  has_config: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PushToken {
+  id: string
+  name: string
+  channel_ids: string[]
+  enabled: boolean
+  last_used_at: string | null
+  created_at: string
+}
+
+export interface PushTokenCreated extends PushToken {
+  token: string
+}

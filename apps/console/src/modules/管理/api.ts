@@ -9,6 +9,10 @@ import type {
   AnnouncementRecord,
   MCPTokenCreatePayload,
   MCPTokenCreateResponse,
+  PushChannel,
+  PushProvider,
+  PushToken,
+  PushTokenCreated,
   SystemStatus,
   TwikooPasswordState,
 } from './types'
@@ -105,5 +109,47 @@ export async function 创建MCP令牌(payload: MCPTokenCreatePayload): Promise<M
 export async function 重置Twikoo密码(password: string): Promise<TwikooPasswordState> {
   const { data } = await api.post<TwikooPasswordState>('/system/twikoo/password/reset', { password })
   return data
+}
+
+export async function 获取推送渠道(): Promise<PushChannel[]> {
+  const { data } = await api.get<PushChannel[]>('/notifications/channels')
+  return data
+}
+
+export async function 创建推送渠道(payload: { name: string; provider: PushProvider; config: Record<string, string> }): Promise<PushChannel> {
+  const { data } = await api.post<PushChannel>('/notifications/channels', payload)
+  return data
+}
+
+export async function 更新推送渠道(id: string, payload: { name?: string; config?: Record<string, string>; enabled?: boolean }): Promise<PushChannel> {
+  const { data } = await api.patch<PushChannel>(`/notifications/channels/${id}`, payload)
+  return data
+}
+
+export async function 删除推送渠道(id: string): Promise<void> {
+  await api.delete(`/notifications/channels/${id}`)
+}
+
+export async function 测试推送渠道(id: string): Promise<{ success: boolean; error: string | null }> {
+  const { data } = await api.post<{ success: boolean; error: string | null }>(`/notifications/channels/${id}/test`)
+  return data
+}
+
+export async function 获取推送令牌(): Promise<PushToken[]> {
+  const { data } = await api.get<PushToken[]>('/notifications/tokens')
+  return data
+}
+
+export async function 创建推送令牌(payload: { name: string; channel_ids: string[] }): Promise<PushTokenCreated> {
+  const { data } = await api.post<PushTokenCreated>('/notifications/tokens', payload)
+  return data
+}
+
+export async function 更新推送令牌状态(id: string, enabled: boolean): Promise<void> {
+  await api.patch(`/notifications/tokens/${id}`, { enabled })
+}
+
+export async function 删除推送令牌(id: string): Promise<void> {
+  await api.delete(`/notifications/tokens/${id}`)
 }
 

@@ -35,3 +35,6 @@ TODO.md
 
 # 博客自带头像是版本库资源。
 !apps/blog/public/头像.avif
+
+# AGENT
+.workbuddy/

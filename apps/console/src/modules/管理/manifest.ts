@@ -1,5 +1,5 @@
 import type { AppModule } from '@feathernest/app-core'
-import { Bell, ChatDotRound, DataAnalysis, Link, Monitor, Setting } from '@element-plus/icons-vue'
+import { Bell, ChatDotRound, DataAnalysis, Link, Message, Monitor, Setting } from '@element-plus/icons-vue'
 
 export default {
   id: '管理',
@@ -41,6 +41,12 @@ export default {
       meta: { title: 'AI 管理' },
     },
     {
+      path: 'push',
+      name: 'PushManage',
+      component: () => import('../管理/dashboard/pages/推送管理页面.vue'),
+      meta: { title: '推送管理' },
+    },
+    {
       path: 'twikoo',
       name: 'TwikooManage',
       component: () => import('../管理/dashboard/pages/评论管理页面.vue'),
@@ -54,6 +60,7 @@ export default {
     { routeName: 'AnnouncementsManage', label: '公告管理', icon: Bell, order: 5 },
     { routeName: 'FriendLinksManage', label: '友链管理', icon: Link, order: 3 },
     { routeName: 'AIManage', label: 'AI 管理', icon: ChatDotRound, order: 16 },
+    { routeName: 'PushManage', label: '推送管理', icon: Message, order: 15 },
     { routeName: 'TwikooManage', label: '评论管理', icon: ChatDotRound, order: 4 },
   ],
 } satisfies AppModule

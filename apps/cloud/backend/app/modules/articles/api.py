@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query, Request, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +40,6 @@ from app.modules.articles.queries import (
     按标识点赞文章,
     列出全部文章元数据,
     列出文章 as 列出文章_service,
-    列出我删除的文章 as 列出我删除的文章_service,
     列出我的文章 as 列出我的文章_service,
     未分类文章分类筛选值,
     取消按标识点赞文章,
@@ -133,6 +134,10 @@ async def 列出我的文章(
     is_deleted: bool = Query(False, description="是否显示回收站文章"),
     organization_state: str | None = Query(None, pattern="^(inbox|organized|archived)$"),
     search: str | None = Query(None, max_length=200),
+    status: str | None = Query(None, pattern="^(private|login_required|public|pending)$"),
+    tag_id: UUID | None = Query(None),
+    sort_by: str = Query("last_edited_at", pattern="^(title|status|organization_state|category|tags|word_count|last_edited_at)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     category: str = Query(
         全部文章分类筛选值,
         description=f"文章分类筛选：{全部文章分类筛选值} 为全部，{未分类文章分类筛选值} 为未分类，其他值按分类 ID 筛选",
@@ -152,14 +157,6 @@ async def 列出我的文章(
     Returns:
         PaginatedResponse: 分页文章数据
     """
-    if is_deleted:
-        return await 列出我删除的文章_service(
-            db,
-            page=page,
-            page_size=page_size,
-            user=user,
-            category_filter=category,
-        )
     return await 列出我的文章_service(
         db,
         page=page,
@@ -168,6 +165,11 @@ async def 列出我的文章(
         category_filter=category,
         organization_state=organization_state,
         search=search,
+        status=status,
+        tag_id=tag_id,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        is_deleted=is_deleted,
     )
 
 

@@ -7,10 +7,11 @@ import random
 from uuid import UUID
 
 from fastapi import HTTPException, Request, Response
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, literal, or_, select
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.articles.models import 文章, 文章图片, 文章状态, 博客发布
+from app.modules.articles.models import 文章, 文章图片, 文章标签, 文章状态, 分类, 标签, 博客发布
 from app.modules.articles.permissions import (
     构建博客可见文章条件,
     用户可否阅读文章,
@@ -162,10 +163,27 @@ async def 列出我的文章(
     category_filter: str = 全部文章分类筛选值,
     organization_state: str | None = None,
     search: str | None = None,
+    status: str | None = None,
+    tag_id: UUID | None = None,
+    sort_by: str = "last_edited_at",
+    sort_order: str = "desc",
+    is_deleted: bool = False,
 ) -> PaginatedResponse:
-    """获取当前用户的文章列表。"""
+    """获取当前用户的文章列表，筛选与排序在分页前执行。"""
     query = 文章查询().where(文章.author_id == user.id)
-    query = query.where(文章.is_deleted.is_(False))
+    query = query.where(文章.is_deleted.is_(is_deleted))
+    发布状态 = func.coalesce(
+        select(博客发布.status).where(博客发布.id == 文章.id, 博客发布.is_published.is_(True)).scalar_subquery(),
+        "private",
+    )
+    if status == "pending":
+        query = query.where(文章.blog.has(
+            (博客发布.is_published.is_(True)) & (博客发布.source_revision != 文章.revision)
+        ))
+    elif status:
+        query = query.where(发布状态 == status)
+    if tag_id:
+        query = query.where(文章.tags.any(标签.id == tag_id))
     if organization_state:
         query = query.where(文章.organization_state == organization_state)
     if search and search.strip():
@@ -176,8 +194,24 @@ async def 列出我的文章(
     elif category_filter and category_filter != 全部文章分类筛选值:
         query = query.where(文章.category_id == category_filter)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
+    分类名 = select(分类.name).where(分类.id == 文章.category_id).scalar_subquery()
+    标签名 = (
+        select(func.string_agg(标签.name, aggregate_order_by(literal(","), 标签.name.asc())))
+        .select_from(文章标签).join(标签, 标签.id == 文章标签.tag_id)
+        .where(文章标签.article_id == 文章.id).scalar_subquery()
+    )
+    排序列 = {
+        "title": 文章.title,
+        "status": case((发布状态 == "private", 0), (发布状态 == "login_required", 1), else_=2),
+        "organization_state": 文章.organization_state,
+        "category": func.coalesce(分类名, ""),
+        "tags": func.coalesce(标签名, ""),
+        "word_count": 文章.word_count,
+        "last_edited_at": 文章.last_edited_at,
+    }[sort_by]
+    排序表达式 = 排序列.asc() if sort_order == "asc" else 排序列.desc()
     result = await db.execute(
-        query.order_by(文章.last_edited_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        query.order_by(排序表达式, 文章.id.asc()).offset((page - 1) * page_size).limit(page_size)
     )
     items = result.scalars().unique().all()
     return PaginatedResponse(
@@ -198,27 +232,9 @@ async def 列出我删除的文章(
     category_filter: str = 全部文章分类筛选值,
 ) -> PaginatedResponse:
     """获取当前用户回收站中的文章列表。"""
-    query = 文章查询().where(
-        文章.author_id == user.id,
-        文章.is_deleted.is_(True),
-    )
-    if category_filter == 未分类文章分类筛选值:
-        query = query.where(文章.category_id.is_(None))
-    elif category_filter and category_filter != 全部文章分类筛选值:
-        query = query.where(文章.category_id == category_filter)
-    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
-    result = await db.execute(
-        query.order_by(文章.deleted_at.desc(), 文章.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
-    items = result.scalars().unique().all()
-    return PaginatedResponse(
-        items=[文章列表项.model_validate(item) for item in items],
-        total=total,
-        page=page,
-        page_size=page_size,
-        pages=math.ceil(total / page_size) if total else 0,
+    return await 列出我的文章(
+        db, page=page, page_size=page_size, user=user,
+        category_filter=category_filter, is_deleted=True,
     )
 
 

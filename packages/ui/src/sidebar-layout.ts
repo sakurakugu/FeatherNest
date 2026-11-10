@@ -6,6 +6,8 @@ export type 侧栏菜单项 = {
   label: string
   key: string
   icon: Component
+  iconPath?: string
+  count?: number
   disabled?: boolean
   dividerBefore?: boolean
   exact?: boolean

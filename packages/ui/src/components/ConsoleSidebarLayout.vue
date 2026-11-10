@@ -39,10 +39,9 @@ const 当前激活菜单Key = computed(() => {
     return 精确匹配项.key
   }
 
-  const 前缀匹配项 = props.menuItems.find((item) => (
-    !item.exact
-    && (route.path === item.key || route.path.startsWith(`${item.key}/`))
-  ))
+  const 前缀匹配项 = props.menuItems.find(
+    (item) => !item.exact && (route.path === item.key || route.path.startsWith(`${item.key}/`)),
+  )
 
   return 前缀匹配项?.key ?? route.path
 })
@@ -87,8 +86,29 @@ const 当前激活菜单Key = computed(() => {
               class="ps-console-sider__link-overlay"
               :aria-label="item.label"
             />
-            <ElIcon class="ps-console-sider__menu-icon"><component :is="item.icon" /></ElIcon>
-            <template #title>{{ item.label }}</template>
+            <ElIcon class="ps-console-sider__menu-icon">
+              <svg
+                v-if="item.iconPath"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path :d="item.iconPath" />
+              </svg>
+              <component :is="item.icon" v-else />
+            </ElIcon>
+            <template #title
+              ><span class="ps-console-sider__label">{{ item.label }}</span
+              ><span
+                v-if="item.count !== undefined && !isCompact"
+                class="ps-console-sider__count"
+                >{{ item.count.toLocaleString() }}</span
+              ></template
+            >
           </ElMenuItem>
         </ElMenu>
         <SidebarToggleHandle
@@ -162,7 +182,9 @@ const 当前激活菜单Key = computed(() => {
   width: 1px;
   background: var(--el-border-color);
   opacity: 0;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .ps-console-sider__resizer-handle {
@@ -180,7 +202,9 @@ const 当前激活菜单Key = computed(() => {
     rgb(var(--el-color-primary-rgb) / 0.16)
   );
   opacity: 0;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .ps-console-sider__resizer:hover::before,
@@ -297,7 +321,9 @@ const 当前激活菜单Key = computed(() => {
   opacity: 0.9;
 }
 
-.ps-console-sider.is-compact .ps-console-sider__inner :deep(.el-menu-item.menu-item--divider-before::before) {
+.ps-console-sider.is-compact
+  .ps-console-sider__inner
+  :deep(.el-menu-item.menu-item--divider-before::before) {
   left: 12px;
   right: 12px;
 }
@@ -320,4 +346,16 @@ const 当前激活菜单Key = computed(() => {
   pointer-events: none;
 }
 
+.ps-console-sider__count {
+  margin-left: auto;
+  color: var(--el-text-color-secondary);
+  font:
+    11px ui-monospace,
+    'Cascadia Code',
+    monospace;
+}
+.ps-console-sider__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 </style>

@@ -24,6 +24,7 @@ from app.modules.files.api import router as files_router
 from app.modules.friend_links.api import router as friend_links_router
 from app.modules.media.api import router as media_router
 from app.modules.moments.api import router as moments_router
+from app.modules.notifications.api import router as notifications_router
 from app.modules.stats.api import router as stats_router
 from app.modules.system.banner_api import router as banner_router
 from app.modules.system.api import router as admin_router
@@ -61,6 +62,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         feed_router,
         rss_router,
         moments_router,
+        notifications_router,
         banner_router,
     )
     for router in routers:

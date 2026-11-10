@@ -2176,6 +2176,102 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/notifications/channels': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['\u83B7\u53D6\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels_get']
+    put?: never
+    post: operations['\u65B0\u5EFA\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/notifications/channels/{channel_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations['\u79FB\u9664\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels__channel_id__delete']
+    options?: never
+    head?: never
+    patch: operations['\u7F16\u8F91\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels__channel_id__patch']
+    trace?: never
+  }
+  '/notifications/channels/{channel_id}/test': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['\u53D1\u9001\u63A8\u9001\u6D4B\u8BD5_api_v1_notifications_channels__channel_id__test_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/notifications/tokens': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['\u83B7\u53D6\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens_get']
+    put?: never
+    post: operations['\u65B0\u5EFA\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/notifications/tokens/{token_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations['\u79FB\u9664\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens__token_id__delete']
+    options?: never
+    head?: never
+    patch: operations['\u66F4\u6539\u63A8\u9001\u4EE4\u724C\u72B6\u6001_api_v1_notifications_tokens__token_id__patch']
+    trace?: never
+  }
+  '/notifications/send': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['\u53D1\u9001\u63A8\u9001\u6D88\u606F_api_v1_notifications_send_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/banner-images': {
     parameters: {
       query?: never
@@ -3265,6 +3361,84 @@ export interface components {
       last_edited_at: string
       updated_at: string
     }
+    app__modules__notifications__schemas______: {
+      channel_ids: string[]
+      title: string
+      content: string
+    }
+    app__modules__notifications__schemas_______: {
+      channel_id: string
+      name: string
+      success: boolean
+      error?: string | null
+    }
+    'app__modules__notifications__schemas__________-Input': {
+      enabled: boolean
+    }
+    'app__modules__notifications__schemas__________-Output': {
+      id: string
+      name: string
+      channel_ids: string[]
+      enabled: boolean
+      last_used_at: string | null
+      created_at: string
+      token: string
+    }
+    app__modules__notifications__schemas__________1: {
+      name: string
+      provider:
+        | 'bark'
+        | 'serverchan'
+        | 'pushplus'
+        | 'wxpusher'
+        | 'wecom'
+        | 'feishu'
+        | 'dingtalk'
+        | 'webhook'
+      config: {
+        [key: string]: string
+      }
+      enabled?: boolean
+    }
+    app__modules__notifications__schemas__________2: {
+      name?: string | null
+      config?: {
+        [key: string]: string
+      } | null
+      enabled?: boolean | null
+    }
+    app__modules__notifications__schemas__________3: {
+      name: string
+      channel_ids: string[]
+    }
+    app__modules__notifications__schemas__________4: {
+      id: string
+      name: string
+      provider:
+        | 'bark'
+        | 'serverchan'
+        | 'pushplus'
+        | 'wxpusher'
+        | 'wecom'
+        | 'feishu'
+        | 'dingtalk'
+        | 'webhook'
+      enabled: boolean
+      has_config?: boolean
+      created_at: string
+      updated_at: string
+    }
+    app__modules__notifications__schemas__________5: {
+      id: string
+      name: string
+      channel_ids: string[]
+      enabled: boolean
+      last_used_at: string | null
+      created_at: string
+    }
+    app__modules__notifications__schemas__________6: {
+      results: components['schemas']['app__modules__notifications__schemas_______'][]
+    }
     app__modules__system__schemas_______: {
       total_articles: number
       total_views: number
@@ -4113,6 +4287,10 @@ export interface operations {
         is_deleted?: boolean
         organization_state?: string | null
         search?: string | null
+        status?: string | null
+        tag_id?: string | null
+        sort_by?: string
+        sort_order?: string
         category?: string
       }
       header?: never
@@ -8334,6 +8512,286 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['app__modules__moments__schemas______-Output']
+        }
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u83B7\u53D6\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels_get': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__schemas__________4'][]
+        }
+      }
+    }
+  }
+  '\u65B0\u5EFA\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels_post': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['app__modules__notifications__schemas__________1']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__schemas__________4']
+        }
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u79FB\u9664\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels__channel_id__delete': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        channel_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u7F16\u8F91\u63A8\u9001\u6E20\u9053_api_v1_notifications_channels__channel_id__patch': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        channel_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['app__modules__notifications__schemas__________2']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__schemas__________4']
+        }
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u53D1\u9001\u63A8\u9001\u6D4B\u8BD5_api_v1_notifications_channels__channel_id__test_post': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        channel_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u83B7\u53D6\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens_get': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__schemas__________5'][]
+        }
+      }
+    }
+  }
+  '\u65B0\u5EFA\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens_post': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['app__modules__notifications__schemas__________3']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__schemas__________-Output']
+        }
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u79FB\u9664\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens__token_id__delete': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        token_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u66F4\u6539\u63A8\u9001\u4EE4\u724C\u72B6\u6001_api_v1_notifications_tokens__token_id__patch': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        token_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['app__modules__notifications__schemas__________-Input']
+      }
+    }
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u53D1\u9001\u63A8\u9001\u6D88\u606F_api_v1_notifications_send_post': {
+    parameters: {
+      query?: never
+      header?: {
+        authorization?: string | null
+      }
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['app__modules__notifications__schemas______']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__schemas__________6']
         }
       }
       422: {
