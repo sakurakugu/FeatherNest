@@ -26,6 +26,7 @@
     "@feathernest/domain": "*",
     "@feathernest/ui": "*",
     "@vueuse/core": "^15.0.0",
+    "fflate": "^0.8.3",
     "markdown-it-container": "^4.0.0"
   },
   "peerDependencies": {

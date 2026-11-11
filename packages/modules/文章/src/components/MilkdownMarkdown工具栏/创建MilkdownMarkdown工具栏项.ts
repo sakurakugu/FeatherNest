@@ -22,7 +22,6 @@ import {
   ListTodo,
   Maximize2,
   Network,
-  PanelRightOpen,
   Pilcrow,
   Quote,
   Reply,
@@ -41,6 +40,7 @@ import {
   Github图标,
   HTML预览图标,
   大纲图标,
+  属性图标,
   标签页图标,
   美化图标,
   缩写图标,
@@ -60,6 +60,8 @@ interface 创建MilkdownMarkdown工具栏项选项 {
   outlineVisible: () => boolean
   showOutlineToggle: () => boolean
   showAiTools: () => boolean
+  propertiesVisible: () => boolean
+  showPropertiesToggle: () => boolean
 }
 
 export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdown工具栏项选项): ToolbarItem[] {
@@ -198,15 +200,6 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
       hidden: () => !options.showAiTools(),
     },
     {
-      label: '布局',
-      title: '预览布局切换',
-      dynamicTitle: () => (options.previewLayoutMode() === 'split' ? '切换为全屏预览' : '切换为半屏预览'),
-      action: 'previewLayoutToggle',
-      dynamicIcon: () => (options.previewLayoutMode() === 'split' ? PanelRightOpen : Columns2),
-      hidden: () => !options.showPreviewToggle() || !options.previewEnabled(),
-      active: () => options.previewLayoutMode() === 'full',
-    },
-    {
       label: '类型',
       title: '预览类型切换',
       dynamicTitle: () => {
@@ -255,9 +248,13 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
     {
       label: '预览',
       title: '预览',
-      dynamicTitle: () => (options.previewEnabled() ? '关闭预览' : '启用预览'),
+      dynamicTitle: () => !options.previewEnabled()
+        ? '当前书写，点击切换为预览'
+        : options.previewLayoutMode() === 'full'
+          ? '当前预览，点击切换为双屏'
+          : '当前双屏，点击切换为书写',
       action: 'previewToggle',
-      dynamicIcon: () => (options.previewEnabled() ? EyeOff : Eye),
+      dynamicIcon: () => !options.previewEnabled() ? FilePenLine : options.previewLayoutMode() === 'full' ? Eye : Columns2,
       hidden: () => !options.showPreviewToggle(),
       active: () => options.previewEnabled(),
     },
@@ -270,6 +267,14 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
       icon: 大纲图标,
       hidden: () => !options.showOutlineToggle(),
       active: () => options.outlineVisible(),
+    },
+    {
+      label: '属性',
+      title: '文章属性',
+      action: 'propertiesToggle',
+      icon: 属性图标,
+      hidden: () => !options.showPropertiesToggle(),
+      active: () => options.propertiesVisible(),
     },
     {
       label: '浏览器全屏',

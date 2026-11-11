@@ -162,6 +162,7 @@ def 存在待执行迁移(
             [*alembic前缀, *参数],
             capture_output=True,
             text=True,
+            errors="replace",
             cwd=迁移工作目录,
             env=迁移环境,
         )

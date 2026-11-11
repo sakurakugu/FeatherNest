@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Delete, DocumentAdd, EditPen, MagicStick, Select } from '@element-plus/icons-vue'
-import { 获取API错误消息 } from '@feathernest/api'
+import api, { 获取API错误消息 } from '@feathernest/api'
 import { PageSectionShell } from '@feathernest/ui'
 import {
   ElButton,
@@ -16,7 +16,17 @@ import {
   ElSpace,
   ElTag,
 } from 'element-plus'
-import { computed, defineAsyncComponent, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   AI润色文章正文,
@@ -32,6 +42,10 @@ import {
   获取文章图片,
 } from '../../api'
 import MarkdownRenderer from '../../components/Markdown渲染器.vue'
+import {
+  大纲图标 as OutlineIcon,
+  属性图标 as PropertiesIcon,
+} from '../../components/MilkdownMarkdown工具栏/MilkdownMarkdown工具栏图标'
 import type {
   MilkdownMarkdownImagePayload,
   MilkdownMarkdown编辑器实例,
@@ -57,20 +71,37 @@ import { 使用保存快捷键 } from '../../使用保存快捷键'
 import { 使用视口 } from '../../使用视口'
 import ArticleImagePanel from '../components/文章图片面板.vue'
 import { 使用编辑器快捷键 } from '../composables/使用编辑器快捷键'
+import { 下载文章Markdown } from '../文章Markdown导出'
 
-const props = withDefaults(defineProps<{
-  showBack?: boolean
-  backTo?: string
-}>(), {
-  showBack: false,
-  backTo: '/articles',
-})
+const props = withDefaults(
+  defineProps<{
+    showBack?: boolean
+    backTo?: string
+    embedded?: boolean
+    split?: boolean
+    splitEdit?: boolean
+    articleId?: string
+  }>(),
+  {
+    showBack: false,
+    backTo: '/articles',
+    embedded: false,
+    split: false,
+    articleId: '',
+  },
+)
+
+const emit = defineEmits<{
+  close: []
+  saved: [article: ArticleRecord]
+  deleted: [id: string]
+}>()
 
 const route = useRoute()
 const router = useRouter()
 const themeStore = 使用文章主题状态()
 const articleTaxonomyStore = 使用文章分类存储()
-const 路由前缀 = computed(() => route.path.startsWith('/admin') ? '/admin' : '')
+const 路由前缀 = computed(() => (route.path.startsWith('/admin') ? '/admin' : ''))
 
 const MarkdownMindmap = defineAsyncComponent(() => import('../../components/Markdown思维导图.vue'))
 
@@ -78,6 +109,32 @@ const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)
 const loading = ref(false)
 const saving = ref(false)
+const loadFailed = ref(false)
+const saveFailed = ref(false)
+const propertiesVisible = ref(true)
+const exporting = ref(false)
+const visibility = ref<'private' | 'public' | 'login_required'>('private')
+const savedVisibility = ref(visibility.value)
+const visibilityOptions = [
+  { value: 'public', label: '公开' },
+  { value: 'login_required', label: '登录可见' },
+  { value: 'private', label: '私有' },
+] as const
+let autoSaveTimer: ReturnType<typeof setTimeout> | undefined
+let pendingSave: Promise<boolean> | null = null
+const saveStateText = computed(() =>
+  loadFailed.value
+    ? '加载失败'
+    : saveFailed.value
+      ? '保存失败，点击重试'
+      : saving.value
+        ? '保存中…'
+        : isDirty.value
+          ? '未保存'
+          : currentArticleId.value
+            ? '已保存'
+            : '尚未保存',
+)
 const deletingArticle = ref(false)
 const formatting = ref(false)
 const uploadingImageCount = ref(0)
@@ -101,15 +158,33 @@ type 预览布局模式 = 'hidden' | 'split' | 'full'
 const previewType = ref<预览类型>('preview')
 const previewLayoutMode = ref<预览布局模式>('hidden')
 const scrollSyncEnabled = ref(true)
-const isMarkdownPreviewVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value !== 'hidden')
-const isMarkdownSplitVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'split')
-const isMarkdownFullVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'full')
-const isHtmlPreviewVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value !== 'hidden')
-const isHtmlSplitVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'split')
-const isHtmlFullVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'full')
-const isMindmapPreviewVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden')
-const isMindmapSplitVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'split')
-const isMindmapFullVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'full')
+const isMarkdownPreviewVisible = computed(
+  () => previewType.value === 'preview' && previewLayoutMode.value !== 'hidden',
+)
+const isMarkdownSplitVisible = computed(
+  () => previewType.value === 'preview' && previewLayoutMode.value === 'split',
+)
+const isMarkdownFullVisible = computed(
+  () => previewType.value === 'preview' && previewLayoutMode.value === 'full',
+)
+const isHtmlPreviewVisible = computed(
+  () => previewType.value === 'html' && previewLayoutMode.value !== 'hidden',
+)
+const isHtmlSplitVisible = computed(
+  () => previewType.value === 'html' && previewLayoutMode.value === 'split',
+)
+const isHtmlFullVisible = computed(
+  () => previewType.value === 'html' && previewLayoutMode.value === 'full',
+)
+const isMindmapPreviewVisible = computed(
+  () => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden',
+)
+const isMindmapSplitVisible = computed(
+  () => previewType.value === 'mindmap' && previewLayoutMode.value === 'split',
+)
+const isMindmapFullVisible = computed(
+  () => previewType.value === 'mindmap' && previewLayoutMode.value === 'full',
+)
 const previewEnabled = computed({
   get: () => previewLayoutMode.value !== 'hidden',
   set: (enabled: boolean) => {
@@ -117,12 +192,12 @@ const previewEnabled = computed({
   },
 })
 const activePreviewLayoutMode = computed<'split' | 'full'>({
-  get: () => previewLayoutMode.value === 'full' ? 'full' : 'split',
+  get: () => (previewLayoutMode.value === 'full' ? 'full' : 'split'),
   set: (mode) => {
     previewLayoutMode.value = mode
   },
 })
-const outlineVisible = ref(false)
+const outlineVisible = ref(props.embedded)
 const 编辑器内容区顶部偏移 = ref(0)
 const 编辑器工具栏底部偏移 = ref(0)
 const 编辑器内容区底部偏移 = ref(0)
@@ -171,28 +246,41 @@ const aiStatusMessage = ref('')
 
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
-const isDirty = computed(() => buildFormSnapshot(form.value) !== buildFormSnapshot(savedForm.value))
-const 已使用文章图片路径集合 = computed(() => 收集已使用文章图片路径(form.value.content, form.value.cover_url))
-const 文章图片列表项 = computed(() => articleImages.value.map((image) => {
-  const 图片路径 = 规范化站内文件路径(image.url)
-  return {
-    ...image,
-    isUsed: image.used_by_publication || (图片路径 !== null && 已使用文章图片路径集合.value.has(图片路径)),
-  }
-}))
+const isDirty = computed(
+  () =>
+    buildFormSnapshot(form.value) !== buildFormSnapshot(savedForm.value) ||
+    visibility.value !== savedVisibility.value,
+)
+const 已使用文章图片路径集合 = computed(() =>
+  收集已使用文章图片路径(form.value.content, form.value.cover_url),
+)
+const 文章图片列表项 = computed(() =>
+  articleImages.value.map((image) => {
+    const 图片路径 = 规范化站内文件路径(image.url)
+    return {
+      ...image,
+      isUsed:
+        image.used_by_publication ||
+        (图片路径 !== null && 已使用文章图片路径集合.value.has(图片路径)),
+    }
+  }),
+)
 const 未使用文章图片列表 = computed(() => 文章图片列表项.value.filter((image) => !image.isUsed))
-const 已使用文章图片数量 = computed(() => 文章图片列表项.value.length - 未使用文章图片列表.value.length)
+const 已使用文章图片数量 = computed(
+  () => 文章图片列表项.value.length - 未使用文章图片列表.value.length,
+)
 const htmlPreviewContent = computed(() => renderArticleMarkdown(form.value.content).html)
 const 文章大纲列表 = computed(() => 提取Markdown大纲(form.value.content))
 const 当前可见大纲序号集合 = ref<Set<number>>(new Set())
-const 文章图片桌面摘要 = computed(() => (
-  `共 ${文章图片列表项.value.length} 张，已使用 ${已使用文章图片数量.value} 张，未使用 ${未使用文章图片列表.value.length} 张`
-))
-const 文章图片移动端摘要 = computed(() => (
+const 文章图片桌面摘要 = computed(
+  () =>
+    `共 ${文章图片列表项.value.length} 张，已使用 ${已使用文章图片数量.value} 张，未使用 ${未使用文章图片列表.value.length} 张`,
+)
+const 文章图片移动端摘要 = computed(() =>
   未使用文章图片列表.value.length > 0
     ? `共 ${文章图片列表项.value.length} 张，未使用 ${未使用文章图片列表.value.length} 张`
-    : `共 ${文章图片列表项.value.length} 张`
-))
+    : `共 ${文章图片列表项.value.length} 张`,
+)
 const 已有分类名称列表 = computed(() => categories.value.map((item) => item.label))
 const 已有标签名称列表 = computed(() => tags.value.map((item) => item.label))
 const AI建议分类已存在 = computed(() => {
@@ -214,7 +302,12 @@ interface SaveArticleOptions {
 }
 
 使用保存快捷键({
-  enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
+  enabled: () =>
+    页面是否激活.value &&
+    !loading.value &&
+    !saving.value &&
+    !formatting.value &&
+    !isUploadingImages.value,
   onSave: () => {
     if (!isDirty.value) {
       ElMessage.info('没有可保存的更改')
@@ -228,12 +321,18 @@ interface SaveArticleOptions {
 使用编辑器快捷键({
   editorRoot: editorWrapperRef,
   editorId,
-  enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
+  enabled: () =>
+    页面是否激活.value &&
+    !loading.value &&
+    !saving.value &&
+    !formatting.value &&
+    !isUploadingImages.value,
   onFormatAndSave: formatAndSaveArticle,
   onRedo: () => editorRef.value?.redo(),
 })
 
 function getRouteArticleId(): string {
+  if (props.embedded) return props.articleId
   const routeArticleId = route.params.id
 
   if (typeof routeArticleId === 'string') {
@@ -251,7 +350,10 @@ async function loadEditorOptions() {
   await articleTaxonomyStore.ensureLoaded(false, 'all')
   const categoryRecords = articleTaxonomyStore.categories
   const tagRecords = articleTaxonomyStore.tags
-  categories.value = categoryRecords.map((category) => ({ label: category.name, value: category.id }))
+  categories.value = categoryRecords.map((category) => ({
+    label: category.name,
+    value: category.id,
+  }))
   tags.value = tagRecords.map((tag) => ({ label: tag.name, value: tag.id }))
 }
 
@@ -293,6 +395,21 @@ async function handleCreateTag() {
     if (error === 'cancel') return
     ElMessage.error(获取API错误消息(error, '创建标签失败'))
   }
+}
+
+function toggleTag(tagId: string) {
+  const index = form.value.tag_ids.indexOf(tagId)
+  if (index === -1) {
+    form.value.tag_ids.push(tagId)
+  } else {
+    form.value.tag_ids.splice(index, 1)
+  }
+}
+
+function handleTitleKeydown(event: globalThis.Event | globalThis.KeyboardEvent) {
+  if (!(event instanceof globalThis.KeyboardEvent) || event.key !== 'Enter' || event.isComposing) return
+  event.preventDefault()
+  editorRef.value?.focus()
 }
 
 async function 构建文章AI请求(): Promise<ArticleAIRequestPayload | null> {
@@ -368,9 +485,10 @@ async function 生成AI润色正文() {
       ElMessage.warning(aiStatusMessage.value)
       return
     }
-    aiStatusMessage.value = result.content.trim() === payload.content.trim()
-      ? 'AI 已返回润色结果，但正文与当前内容基本一致。'
-      : '正文润色结果已生成，可预览后替换。'
+    aiStatusMessage.value =
+      result.content.trim() === payload.content.trim()
+        ? 'AI 已返回润色结果，但正文与当前内容基本一致。'
+        : '正文润色结果已生成，可预览后替换。'
     ElMessage.success('AI 润色结果已生成')
   } catch (error) {
     const message = 获取API错误消息(error, 'AI 润色正文失败')
@@ -542,7 +660,7 @@ function cloneFormPayload(payload: ArticleEditorPayload): ArticleEditorPayload {
 function 提取Markdown大纲(content: string): 文章大纲项[] {
   const outline: 文章大纲项[] = []
   const lines = content.replace(/\r\n?/g, '\n').split('\n')
-  let fence: { marker: string, length: number } | null = null
+  let fence: { marker: string; length: number } | null = null
 
   lines.forEach((line, lineIndex) => {
     const fenceMatch = line.match(/^(\s*)(`{3,}|~{3,})/)
@@ -668,9 +786,10 @@ function 更新当前可见大纲项() {
   }
 
   const 源码输入框 = 滚动容器.querySelector('.milkdown-markdown-editor__source')
-  const visibleIndexes = 源码输入框 instanceof globalThis.HTMLTextAreaElement
-    ? 获取源码模式可见大纲序号(滚动容器, 源码输入框, outlineItems)
-    : 获取可视编辑模式可见大纲序号(滚动容器)
+  const visibleIndexes =
+    源码输入框 instanceof globalThis.HTMLTextAreaElement
+      ? 获取源码模式可见大纲序号(滚动容器, 源码输入框, outlineItems)
+      : 获取可视编辑模式可见大纲序号(滚动容器)
 
   当前可见大纲序号集合.value = visibleIndexes
   void nextTick(() => 更新大纲活动指示器())
@@ -686,7 +805,9 @@ function 更新大纲活动指示器() {
 
   const activeElements = Array.from(
     listElement.querySelectorAll('.article-editor-outline__item.is-active'),
-  ).filter((element): element is globalThis.HTMLElement => element instanceof globalThis.HTMLElement)
+  ).filter(
+    (element): element is globalThis.HTMLElement => element instanceof globalThis.HTMLElement,
+  )
 
   if (activeElements.length === 0) {
     indicator.style.opacity = '0'
@@ -705,9 +826,9 @@ function 更新大纲活动指示器() {
 
 function 获取可视编辑模式可见大纲序号(滚动容器: globalThis.HTMLElement): Set<number> {
   const visibleIndexes = new Set<number>()
-  const 标题元素列表 = Array.from(
-    滚动容器.querySelectorAll('h1, h2, h3, h4, h5, h6'),
-  ).filter((element): element is globalThis.HTMLElement => element instanceof globalThis.HTMLElement)
+  const 标题元素列表 = Array.from(滚动容器.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(
+    (element): element is globalThis.HTMLElement => element instanceof globalThis.HTMLElement,
+  )
   const 容器矩形 = 滚动容器.getBoundingClientRect()
 
   标题元素列表.forEach((element, index) => {
@@ -743,7 +864,10 @@ function 获取源码模式可见大纲序号(
   const lineHeight = 获取文本域行高(textarea)
   const 标题区域高度 = Math.max(0, textarea.offsetTop - 滚动容器.offsetTop)
   const 正文滚动顶部 = Math.max(0, 滚动容器.scrollTop - 标题区域高度)
-  const 正文可见底部 = Math.max(正文滚动顶部, 滚动容器.scrollTop + 滚动容器.clientHeight - 标题区域高度)
+  const 正文可见底部 = Math.max(
+    正文滚动顶部,
+    滚动容器.scrollTop + 滚动容器.clientHeight - 标题区域高度,
+  )
   const startLine = Math.max(1, Math.floor(正文滚动顶部 / lineHeight) + 1)
   const endLine = Math.max(startLine, Math.ceil(正文可见底部 / lineHeight))
 
@@ -788,7 +912,10 @@ function 调度滚动大纲到活动项() {
     大纲活动滚动计时器 = 0
     const 大纲列表元素 = outlineListRef.value
     const activeElement = 大纲列表元素?.querySelector('.article-editor-outline__item.is-active')
-    if (!(大纲列表元素 instanceof globalThis.HTMLElement) || !(activeElement instanceof globalThis.HTMLElement)) {
+    if (
+      !(大纲列表元素 instanceof globalThis.HTMLElement) ||
+      !(activeElement instanceof globalThis.HTMLElement)
+    ) {
       return
     }
 
@@ -886,6 +1013,9 @@ async function syncArticleByRoute(articleId: string) {
   const 当前加载序号 = ++文章加载序号
 
   currentArticleId.value = articleId
+  loadFailed.value = false
+  saveFailed.value = false
+  visibility.value = 'private'
   if (!articleId) {
     loading.value = false
     resetEditorForm()
@@ -902,6 +1032,7 @@ async function syncArticleByRoute(articleId: string) {
     }
 
     currentArticleId.value = article.id
+    visibility.value = article.status
     applyArticleToForm(article)
     await 同步文章图片(article.id)
     markFormSaved()
@@ -911,6 +1042,7 @@ async function syncArticleByRoute(articleId: string) {
     }
 
     currentArticleId.value = ''
+    loadFailed.value = true
     resetEditorForm()
     清空文章图片状态()
     markFormSaved()
@@ -952,7 +1084,11 @@ function 是否为控制台标签切换(): boolean {
 onMounted(() => {
   本页路由路径.value = route.path
   previewType.value = 'preview'
-  previewLayoutMode.value = isMobileViewport.value ? 'hidden' : 'split'
+  previewLayoutMode.value = props.embedded || isMobileViewport.value ? 'hidden' : 'split'
+  if (props.embedded && isMobileViewport.value) {
+    propertiesVisible.value = true
+    outlineVisible.value = false
+  }
 
   void loadEditorOptions().catch((error) => {
     ElMessage.error(获取API错误消息(error, '加载分类和标签失败'))
@@ -972,6 +1108,7 @@ onDeactivated(() => {
 })
 
 onBeforeUnmount(() => {
+  clearTimeout(autoSaveTimer)
   window.removeEventListener('beforeunload', handleBeforeUnload)
   编辑器尺寸观察器?.disconnect()
   if (滚动同步初始化帧) {
@@ -995,15 +1132,37 @@ watch(
 watch(
   isMobileViewport,
   async () => {
+    if (isMobileViewport.value) {
+      propertiesVisible.value = true
+      outlineVisible.value = false
+    }
     await nextTick()
     初始化编辑器内容区尺寸观察()
   },
   { flush: 'post' },
 )
 
-watch([previewType, previewLayoutMode, scrollSyncEnabled], async () => {
+watch(outlineVisible, (visible) => {
+  if (visible && isMobileViewport.value) propertiesVisible.value = false
+})
+watch(propertiesVisible, (visible) => {
+  if (visible && isMobileViewport.value) outlineVisible.value = false
+})
+
+watch([previewType, previewLayoutMode], async (_, [previousType, previousLayout]) => {
+  const previousPreview = previousType === 'html' ? htmlOverlayRef.value : markdownOverlayRef.value
+  const ratio = previousLayout === 'full' && previousPreview
+    ? 获取滚动比例(previousPreview)
+    : editorRef.value?.getScrollRatio() ?? 0
+  清理滚动同步监听()
+  await nextTick()
+  初始化编辑器内容区尺寸观察()
+  editorRef.value?.setScrollRatio(ratio)
+  const preview = 获取预览滚动容器()
+  if (preview) 设置滚动比例(preview, ratio)
   await 调度滚动同步监听初始化()
 })
+watch(scrollSyncEnabled, 调度滚动同步监听初始化)
 
 watch(
   () => editorRef.value,
@@ -1049,6 +1208,7 @@ watch(
 )
 
 onBeforeRouteLeave(async () => {
+  if (props.embedded) return prepareToLeave()
   if (deletingArticle.value) {
     return true
   }
@@ -1062,7 +1222,9 @@ onBeforeRouteLeave(async () => {
     ElMessage.warning(
       isUploadingImages.value
         ? '图片仍在上传，请稍后'
-        : (formatting.value ? '正在美化内容，请稍后' : '正在保存，请稍后'),
+        : formatting.value
+          ? '正在美化内容，请稍后'
+          : '正在保存，请稍后',
     )
     return false
   }
@@ -1072,18 +1234,14 @@ onBeforeRouteLeave(async () => {
   }
 
   try {
-    await ElMessageBox.confirm(
-      '当前文章有未保存内容，是否先保存再退出？',
-      '未保存内容',
-      {
-        confirmButtonText: '保存并退出',
-        cancelButtonText: '直接退出',
-        distinguishCancelAndClose: true,
-        closeOnClickModal: false,
-        closeOnPressEscape: false,
-        type: 'warning',
-      },
-    )
+    await ElMessageBox.confirm('当前文章有未保存内容，是否先保存再退出？', '未保存内容', {
+      confirmButtonText: '保存并退出',
+      cancelButtonText: '直接退出',
+      distinguishCancelAndClose: true,
+      closeOnClickModal: false,
+      closeOnPressEscape: false,
+      type: 'warning',
+    })
     return await saveArticle({ redirectAfterSave: false, syncRouteAfterSave: false })
   } catch (action: unknown) {
     return action === 'cancel'
@@ -1100,13 +1258,17 @@ function buildFormSnapshot(payload: ArticleEditorPayload): string {
 
 function markFormSaved() {
   savedForm.value = cloneFormPayload(form.value)
+  savedVisibility.value = visibility.value
 }
 
 function isSameTagIds(currentTagIds: string[], previousTagIds: string[]): boolean {
   return JSON.stringify([...currentTagIds].sort()) === JSON.stringify([...previousTagIds].sort())
 }
 
-function buildUpdatePayload(currentPayload: ArticleEditorPayload, previousPayload: ArticleEditorPayload): ArticleUpdatePayload {
+function buildUpdatePayload(
+  currentPayload: ArticleEditorPayload,
+  previousPayload: ArticleEditorPayload,
+): ArticleUpdatePayload {
   const payload: ArticleUpdatePayload = {}
 
   if (currentPayload.title !== previousPayload.title) {
@@ -1156,29 +1318,15 @@ function buildDraftPayload(): ArticleDraftPayload {
   }
 }
 
-async function createCurrentArticle() {
-  尝试从内容补全标题()
-  const created = await 创建文章(form.value)
-  currentArticleId.value = created.id
-  return created.id
-}
-
-async function updateCurrentArticle() {
-  if (!currentArticleId.value) {
-    throw new Error('missing_article_id')
-  }
-
-  尝试从内容补全标题()
-  const payload = buildUpdatePayload(form.value, savedForm.value)
-  await 更新文章(currentArticleId.value, payload)
-  return currentArticleId.value
-}
-
 async function syncEditorRoute(articleId: string) {
+  if (props.embedded) return
   if (!articleId) {
     return
   }
-  if (!['DesktopArticleEditor', 'ArticleEditor'].includes(String(route.name ?? '')) || getRouteArticleId() === articleId) {
+  if (
+    !['DesktopArticleEditor', 'ArticleEditor'].includes(String(route.name ?? '')) ||
+    getRouteArticleId() === articleId
+  ) {
     return
   }
 
@@ -1189,6 +1337,7 @@ async function syncEditorRoute(articleId: string) {
 }
 
 async function ensureDraftArticleForImageUpload(): Promise<string> {
+  if (pendingSave && !(await pendingSave)) throw new Error('保存草稿失败，无法上传图片')
   if (currentArticleId.value) {
     return currentArticleId.value
   }
@@ -1227,7 +1376,8 @@ function 同步编辑器内容区尺寸() {
   const 页脚元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__footer')
 
   编辑器内容区顶部偏移.value = 编辑器工具栏底部偏移.value
-  编辑器内容区底部偏移.value = 页脚元素 instanceof globalThis.HTMLElement ? 页脚元素.offsetHeight : 0
+  编辑器内容区底部偏移.value =
+    页脚元素 instanceof globalThis.HTMLElement ? 页脚元素.offsetHeight : 0
 }
 
 function 初始化编辑器内容区尺寸观察() {
@@ -1270,11 +1420,11 @@ function 初始化编辑器内容区尺寸观察() {
 }
 
 function 获取预览滚动容器(): globalThis.HTMLElement | null {
-  if (isMarkdownSplitVisible.value) {
+  if (isMarkdownPreviewVisible.value) {
     return markdownOverlayRef.value
   }
 
-  if (isHtmlSplitVisible.value) {
+  if (isHtmlPreviewVisible.value) {
     return htmlOverlayRef.value
   }
 
@@ -1330,7 +1480,7 @@ function 初始化滚动同步监听() {
   }
 
   const 同步到预览 = () => {
-    if (当前滚动同步来源 === 'preview') {
+    if (previewLayoutMode.value !== 'split' || 当前滚动同步来源 === 'preview') {
       return
     }
 
@@ -1364,7 +1514,7 @@ function 初始化滚动同步监听() {
     () => 预览滚动容器.removeEventListener('scroll', 同步到编辑器),
   ]
 
-  将编辑器滚动同步到预览()
+  if (previewLayoutMode.value === 'split') 将编辑器滚动同步到预览()
 }
 
 async function 调度滚动同步监听初始化() {
@@ -1395,7 +1545,7 @@ function handleEditorUploadError(error: unknown) {
 }
 
 function 将编辑器滚动同步到预览() {
-  if (!scrollSyncEnabled.value) {
+  if (!scrollSyncEnabled.value || previewLayoutMode.value === 'full') {
     return
   }
 
@@ -1406,6 +1556,12 @@ function 将编辑器滚动同步到预览() {
   }
 
   设置滚动比例(预览滚动容器, 编辑器实例.getScrollRatio())
+}
+
+async function 恢复预览滚动位置() {
+  await nextTick()
+  const preview = 获取预览滚动容器()
+  if (preview && editorRef.value) 设置滚动比例(preview, editorRef.value.getScrollRatio())
 }
 
 function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
@@ -1494,7 +1650,7 @@ async function formatArticleContent(): Promise<boolean> {
 }
 
 async function formatAndSaveArticle(): Promise<boolean> {
-  if (!await formatArticleContent()) {
+  if (!(await formatArticleContent())) {
     return false
   }
 
@@ -1507,9 +1663,22 @@ async function formatAndSaveArticle(): Promise<boolean> {
 }
 
 async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
-  尝试从内容补全标题()
+  if (pendingSave) return pendingSave
+  pendingSave = persistArticle(options)
+  try {
+    return await pendingSave
+  } finally {
+    pendingSave = null
+  }
+}
 
-  if (!form.value.title.trim()) {
+async function persistArticle(options: SaveArticleOptions): Promise<boolean> {
+  clearTimeout(autoSaveTimer)
+  if (loadFailed.value) return false
+  if (editorRef.value) form.value.content = editorRef.value.getMarkdown()
+  if (!props.embedded) 尝试从内容补全标题()
+
+  if (!props.embedded && !form.value.title.trim()) {
     ElMessage.warning('请填写标题')
     return false
   }
@@ -1518,27 +1687,47 @@ async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
     return false
   }
 
-  let savedArticleId: string
+  const snapshot = cloneFormPayload(form.value)
+  const visibilitySnapshot = visibility.value
+  let article: ArticleRecord
 
   saving.value = true
+  saveFailed.value = false
   try {
     if (isEdit.value) {
-      savedArticleId = await updateCurrentArticle()
-      ElMessage.success('更新成功')
+      article = await 更新文章(
+        currentArticleId.value,
+        buildUpdatePayload(snapshot, savedForm.value),
+      )
     } else {
-      savedArticleId = await createCurrentArticle()
-      ElMessage.success('创建成功')
+      article = await (props.embedded ? 创建文章草稿(snapshot) : 创建文章(snapshot))
+      currentArticleId.value = article.id
     }
-    markFormSaved()
+    if (props.embedded) {
+      if (visibilitySnapshot !== 'private') {
+        await api.post(`/articles/blog/${article.id}/publish`, {
+          expected_revision: article.revision,
+          visibility: visibilitySnapshot,
+        })
+        article = await 根据ID获取我的文章(article.id)
+      } else if (article.status !== 'private') {
+        await api.post(`/articles/blog/${article.id}/withdraw`)
+        article = await 根据ID获取我的文章(article.id)
+      }
+    }
+    console.info('[文章写作] 保存完成', { articleId: article.id, status: article.status })
+    savedForm.value = snapshot
+    savedVisibility.value = visibilitySnapshot
+    emit('saved', article)
+    if (!props.embedded) ElMessage.success('保存成功')
   } catch (error) {
-    if (error instanceof Error && error.message === 'missing_article_id') {
-      ElMessage.error('缺少文章 ID，无法更新')
-      return false
-    }
+    saveFailed.value = true
+    console.error('[文章写作] 保存失败', { articleId: currentArticleId.value, error })
     ElMessage.error(获取API错误消息(error, '保存失败'))
     return false
   } finally {
     saving.value = false
+    if (props.embedded && !saveFailed.value && isDirty.value) scheduleAutoSave()
   }
 
   if (options.redirectAfterSave) {
@@ -1547,11 +1736,73 @@ async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
   }
 
   if (options.syncRouteAfterSave !== false) {
-    await syncEditorRoute(savedArticleId)
+    await syncEditorRoute(article.id)
   }
 
   return true
 }
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer)
+  if (
+    !props.embedded ||
+    loading.value ||
+    loadFailed.value ||
+    !isDirty.value ||
+    isUploadingImages.value ||
+    formatting.value
+  )
+    return
+  autoSaveTimer = setTimeout(() => {
+    void saveArticle({ redirectAfterSave: false, syncRouteAfterSave: false })
+  }, 1600)
+}
+
+watch([form, visibility, isUploadingImages, formatting], scheduleAutoSave, { deep: true })
+
+async function prepareToLeave(): Promise<boolean> {
+  clearTimeout(autoSaveTimer)
+  if (loading.value || formatting.value || isUploadingImages.value) {
+    ElMessage.warning('文章仍在处理，请稍后')
+    return false
+  }
+  // Markdown 变更通知有延迟，离开前直接读取编辑器以保存最后一次输入。
+  if (!loadFailed.value && editorRef.value) form.value.content = editorRef.value.getMarkdown()
+  if (pendingSave && !(await pendingSave)) return false
+  while (isDirty.value) {
+    if (!(await saveArticle({ redirectAfterSave: false, syncRouteAfterSave: false }))) return false
+  }
+  return true
+}
+
+async function closeWriting() {
+  if (await prepareToLeave()) emit('close')
+}
+
+async function saveWriting() {
+  await saveArticle({ redirectAfterSave: false, syncRouteAfterSave: false })
+}
+
+async function exportWriting() {
+  if (editorRef.value) form.value.content = editorRef.value.getMarkdown()
+  exporting.value = true
+  try {
+    await 下载文章Markdown(form.value.title, form.value.content)
+  } catch (error) {
+    console.error('[文章写作] 另存为失败', error)
+    ElMessage.error(获取API错误消息(error, '另存为失败'))
+  } finally {
+    exporting.value = false
+  }
+}
+
+function showWritingPreview(mode: 预览布局模式) {
+  if (editorRef.value) form.value.content = editorRef.value.getMarkdown()
+  previewType.value = 'preview'
+  previewLayoutMode.value = mode
+}
+
+defineExpose({ prepareToLeave, closeWriting })
 
 async function save() {
   await saveArticle({ redirectAfterSave: true, syncRouteAfterSave: false })
@@ -1590,6 +1841,11 @@ async function deleteCurrentArticle() {
     await 删除文章(currentArticleId.value, false)
     markFormSaved()
     ElMessage.success('文章已移入回收站')
+    if (props.embedded) {
+      emit('deleted', currentArticleId.value)
+      emit('close')
+      return
+    }
     await router.push(`${路由前缀.value}/articles`)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '删除文章失败'))
@@ -1598,10 +1854,16 @@ async function deleteCurrentArticle() {
   }
 }
 
-watch(未使用文章图片列表, (unusedImages) => {
-  const unusedIds = new Set(unusedImages.map((image) => image.id))
-  selectedUnusedArticleImageIds.value = selectedUnusedArticleImageIds.value.filter((id) => unusedIds.has(id))
-}, { immediate: true })
+watch(
+  未使用文章图片列表,
+  (unusedImages) => {
+    const unusedIds = new Set(unusedImages.map((image) => image.id))
+    selectedUnusedArticleImageIds.value = selectedUnusedArticleImageIds.value.filter((id) =>
+      unusedIds.has(id),
+    )
+  },
+  { immediate: true },
+)
 
 function 切换未使用文章图片选择(imageId: string, checked: boolean) {
   if (checked) {
@@ -1611,7 +1873,9 @@ function 切换未使用文章图片选择(imageId: string, checked: boolean) {
     return
   }
 
-  selectedUnusedArticleImageIds.value = selectedUnusedArticleImageIds.value.filter((id) => id !== imageId)
+  selectedUnusedArticleImageIds.value = selectedUnusedArticleImageIds.value.filter(
+    (id) => id !== imageId,
+  )
 }
 
 function 选中全部未使用文章图片() {
@@ -1659,7 +1923,9 @@ async function 删除选中未使用文章图片() {
   try {
     const 选中ID集合 = new Set(selectedUnusedArticleImageIds.value)
     const 删除结果 = await Promise.allSettled(
-      selectedUnusedArticleImageIds.value.map((imageId) => 删除管理文件(currentArticleId.value, imageId)),
+      selectedUnusedArticleImageIds.value.map((imageId) =>
+        删除管理文件(currentArticleId.value, imageId),
+      ),
     )
     const 删除成功数量 = 删除结果.filter((item) => item.status === 'fulfilled').length
     const 删除失败数量 = 删除结果.length - 删除成功数量
@@ -1687,7 +1953,89 @@ async function 删除选中未使用文章图片() {
 </script>
 
 <template>
-  <div class="page-container">
+  <div
+    class="page-container"
+    :class="{
+      'writing-sheet': props.embedded,
+      'writing-sheet--split-edit': props.splitEdit,
+      'writing-sheet--no-props': !propertiesVisible,
+      'writing-sheet--no-outline': !outlineVisible,
+    }"
+  >
+    <header v-if="props.embedded && !props.split" class="writing-head">
+      <button class="writing-back" type="button" @click="closeWriting">← <span>列表</span></button>
+      <span class="writing-divider" />
+      <span class="writing-name">{{ form.title || '未命名草稿' }}</span>
+      <button
+        class="writing-save-state"
+        :class="{ 'is-dirty': isDirty || saveFailed }"
+        type="button"
+        :disabled="loading || saving"
+        @click="saveWriting"
+      >
+        {{ saveStateText }}
+      </button>
+      <div class="writing-head-actions">
+        <div class="writing-pane-switch" role="group" aria-label="书写、预览与双屏">
+          <button
+            type="button"
+            :class="{ 'is-active': previewLayoutMode === 'hidden' }"
+            @click="showWritingPreview('hidden')"
+          >
+            书写
+          </button>
+          <button
+            type="button"
+            :class="{ 'is-active': previewLayoutMode === 'full' }"
+            @click="showWritingPreview('full')"
+          >
+            预览
+          </button>
+          <button
+            type="button"
+            :class="{ 'is-active': previewLayoutMode === 'split' }"
+            @click="showWritingPreview('split')"
+          >
+            双屏
+          </button>
+        </div>
+        <button
+          class="writing-panel-toggle"
+          type="button"
+          title="文章大纲"
+          aria-label="文章大纲"
+          :aria-pressed="outlineVisible"
+          @click="outlineVisible = !outlineVisible"
+        >
+          <OutlineIcon />
+        </button>
+        <button
+          class="writing-panel-toggle"
+          type="button"
+          title="文章属性"
+          aria-label="文章属性"
+          :aria-pressed="propertiesVisible"
+          @click="propertiesVisible = !propertiesVisible"
+        >
+          <PropertiesIcon />
+        </button>
+        <ElButton
+          size="small"
+          :disabled="loading || loadFailed || saving || isUploadingImages"
+          :loading="exporting"
+          @click="exportWriting"
+          >另存为</ElButton
+        >
+        <ElButton
+          size="small"
+          type="primary"
+          :disabled="loading || loadFailed || saving || isUploadingImages"
+          :loading="saving"
+          @click="saveWriting"
+          >保存</ElButton
+        >
+      </div>
+    </header>
     <PageSectionShell
       class="article-editor-shell"
       :title="isEdit ? '编辑文章' : '写文章'"
@@ -1697,218 +2045,304 @@ async function 删除选中未使用文章图片() {
       :to="props.backTo"
     >
       <ElSkeleton :loading="loading" animated>
-        <ElForm label-position="top">
+        <ElForm
+          label-position="top"
+          :class="{ 'writing-form': props.embedded }"
+          :inert="props.embedded && loadFailed"
+        >
           <ElFormItem class="editor-form-item">
             <div
               class="editor-workspace"
               :class="{ 'editor-workspace--outline-visible': outlineVisible }"
             >
-            <aside v-if="outlineVisible" class="article-editor-outline" aria-label="文章大纲">
-              <div class="article-editor-outline__header">
-                <span>大纲</span>
-                <ElTag size="small" effect="plain">{{ 文章大纲列表.length }}</ElTag>
-              </div>
-              <div v-if="文章大纲列表.length > 0" ref="outlineListRef" class="article-editor-outline__list">
-                <button
-                  v-for="item in 文章大纲列表"
-                  :key="item.id"
-                  class="article-editor-outline__item"
-                  :class="[获取大纲层级类(item.level), { 'is-active': 当前可见大纲序号集合.has(item.index) }]"
-                  type="button"
-                  :title="item.text"
-                  :aria-current="当前可见大纲序号集合.has(item.index) ? 'true' : undefined"
-                  @click="跳转到大纲项(item)"
+              <aside v-if="outlineVisible" class="article-editor-outline" aria-label="文章大纲">
+                <div class="article-editor-outline__header">
+                  <span>大纲</span>
+                  <ElTag size="small" effect="plain">{{ 文章大纲列表.length }}</ElTag>
+                </div>
+                <div
+                  v-if="文章大纲列表.length > 0"
+                  ref="outlineListRef"
+                  class="article-editor-outline__list"
                 >
-                  <span class="article-editor-outline__marker">H{{ item.level }}</span>
-                  <span class="article-editor-outline__text">{{ item.text }}</span>
-                </button>
-                <div ref="outlineIndicatorRef" class="article-editor-outline__indicator" aria-hidden="true" />
-              </div>
-              <div v-else class="article-editor-outline__empty">
-                当前正文没有 Markdown 标题。
-              </div>
-            </aside>
-            <div
-              ref="editorWrapperRef"
-              class="editor-wrapper"
-              :class="{
-                'editor-wrapper--markdown-split': isMarkdownSplitVisible,
-                'editor-wrapper--markdown-full': isMarkdownFullVisible,
-                'editor-wrapper--html-split': isHtmlSplitVisible,
-                'editor-wrapper--html-full': isHtmlFullVisible,
-                'editor-wrapper--mindmap-split': isMindmapSplitVisible,
-                'editor-wrapper--mindmap-full': isMindmapFullVisible,
-              }"
-              :style="编辑器内容区覆盖样式"
-            >
-              <MilkdownMarkdownEditor
-                :id="editorId"
-                ref="editorRef"
-                v-model="form.content"
-                class="article-milkdown-editor"
-                :theme="editorTheme"
-                placeholder="在此编写 Markdown 内容..."
-                :upload-images="handleEditorImageUpload"
-                :format-content="formatArticleContent"
-                v-model:scroll-sync="scrollSyncEnabled"
-                v-model:preview-enabled="previewEnabled"
-                v-model:preview-layout-mode="activePreviewLayoutMode"
-                v-model:preview-type="previewType"
-                v-model:outline-visible="outlineVisible"
-                :show-scroll-sync="previewEnabled"
-                show-preview-toggle
-                show-outline-toggle
-                show-ai-tools
-                fullscreen-root-selector=".editor-wrapper"
-                @ready="handleEditorReady"
-                @upload-error="handleEditorUploadError"
-                @mode-change="handleEditorModeChange"
-                @open-ai-tools="打开AI工具面板"
-              >
-                <template #content-header>
-                  <div
-                    class="article-editor-title-area"
+                  <button
+                    v-for="item in 文章大纲列表"
+                    :key="item.id"
+                    class="article-editor-outline__item"
+                    :class="[
+                      获取大纲层级类(item.level),
+                      { 'is-active': 当前可见大纲序号集合.has(item.index) },
+                    ]"
+                    type="button"
+                    :title="item.text"
+                    :aria-current="当前可见大纲序号集合.has(item.index) ? 'true' : undefined"
+                    @click="跳转到大纲项(item)"
                   >
-                    <div class="article-editor-title-area__editor">
-                      <ElInput
-                        v-model="form.title"
-                        class="article-editor-title-input"
-                        placeholder="文章标题"
-                        size="large"
-                      />
+                    <span class="article-editor-outline__marker">H{{ item.level }}</span>
+                    <span class="article-editor-outline__text">{{ item.text }}</span>
+                  </button>
+                  <div
+                    ref="outlineIndicatorRef"
+                    class="article-editor-outline__indicator"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div v-else class="article-editor-outline__empty">当前正文没有 Markdown 标题。</div>
+              </aside>
+              <div
+                ref="editorWrapperRef"
+                class="editor-wrapper"
+                :class="{
+                  'editor-wrapper--markdown-split': isMarkdownSplitVisible,
+                  'editor-wrapper--markdown-full': isMarkdownFullVisible,
+                  'editor-wrapper--html-split': isHtmlSplitVisible,
+                  'editor-wrapper--html-full': isHtmlFullVisible,
+                  'editor-wrapper--mindmap-split': isMindmapSplitVisible,
+                  'editor-wrapper--mindmap-full': isMindmapFullVisible,
+                }"
+                :style="编辑器内容区覆盖样式"
+              >
+                <MilkdownMarkdownEditor
+                  :id="editorId"
+                  ref="editorRef"
+                  v-model="form.content"
+                  class="article-milkdown-editor"
+                  :theme="editorTheme"
+                  placeholder="在此编写 Markdown 内容..."
+                  :upload-images="handleEditorImageUpload"
+                  :format-content="formatArticleContent"
+                  v-model:scroll-sync="scrollSyncEnabled"
+                  v-model:preview-enabled="previewEnabled"
+                  v-model:preview-layout-mode="activePreviewLayoutMode"
+                  v-model:preview-type="previewType"
+                  v-model:outline-visible="outlineVisible"
+                  v-model:properties-visible="propertiesVisible"
+                  :show-properties-toggle="props.embedded"
+                  :show-scroll-sync="previewEnabled"
+                  show-preview-toggle
+                  show-outline-toggle
+                  show-ai-tools
+                  fullscreen-root-selector=".editor-wrapper"
+                  @ready="handleEditorReady"
+                  @upload-error="handleEditorUploadError"
+                  @mode-change="handleEditorModeChange"
+                  @open-ai-tools="打开AI工具面板"
+                >
+                  <template #content-header>
+                    <div class="article-editor-title-area">
+                      <div class="article-editor-title-area__editor">
+                        <ElInput
+                          v-model="form.title"
+                          class="article-editor-title-input"
+                          placeholder="文章标题"
+                          size="large"
+                          @keydown="handleTitleKeydown"
+                        />
+                      </div>
                     </div>
+                  </template>
+                </MilkdownMarkdownEditor>
+
+                <div
+                  v-if="isMarkdownPreviewVisible"
+                  ref="markdownOverlayRef"
+                  class="markdown-editor-overlay"
+                >
+                  <div class="markdown-editor-overlay__title" :title="form.title || '未命名文章'">
+                    {{ form.title || '未命名文章' }}
+                  </div>
+                  <MarkdownRenderer
+                    class="markdown-editor-overlay__content article-markdown-preview"
+                    :content="form.content"
+                    :debounce-ms="180"
+                    @rendered="恢复预览滚动位置"
+                  />
+                </div>
+
+                <div v-if="isHtmlPreviewVisible" ref="htmlOverlayRef" class="html-editor-overlay">
+                  <pre
+                    class="html-editor-overlay__content"
+                  ><code>{{ htmlPreviewContent }}</code></pre>
+                </div>
+
+                <div v-if="isMindmapPreviewVisible" class="mindmap-editor-overlay">
+                  <MarkdownMindmap :content="form.content" :title="form.title" height="100%" />
+                </div>
+              </div>
+            </div>
+          </ElFormItem>
+
+          <aside
+            class="article-editor-properties"
+            :aria-label="props.embedded ? '文章属性' : undefined"
+          >
+            <template v-if="props.embedded">
+              <div class="writing-props-title">文章属性</div>
+              <div class="writing-publication-state">
+                {{ visibility === 'public' ? '已公开发布，保存后同步更新' : visibility === 'login_required' ? '已发布为登录可见，保存后同步更新' : '私有文章，保存后仅自己可见' }}
+              </div>
+            </template>
+            <ElFormItem v-if="props.embedded" label="可见性">
+              <div class="article-editor-chips" role="group" aria-label="可见性">
+                <button
+                  v-for="item in visibilityOptions"
+                  :key="item.value"
+                  class="article-editor-chip"
+                  :class="{ 'is-active': visibility === item.value }"
+                  type="button"
+                  :aria-pressed="visibility === item.value"
+                  @click="visibility = item.value"
+                >
+                  {{ item.label }}
+                </button>
+              </div>
+            </ElFormItem>
+            <div class="article-editor-metadata-grid">
+              <ElFormItem>
+                <template #label>
+                  <div class="article-editor-metadata-label">
+                    <span>分类</span>
+                    <ElButton link type="primary" size="small" @click="handleCreateCategory"
+                      >+ 新增</ElButton
+                    >
                   </div>
                 </template>
-              </MilkdownMarkdownEditor>
-
-              <div v-if="isMarkdownPreviewVisible" ref="markdownOverlayRef" class="markdown-editor-overlay">
-                <div
-                  class="markdown-editor-overlay__title"
-                  :title="form.title || '未命名文章'"
-                >
-                  {{ form.title || '未命名文章' }}
+                <ElSelect v-model="form.category_id" placeholder="选择分类" clearable>
+                  <ElOption
+                    v-for="item in categories"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </ElSelect>
+              </ElFormItem>
+              <ElFormItem>
+                <template #label>
+                  <div class="article-editor-metadata-label">
+                    <span>标签</span>
+                    <ElButton link type="primary" size="small" @click="handleCreateTag"
+                      >+ 新增</ElButton
+                    >
+                  </div>
+                </template>
+                <div class="article-editor-chips" role="group" aria-label="标签">
+                  <button
+                    v-for="item in tags"
+                    :key="item.value"
+                    class="article-editor-chip"
+                    :class="{ 'is-active': form.tag_ids.includes(item.value) }"
+                    type="button"
+                    :aria-pressed="form.tag_ids.includes(item.value)"
+                    @click="toggleTag(item.value)"
+                  >
+                    {{ item.label }}
+                  </button>
+                  <span v-if="tags.length === 0" class="article-editor-tags-empty">暂无标签</span>
                 </div>
-                <MarkdownRenderer
-                  class="markdown-editor-overlay__content article-markdown-preview"
-                  :content="form.content"
-                  :debounce-ms="180"
-                />
-              </div>
-
-              <div v-if="isHtmlPreviewVisible" ref="htmlOverlayRef" class="html-editor-overlay">
-                <pre class="html-editor-overlay__content"><code>{{ htmlPreviewContent }}</code></pre>
-              </div>
-
-              <div v-if="isMindmapPreviewVisible" class="mindmap-editor-overlay">
-                <MarkdownMindmap
-                  :content="form.content"
-                  :title="form.title"
-                  height="100%"
-                />
-              </div>
+              </ElFormItem>
             </div>
-            </div>
-          </ElFormItem>
 
-          <div class="article-editor-metadata-grid">
-            <ElFormItem>
-              <template #label>
-                <div class="article-editor-metadata-label">
-                  <span>分类</span>
-                  <ElButton link type="primary" size="small" @click="handleCreateCategory">+ 新增</ElButton>
-                </div>
-              </template>
-              <ElSelect v-model="form.category_id" placeholder="选择分类" clearable>
-                <ElOption v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
-              </ElSelect>
+            <ElFormItem label="摘要">
+              <ElInput
+                v-model="form.excerpt"
+                type="textarea"
+                placeholder="文章摘要（可选）"
+                :rows="2"
+              />
             </ElFormItem>
-            <ElFormItem>
-              <template #label>
-                <div class="article-editor-metadata-label">
-                  <span>标签</span>
-                  <ElButton link type="primary" size="small" @click="handleCreateTag">+ 新增</ElButton>
-                </div>
-              </template>
-              <ElSelect v-model="form.tag_ids" placeholder="选择标签" multiple clearable>
-                <ElOption v-for="item in tags" :key="item.value" :label="item.label" :value="item.value" />
-              </ElSelect>
+
+            <ElFormItem label="封面图 URL">
+              <ElInput v-model="form.cover_url" placeholder="https://..." />
             </ElFormItem>
-          </div>
 
-          <ElFormItem label="封面图 URL">
-            <ElInput v-model="form.cover_url" placeholder="https://..." />
-          </ElFormItem>
+            <ArticleImagePanel
+              :expanded="articleImagePanelExpanded"
+              :current-article-id="currentArticleId"
+              :loading="articleImagesLoading"
+              :deleting="deletingArticleImages"
+              :items="文章图片列表项"
+              :desktop-summary="文章图片桌面摘要"
+              :mobile-summary="文章图片移动端摘要"
+              :selected-ids="selectedUnusedArticleImageIds"
+              :unused-count="未使用文章图片列表.length"
+              :resolve-preview-url="获取文章图片预览地址"
+              :format-size="格式化文章图片大小"
+              :format-time="格式化文章图片时间"
+              @toggle="切换文章图片面板展开状态"
+              @refresh="同步文章图片(currentArticleId)"
+              @select-all-unused="选中全部未使用文章图片"
+              @clear-selection="清空未使用文章图片选择"
+              @delete-selected="删除选中未使用文章图片"
+              @selection-change="切换未使用文章图片选择"
+            />
 
-          <ElFormItem label="摘要">
-            <ElInput v-model="form.excerpt" type="textarea" placeholder="文章摘要（可选）" :rows="2" />
-          </ElFormItem>
-
-        <ArticleImagePanel
-          :expanded="articleImagePanelExpanded"
-          :current-article-id="currentArticleId"
-          :loading="articleImagesLoading"
-          :deleting="deletingArticleImages"
-          :items="文章图片列表项"
-          :desktop-summary="文章图片桌面摘要"
-          :mobile-summary="文章图片移动端摘要"
-          :selected-ids="selectedUnusedArticleImageIds"
-          :unused-count="未使用文章图片列表.length"
-          :resolve-preview-url="获取文章图片预览地址"
-          :format-size="格式化文章图片大小"
-          :format-time="格式化文章图片时间"
-          @toggle="切换文章图片面板展开状态"
-          @refresh="同步文章图片(currentArticleId)"
-          @select-all-unused="选中全部未使用文章图片"
-          @clear-selection="清空未使用文章图片选择"
-          @delete-selected="删除选中未使用文章图片"
-          @selection-change="切换未使用文章图片选择"
-        />
-
-          <div class="article-editor-actions">
-            <div class="article-editor-buttons">
+            <div v-if="props.embedded && props.split" class="writing-props-actions">
               <ElButton
-                v-if="isEdit"
-                type="danger"
-                plain
-                :icon="Delete"
-                :loading="deletingArticle"
-                :disabled="saving || formatting || isUploadingImages"
-                @click="deleteCurrentArticle"
+                size="small"
+                :disabled="loading || loadFailed || saving || isUploadingImages"
+                :loading="exporting"
+                @click="exportWriting"
+                >另存为</ElButton
               >
-                删除
-              </ElButton>
-              <div class="article-editor-buttons__main">
-                <ElButton @click="router.back()">取消</ElButton>
+              <ElButton
+                size="small"
+                type="primary"
+                :disabled="loading || loadFailed || saving || isUploadingImages"
+                :loading="saving"
+                @click="saveWriting"
+                >保存</ElButton
+              >
+            </div>
+            <ElButton
+              v-if="props.embedded && isEdit"
+              class="writing-delete"
+              text
+              type="danger"
+              :loading="deletingArticle"
+              :disabled="saving || formatting || isUploadingImages"
+              @click="deleteCurrentArticle"
+              >移入回收站</ElButton
+            >
+            <div v-if="!props.embedded" class="article-editor-actions">
+              <div class="article-editor-buttons">
                 <ElButton
+                  v-if="isEdit"
+                  type="danger"
                   plain
-                  :icon="Select"
-                  :loading="saving || formatting || isUploadingImages"
-                  :disabled="deletingArticle"
-                  @click="save"
+                  :icon="Delete"
+                  :loading="deletingArticle"
+                  :disabled="saving || formatting || isUploadingImages"
+                  @click="deleteCurrentArticle"
                 >
-                  保存并退出
+                  删除
                 </ElButton>
-                <ElButton
-                  type="primary"
-                  :loading="saving || formatting || isUploadingImages"
-                  :disabled="deletingArticle"
-                  @click="updateArticleAndStay"
-                >
-                  {{ isEdit ? '保存文章' : '创建文章' }}
-                </ElButton>
+                <div class="article-editor-buttons__main">
+                  <ElButton @click="router.back()">取消</ElButton>
+                  <ElButton
+                    plain
+                    :icon="Select"
+                    :loading="saving || formatting || isUploadingImages"
+                    :disabled="deletingArticle"
+                    @click="save"
+                  >
+                    保存并退出
+                  </ElButton>
+                  <ElButton
+                    type="primary"
+                    :loading="saving || formatting || isUploadingImages"
+                    :disabled="deletingArticle"
+                    @click="updateArticleAndStay"
+                  >
+                    {{ isEdit ? '保存文章' : '创建文章' }}
+                  </ElButton>
+                </div>
               </div>
             </div>
-          </div>
+          </aside>
         </ElForm>
       </ElSkeleton>
     </PageSectionShell>
-
-    <ElDrawer
-      v-model="aiDrawerVisible"
-      title="AI 辅助"
-      size="520px"
-      class="article-ai-drawer"
-    >
+    <ElDrawer v-model="aiDrawerVisible" title="AI 辅助" size="520px" class="article-ai-drawer">
       <div class="article-ai-panel">
         <div class="article-ai-panel__actions">
           <ElButton plain :icon="MagicStick" :loading="aiLoading" @click="生成AI元信息建议">
@@ -1926,7 +2360,9 @@ async function 删除选中未使用文章图片() {
         <section v-if="aiMetadataSuggestion" class="article-ai-section">
           <div class="article-ai-section__header">
             <h3>元信息建议</h3>
-            <ElButton type="primary" plain size="small" @click="应用AI全部元信息">全部应用</ElButton>
+            <ElButton type="primary" plain size="small" @click="应用AI全部元信息"
+              >全部应用</ElButton
+            >
           </div>
 
           <div class="article-ai-field">
@@ -1954,10 +2390,16 @@ async function 删除选中未使用文章图片() {
               <ElTag v-if="aiMetadataSuggestion.category_name" effect="plain">
                 {{ aiMetadataSuggestion.category_name }}
               </ElTag>
-              <ElTag v-if="aiMetadataSuggestion.category_name && !AI建议分类已存在" type="warning" effect="plain">
+              <ElTag
+                v-if="aiMetadataSuggestion.category_name && !AI建议分类已存在"
+                type="warning"
+                effect="plain"
+              >
                 将新建
               </ElTag>
-              <span v-if="!aiMetadataSuggestion.category_name" class="article-ai-muted">未建议分类</span>
+              <span v-if="!aiMetadataSuggestion.category_name" class="article-ai-muted"
+                >未建议分类</span
+              >
             </ElSpace>
           </div>
 
@@ -1967,7 +2409,11 @@ async function 删除选中未使用文章图片() {
               <ElButton link type="primary" size="small" @click="应用AI标签">应用</ElButton>
             </div>
             <ElSpace wrap>
-              <ElTag v-for="tagName in aiMetadataSuggestion.tag_names" :key="tagName" effect="plain">
+              <ElTag
+                v-for="tagName in aiMetadataSuggestion.tag_names"
+                :key="tagName"
+                effect="plain"
+              >
                 {{ tagName }}
               </ElTag>
               <ElTag v-if="AI建议新标签列表.length > 0" type="warning" effect="plain">
@@ -1987,9 +2433,13 @@ async function 删除选中未使用文章图片() {
         <section v-if="aiPolishResult" class="article-ai-section">
           <div class="article-ai-section__header">
             <h3>正文润色</h3>
-            <ElButton type="primary" plain size="small" @click="替换为AI润色正文">替换正文</ElButton>
+            <ElButton type="primary" plain size="small" @click="替换为AI润色正文"
+              >替换正文</ElButton
+            >
           </div>
-          <p v-if="aiPolishResult.summary" class="article-ai-summary">{{ aiPolishResult.summary }}</p>
+          <p v-if="aiPolishResult.summary" class="article-ai-summary">
+            {{ aiPolishResult.summary }}
+          </p>
           <pre class="article-ai-content-preview">{{ aiPolishResult.content }}</pre>
         </section>
 
@@ -2007,7 +2457,7 @@ async function 删除选中未使用文章图片() {
 .page-container {
   height: 100%;
   overflow-y: auto;
-  padding: 24px;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -2037,6 +2487,65 @@ async function 删除选中未使用文章图片() {
   gap: 8px;
 }
 
+.article-editor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.article-editor-chip {
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-regular);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.article-editor-chip:hover {
+  border-color: var(--el-text-color-placeholder);
+  color: var(--el-text-color-primary);
+}
+
+.article-editor-chip.is-active {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary);
+  color: var(--el-color-white);
+}
+
+.article-editor-tags-empty {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.page-container,
+.page-container :deep(*) {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d4 transparent;
+}
+
+.page-container::-webkit-scrollbar,
+.page-container :deep(*::-webkit-scrollbar) {
+  width: 9px;
+  height: 9px;
+}
+
+.page-container::-webkit-scrollbar-track,
+.page-container :deep(*::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+.page-container::-webkit-scrollbar-thumb,
+.page-container :deep(*::-webkit-scrollbar-thumb) {
+  border: 3px solid transparent;
+  border-radius: 99px;
+  background-clip: content-box;
+  background-color: #d4d4d4;
+}
+
 .editor-workspace {
   --article-editor-title-area-height: 69px;
   --article-editor-title-color: var(--el-text-color-primary);
@@ -2046,7 +2555,10 @@ async function 删除选中未使用文章图片() {
   --article-editor-text-secondary: var(--text-secondary, var(--el-text-color-secondary));
   --article-editor-text-tertiary: var(--text-tertiary, var(--el-text-color-placeholder));
   --article-editor-border: var(--border-color, var(--el-border-color));
-  --article-editor-hover-bg: var(--bg-hover, color-mix(in srgb, var(--el-color-primary) 8%, transparent));
+  --article-editor-hover-bg: var(
+    --bg-hover,
+    color-mix(in srgb, var(--el-color-primary) 8%, transparent)
+  );
   --milkdown-markdown-editor-bg: var(--article-editor-panel-bg);
   --milkdown-markdown-editor-bg-color: var(--article-editor-panel-bg-color);
   --milkdown-markdown-editor-toolbar-bg: var(--article-editor-panel-bg);
@@ -2301,11 +2813,8 @@ async function 删除选中未使用文章图片() {
 .html-editor-overlay,
 .mindmap-editor-overlay {
   position: absolute;
-  inset:
-    var(--editor-preview-top-offset, var(--editor-content-top-offset, 0px))
-    0
-    var(--editor-content-bottom-offset, 24px)
-    0;
+  inset: var(--editor-preview-top-offset, var(--editor-content-top-offset, 0px)) 0
+    var(--editor-content-bottom-offset, 24px) 0;
   z-index: 2;
 }
 
@@ -2321,8 +2830,10 @@ async function 删除选中未使用文章图片() {
 .editor-wrapper--html-split .html-editor-overlay,
 .editor-wrapper--mindmap-split .mindmap-editor-overlay {
   left: 50%;
-  border-left: 1px solid color-mix(in srgb, var(--el-border-color) 88%, var(--el-text-color-secondary));
-  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--article-editor-panel-bg-color) 70%, transparent);
+  border-left: 1px solid
+    color-mix(in srgb, var(--el-border-color) 88%, var(--el-text-color-secondary));
+  box-shadow: inset 1px 0 0
+    color-mix(in srgb, var(--article-editor-panel-bg-color) 70%, transparent);
 }
 
 .markdown-editor-overlay__title {
@@ -2359,7 +2870,14 @@ async function 删除选中未使用文章图片() {
   padding: 20px 24px;
   box-sizing: border-box;
   color: var(--el-text-color-primary);
-  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font:
+    13px/1.7 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -2503,16 +3021,19 @@ async function 删除选中未使用文章图片() {
   border-radius: 8px;
   background: var(--el-fill-color-lighter);
   color: var(--el-text-color-primary);
-  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font:
+    13px/1.7 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 @media (--mobile-viewport) {
-  .page-container {
-    padding: 16px;
-  }
-
   .article-editor-metadata-grid {
     grid-template-columns: 1fr;
   }
@@ -2558,5 +3079,515 @@ async function 删除选中未使用文章图片() {
     width: 100%;
     margin-left: 0;
   }
+}
+</style>
+
+<style scoped>
+/* 稿纸沿用文章管理的细线、留白和中性色。 */
+.page-container.writing-sheet {
+  --writing-bg: var(--el-bg-color, #fff);
+  --writing-ink: var(--el-text-color-primary, #171717);
+  --writing-muted: var(--el-text-color-secondary, #8a8a8a);
+  --writing-line: var(--el-border-color-lighter, #e8e8e8);
+  --writing-soft: var(--el-fill-color-light, #fafafa);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--writing-line);
+  border-radius: 11px;
+  background: var(--writing-bg);
+  color: var(--writing-ink);
+  font:
+    13px/1.5 'PingFang SC',
+    'Microsoft YaHei',
+    system-ui,
+    sans-serif;
+}
+.writing-head {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px 14px 8px 10px;
+  border-bottom: 1px solid var(--writing-line);
+}
+.writing-head button {
+  cursor: pointer;
+  font: inherit;
+}
+.writing-back,
+.writing-panel-toggle {
+  flex: none;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--writing-muted);
+}
+.writing-back:hover,
+.writing-panel-toggle:hover,
+.writing-panel-toggle[aria-pressed='true'] {
+  background: var(--writing-soft);
+  color: var(--writing-ink);
+}
+.writing-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--writing-line);
+}
+.writing-name {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.writing-save-state {
+  flex: none;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--writing-soft);
+  color: var(--writing-muted);
+  font-size: 10.5px !important;
+}
+.writing-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.writing-save-state.is-dirty {
+  background: color-mix(in srgb, #e3769b 10%, var(--writing-bg));
+  color: #d46288;
+}
+.writing-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.writing-head-actions .el-button {
+  margin: 0;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.writing-head-actions .el-button--primary {
+  --el-button-bg-color: #e3769b;
+  --el-button-border-color: #e3769b;
+  --el-button-hover-bg-color: #d46288;
+  --el-button-hover-border-color: #d46288;
+}
+.writing-pane-switch {
+  display: flex;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--writing-line);
+  border-radius: 6px;
+}
+.writing-pane-switch button {
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--writing-muted);
+  font-size: 12px;
+}
+.writing-pane-switch button.is-active {
+  background: var(--writing-soft);
+  color: var(--writing-ink);
+}
+.writing-sheet .article-editor-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  gap: 0;
+}
+.writing-sheet :deep(.page-section-shell__body) {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.writing-sheet :deep(.el-skeleton) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+}
+.writing-sheet :deep(.el-skeleton__content) {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.writing-form {
+  display: grid;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: 168px minmax(0, 1fr) 264px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.writing-sheet--no-props .writing-form {
+  grid-template-columns: 168px minmax(0, 1fr) 0;
+}
+.writing-sheet--no-props .article-editor-properties {
+  display: none;
+}
+.writing-sheet--no-outline .writing-form {
+  grid-template-columns: 0 minmax(0, 1fr) 264px;
+}
+.writing-sheet--no-outline.writing-sheet--no-props .writing-form {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+.writing-sheet .editor-form-item {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  display: contents;
+}
+.writing-sheet .editor-form-item :deep(.el-form-item__content) {
+  display: contents;
+}
+.writing-sheet .editor-workspace {
+  --article-editor-panel-bg: var(--writing-bg);
+  --article-editor-panel-bg-color: var(--writing-bg);
+  --article-editor-border: var(--writing-line);
+  --article-editor-text-primary: var(--writing-ink);
+  --article-editor-text-secondary: var(--writing-muted);
+  --article-editor-title-color: var(--writing-ink);
+  --article-editor-hover-bg: var(--writing-soft);
+  display: contents;
+}
+.writing-sheet .article-editor-outline {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  max-height: none;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-right: 1px solid var(--writing-line);
+  border-radius: 0;
+  background: var(--writing-soft);
+}
+.writing-sheet .article-editor-outline__header {
+  min-height: 42px;
+  border: 0;
+  color: var(--writing-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.writing-sheet .article-editor-outline__item {
+  min-height: 29px;
+  gap: 5px;
+  font-size: 11.5px;
+}
+.writing-sheet .article-editor-outline__marker {
+  min-width: 18px;
+  font-size: 9.5px;
+  font-weight: 400;
+}
+.writing-sheet .article-editor-outline__empty {
+  font-size: 11px;
+}
+.writing-sheet .editor-wrapper {
+  display: contents;
+}
+.writing-sheet .editor-wrapper.milkdown-markdown-editor--page-fullscreen,
+.writing-sheet .editor-wrapper:fullscreen {
+  display: block;
+}
+.writing-sheet :deep(.milkdown-markdown-editor) {
+  display: contents;
+}
+.writing-sheet .editor-wrapper.milkdown-markdown-editor--page-fullscreen :deep(.milkdown-markdown-editor),
+.writing-sheet .editor-wrapper:fullscreen :deep(.milkdown-markdown-editor) {
+  display: flex;
+}
+.writing-sheet :deep(.article-milkdown-editor) {
+  display: contents;
+}
+.writing-sheet :deep(.milkdown-markdown-editor__toolbar) {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid var(--writing-line);
+  border-radius: 0;
+}
+.writing-sheet :deep(.milkdown-markdown-editor__content) {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  border-radius: 0;
+}
+.writing-sheet :deep(.milkdown-markdown-editor__footer) {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  border: 0;
+  border-top: 1px solid var(--writing-line);
+  border-radius: 0;
+}
+.writing-sheet .markdown-editor-overlay,
+.writing-sheet .html-editor-overlay,
+.writing-sheet .mindmap-editor-overlay {
+  position: relative;
+  inset: auto;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+}
+.writing-sheet :deep(.milkdown-markdown-editor__toolbar) {
+  border-radius: 0;
+}
+.writing-sheet :deep(.milkdown-markdown-editor__content-header) {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.writing-sheet .article-editor-title-area {
+  display: block;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+.writing-sheet .article-editor-title-area__editor {
+  min-height: 0;
+  padding: 44px 40px 0;
+  border: 0;
+}
+.writing-sheet .article-editor-title-input :deep(.el-input__inner) {
+  height: 44px;
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1.36;
+}
+.writing-sheet :deep(.ProseMirror) {
+  --markdown-content-font-size: 16px;
+  --markdown-content-line-height: 1.92;
+  --markdown-content-paragraph-margin: 0 0 1.1em;
+  --markdown-content-h2-font-size: 1.3em;
+  --markdown-content-h3-font-size: 1.1em;
+  --markdown-content-heading-margin: 2.1em 0 0.72em;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 26px 40px 96px;
+}
+.writing-sheet :deep(.milkdown-markdown-editor__source) {
+  max-width: 700px;
+  min-height: 300px;
+  margin: 0 auto;
+  padding: 26px 40px 96px;
+  font-size: 15px;
+  line-height: 1.92;
+}
+.writing-sheet .markdown-editor-overlay__title {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 44px 40px 22px;
+  border: 0;
+  font-size: 29px;
+  line-height: 1.36;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.writing-sheet .markdown-editor-overlay__content {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 26px 40px 96px;
+  font-size: 17px;
+  line-height: 2.02;
+}
+.writing-sheet .article-editor-properties {
+  grid-column: 3;
+  grid-row: 2;
+  min-width: 0;
+  padding: 18px 16px 28px;
+  overflow-y: auto;
+  border-left: 1px solid var(--writing-line);
+  scrollbar-width: thin;
+}
+.writing-props-title {
+  margin-bottom: 18px;
+  color: var(--writing-muted);
+  font-size: 11px;
+}
+.writing-sheet .article-editor-metadata-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.writing-sheet .article-editor-properties :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+.writing-sheet .article-editor-properties :deep(.el-form-item__label) {
+  margin-bottom: 7px;
+  color: var(--writing-muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.writing-sheet .article-editor-properties :deep(.el-input__wrapper),
+.writing-sheet .article-editor-properties :deep(.el-select__wrapper),
+.writing-sheet .article-editor-properties :deep(.el-textarea__inner) {
+  border-radius: 5px;
+  font-size: 12px;
+}
+.writing-publication-state {
+  margin-bottom: 20px;
+  color: var(--writing-muted);
+  font-size: 12px;
+}
+.writing-props-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.writing-props-actions .el-button {
+  flex: 1;
+  margin: 0;
+}
+.writing-delete {
+  margin-top: 18px;
+  font-size: 12px;
+}
+@container (max-width: 1050px) {
+  .writing-form {
+    grid-template-columns: 136px minmax(0, 1fr) 238px;
+  }
+  .writing-sheet--no-props .writing-form {
+    grid-template-columns: 136px minmax(0, 1fr) 0;
+  }
+  .writing-sheet--no-outline .writing-form {
+    grid-template-columns: 0 minmax(0, 1fr) 238px;
+  }
+  .writing-sheet--no-outline.writing-sheet--no-props .writing-form {
+    grid-template-columns: 0 minmax(0, 1fr) 0;
+  }
+  .writing-name {
+    max-width: 100px;
+  }
+}
+@container (max-width: 800px) {
+  .writing-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .writing-sheet .article-editor-outline,
+  .writing-sheet .article-editor-properties {
+    grid-column: 1;
+    grid-row: 2;
+    z-index: 5;
+    width: min(320px, 88%);
+    height: 100%;
+    max-height: none;
+    border: 1px solid var(--writing-line);
+    border-radius: 0;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  }
+  .writing-sheet .article-editor-outline {
+    justify-self: start;
+    border-right: 1px solid var(--writing-line);
+  }
+  .writing-sheet .article-editor-properties {
+    justify-self: end;
+    border-left: 1px solid var(--writing-line);
+    padding: 14px 12px 18px;
+  }
+  .writing-sheet .article-editor-outline__header {
+    flex: none;
+  }
+  .writing-sheet :deep(.milkdown-markdown-editor__footer) {
+    position: sticky;
+    bottom: 0;
+    z-index: 8;
+    align-self: end;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    padding: 0 8px;
+    overflow: hidden;
+  }
+  .writing-sheet :deep(.milkdown-markdown-editor__footer-left) {
+    flex: none;
+  }
+  .writing-sheet :deep(.milkdown-markdown-editor__footer-right) {
+    flex: 1;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .writing-sheet :deep(.milkdown-markdown-editor__footer-item) {
+    min-height: 28px;
+    font-size: 10px;
+  }
+  .writing-sheet--no-outline .article-editor-outline,
+  .writing-sheet--no-props .article-editor-properties {
+    display: none;
+  }
+  .writing-head {
+    flex-wrap: nowrap;
+    gap: 4px;
+    min-height: 46px;
+    padding: 5px 7px;
+  }
+  .writing-head-actions {
+    flex-wrap: nowrap;
+    gap: 3px;
+    min-width: 0;
+  }
+  .writing-head-actions .el-button { padding: 5px 7px; }
+  .writing-pane-switch button { padding-right: 6px; padding-left: 6px; }
+  .writing-panel-toggle { width: 25px; height: 26px; padding: 3px; }
+  .writing-divider { display: none; }
+  .writing-name {
+    display: none;
+  }
+  .writing-sheet .article-editor-title-area__editor {
+    padding: 32px 24px 0;
+  }
+  .writing-sheet :deep(.ProseMirror),
+  .writing-sheet :deep(.milkdown-markdown-editor__source),
+  .writing-sheet .markdown-editor-overlay__content {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+}
+@container (max-width: 620px) {
+  .writing-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .writing-head-actions {
+    flex: 0 1 auto;
+    justify-content: flex-end;
+  }
+}
+@container (max-width: 420px) {
+  .writing-save-state { display: none; }
+  .writing-head-actions .el-button { padding: 4px 5px; font-size: 10px; }
+  .writing-pane-switch button { padding-right: 4px; padding-left: 4px; font-size: 10px; }
 }
 </style>

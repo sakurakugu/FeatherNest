@@ -53,6 +53,7 @@ export interface 使用MilkdownMarkdown工具栏动作选项 {
   getScrollSync: () => boolean
   getPreviewEnabled: () => boolean
   getOutlineVisible: () => boolean
+  toggleProperties: () => void
   emitModelValue: (value: string) => void
   emitScrollSync: (value: boolean) => void
   emitPreviewEnabled: (value: boolean) => void
@@ -87,6 +88,7 @@ export function 使用MilkdownMarkdown工具栏动作({
   getScrollSync,
   getPreviewEnabled,
   getOutlineVisible,
+  toggleProperties,
   emitModelValue,
   emitScrollSync,
   emitPreviewEnabled,
@@ -150,7 +152,14 @@ export function 使用MilkdownMarkdown工具栏动作({
     }
 
     if (action === 'previewToggle') {
-      emitPreviewEnabled(!getPreviewEnabled())
+      if (!getPreviewEnabled()) {
+        emitPreviewEnabled(true)
+        emitPreviewLayoutMode('full')
+      } else if (getPreviewLayoutMode() === 'full') {
+        emitPreviewLayoutMode('split')
+      } else {
+        emitPreviewEnabled(false)
+      }
       return
     }
 
@@ -194,6 +203,11 @@ export function 使用MilkdownMarkdown工具栏动作({
 
     if (action === 'previewTypeMindmap') {
       emitPreviewType('mindmap')
+      return
+    }
+
+    if (action === 'propertiesToggle') {
+      toggleProperties()
       return
     }
 
@@ -347,6 +361,7 @@ export function 使用MilkdownMarkdown工具栏动作({
       case 'previewTypeHtml':
       case 'previewTypeMindmap':
       case 'outlineToggle':
+      case 'propertiesToggle':
       case 'pageFullscreen':
       case 'fullscreen':
       case 'sourceMode':

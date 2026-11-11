@@ -13,9 +13,10 @@ export default {
     {
       path: 'articles/edit/:id?',
       name: 'ArticleEditor',
-      component: () =>
-        import('@feathernest/module-articles').then((module) => module.ArticleEditorPage),
-      meta: { title: '文章编辑' },
+      redirect: (to) => ({
+        path: to.path.slice(0, to.path.indexOf('/articles')) + '/articles',
+        query: { ...to.query, edit: String(to.params.id || 'new') },
+      }),
     },
   ],
   navigation: [{ routeName: 'DashboardArticles', label: '文章管理', icon: Document, order: 10 }],

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useInfiniteScroll, useStorage } from '@vueuse/core'
+import { useInfiniteScroll, useMediaQuery, useStorage } from '@vueuse/core'
 /* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
 import {
   ArrowRight,
@@ -38,8 +38,17 @@ import {
   ElSwitch,
   ElTooltip,
 } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import {
   删除文章 as removeArticle,
   恢复文章 as requestRestoreArticle,
@@ -69,6 +78,8 @@ import type {
 import ArticleSortIcon from '../components/文章排序图标.vue'
 import ArticleEditIcon from '../components/文章编辑图标.vue'
 
+const ArticleEditor = defineAsyncComponent(() => import('./文章编辑页面.vue'))
+
 const props = withDefaults(
   defineProps<{
     showBack?: boolean
@@ -83,6 +94,31 @@ const props = withDefaults(
 const emit = defineEmits<{ 'article-count-change': [count: number] }>()
 const router = useRouter()
 const route = useRoute()
+const isNarrowSplitViewport = useMediaQuery('(max-width: 680px)')
+const writingEditorRef = ref<{
+  prepareToLeave: () => Promise<boolean>
+  closeWriting: () => Promise<void>
+}>()
+const splitEditorHost = ref<HTMLDivElement>()
+const writingLayerRef = ref<HTMLDivElement>()
+const managerActive = ref(true)
+const writingOpen = computed(() => typeof route.query.edit === 'string')
+const writingArticleId = computed(() =>
+  typeof route.query.edit === 'string' && route.query.edit !== 'new' ? route.query.edit : '',
+)
+const writingInSplit = computed(
+  () => activeListMode.value === 'active-split' && !isRecycleBinMode.value,
+)
+const writingFromNarrowSplit = computed(
+  () =>
+    writingOpen.value &&
+    activeListMode.value === 'active-split' &&
+    !isRecycleBinMode.value &&
+    isNarrowSplitViewport.value,
+)
+let writingChanged = false
+let writingSavedArticleId = ''
+let writingReturnFocus: HTMLElement | null = null
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const splitListRef = ref<globalThis.HTMLDivElement | null>(null)
 const articles = ref<ArticleRecord[]>([])
@@ -235,11 +271,6 @@ const categoryFilterOptions = computed<ContentTabItem[]>(() => [
     count: category.article_count ?? 0,
   })),
 ])
-
-function resolve文章路径(path: '/articles' | '/articles/edit', articleId?: string) {
-  const fullPath = `${路由前缀.value}${path}`
-  return articleId ? `${fullPath}/${articleId}` : fullPath
-}
 
 function scrollCategoryTabs(event: WheelEvent) {
   const tabs = event.currentTarget as HTMLElement
@@ -549,7 +580,7 @@ async function submitConversion() {
 }
 
 function handleArticleAction(article: ArticleRecord, action: string) {
-  if (action === 'edit') void router.push(resolve文章路径('/articles/edit', article.id))
+  if (action === 'edit') void openWriting(article.id)
   if (action === 'copy-link') void copyArticleLink(article)
   if (action === 'delete') openArticleDeletePopover(article)
   if (action === 'todo' || action === 'material') openConvertDialog(article, action)
@@ -568,7 +599,10 @@ function openArticleDeletePopover(article: ArticleRecord) {
 }
 
 async function copyArticleLink(article: ArticleRecord) {
-  const path = router.resolve(resolve文章路径('/articles/edit', article.id)).href
+  const path = router.resolve({
+    path: `${路由前缀.value}/articles`,
+    query: { edit: article.id },
+  }).href
   try {
     await navigator.clipboard.writeText(new URL(path, window.location.href).href)
     ElMessage.success('文章链接已复制')
@@ -579,6 +613,10 @@ async function copyArticleLink(article: ArticleRecord) {
 }
 
 async function selectArticle(article: ArticleRecord) {
+  if (!isRecycleBinMode.value) {
+    await openWriting(article.id)
+    return
+  }
   selectedArticle.value = article
   try {
     const detail = await 根据ID获取我的文章(article.id, isRecycleBinMode.value)
@@ -605,8 +643,86 @@ function handleQuickKeydown(event: Event | KeyboardEvent) {
 }
 
 function handleCreateButtonClick() {
-  void router.push(resolve文章路径('/articles/edit'))
+  void openWriting()
 }
+
+async function openWriting(id = '') {
+  if (!writingOpen.value) writingReturnFocus = document.activeElement as HTMLElement | null
+  await router.push({
+    path: `${路由前缀.value}/articles`,
+    query: { ...route.query, edit: id || 'new' },
+  })
+  if (id && writingArticleId.value === id)
+    selectedArticle.value = articles.value.find((item) => item.id === id) ?? null
+  await nextTick()
+  writingLayerRef.value?.querySelector<HTMLButtonElement>('.writing-back')?.focus()
+}
+
+async function closeWriting() {
+  const query = { ...route.query }
+  delete query.edit
+  await router.replace({ query })
+  writingReturnFocus?.focus()
+  if (writingChanged) {
+    writingChanged = false
+    await Promise.all([
+      reloadArticles(Math.max(articles.value.length, ARTICLE_LIST_PAGE_SIZE), { silent: true }),
+      reloadCategories(),
+    ])
+  }
+}
+
+function onWritingSaved(article: ArticleRecord) {
+  writingChanged = true
+  writingSavedArticleId = article.id
+  const index = articles.value.findIndex((item) => item.id === article.id)
+  if (index >= 0) articles.value[index] = article
+  selectedArticle.value = article
+  if (route.query.edit === 'new') {
+    void router.replace({ query: { ...route.query, edit: article.id } })
+  }
+}
+
+function onWritingDeleted(id: string) {
+  writingChanged = true
+  articles.value = articles.value.filter((item) => item.id !== id)
+}
+
+function handleWritingKeydown(event: KeyboardEvent) {
+  if (event.defaultPrevented || event.isComposing) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    void writingEditorRef.value?.closeWriting()
+  }
+  if (event.key !== 'Tab' || writingInSplit.value) return
+  const focusable = Array.from(
+    writingLayerRef.value!.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"], [contenteditable="true"]',
+    ),
+  ).filter((element) => element.getClientRects().length > 0)
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last?.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first?.focus()
+  }
+}
+
+onBeforeRouteUpdate(async (to, from) => {
+  // 新草稿首次保存只同步地址，表单已经对应这篇文章。
+  if (from.query.edit === 'new' && to.query.edit === writingSavedArticleId) return true
+  if (to.query.edit !== from.query.edit && writingEditorRef.value)
+    return writingEditorRef.value.prepareToLeave()
+})
+onActivated(() => {
+  managerActive.value = true
+})
+onDeactivated(() => {
+  managerActive.value = false
+})
 
 async function fetchAllMyArticles(): Promise<ArticleRecord[]> {
   const firstPage = await 获取我的文章列表(1, ARTICLE_EXPORT_PAGE_SIZE)
@@ -724,6 +840,13 @@ watch(
 
 watch([activeListMode, articles], ([mode, items]) => {
   if (mode !== 'active-split') return
+  if (!isRecycleBinMode.value) {
+    if (!writingOpen.value && items.length) {
+      const article = items.find((item) => item.id === selectedArticle.value?.id) ?? items[0]!
+      void selectArticle(article)
+    }
+    return
+  }
   if (!items.some((item) => item.id === selectedArticle.value?.id)) {
     selectedArticle.value = null
     if (items[0]) void selectArticle(items[0])
@@ -739,6 +862,14 @@ function changeSort(field: ArticleSortField) {
   } else {
     sortBy.value = ''
   }
+}
+
+function openSplitArticle(article: ArticleRecord) {
+  if (isNarrowSplitViewport.value && !isRecycleBinMode.value) {
+    void openWriting(article.id)
+    return
+  }
+  void selectArticle(article)
 }
 
 function clearFilters() {
@@ -770,8 +901,12 @@ function toggleRecycleBin() {
 }
 
 function openArticlePreview(article: ArticleRecord) {
-  void selectArticle(article)
-  selectListMode('active-split')
+  if (isRecycleBinMode.value) {
+    void selectArticle(article)
+    selectListMode('active-split')
+  } else {
+    void openWriting(article.id)
+  }
 }
 
 useInfiniteScroll(pageContainerRef, fetchNextPage, {
@@ -793,8 +928,17 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 </script>
 
 <template>
-  <div class="article-manager" :class="{ 'is-split': activeListMode === 'active-split' }">
-    <section class="article-page">
+  <div
+    class="article-manager"
+    :class="{
+      'is-split': activeListMode === 'active-split',
+      'is-narrow-split-writing': writingFromNarrowSplit,
+    }"
+  >
+    <section
+      class="article-page"
+      :inert="writingOpen && !writingInSplit && !isNarrowSplitViewport"
+    >
       <header class="article-page-head">
         <div>
           <button
@@ -1022,7 +1166,14 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
             </button>
           </div>
 
-          <div ref="pageContainerRef" class="article-list-body">
+          <div
+            ref="pageContainerRef"
+            class="article-list-body"
+            :class="{
+              'article-list-body--writing':
+                writingOpen && isNarrowSplitViewport && !writingInSplit,
+            }"
+          >
             <div v-if="isTableViewMode" class="manager-table">
               <div
                 class="manager-row manager-row-head"
@@ -1136,7 +1287,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     type="button"
                     title="编辑文章"
                     aria-label="编辑文章"
-                    @click="router.push(resolve文章路径('/articles/edit', article.id))"
+                    @click="openWriting(article.id)"
                   >
                     <ElIcon><ArticleEditIcon /></ElIcon>
                   </button>
@@ -1237,7 +1388,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                   type="button"
                   class="article-split-item"
                   :class="{ 'is-active': selectedArticle?.id === article.id }"
-                  @click="selectArticle(article)"
+                  @click="openSplitArticle(article)"
                 >
                   <strong>{{ article.title }}</strong>
                   <span>{{ article.excerpt || '暂无摘要' }}</span>
@@ -1263,7 +1414,12 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                   }}
                 </div>
               </div>
-              <div v-if="selectedArticle" class="article-split-detail">
+              <div
+                v-if="!isRecycleBinMode"
+                ref="splitEditorHost"
+                class="article-split-editor-host"
+              />
+              <div v-else-if="selectedArticle" class="article-split-detail">
                 <div class="article-detail-inner">
                   <small class="article-detail-kicker"
                     ><ElIcon><Document /></ElIcon>文章预览</small
@@ -1297,7 +1453,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     <ElButton
                       v-if="!isRecycleBinMode"
                       class="article-action"
-                      @click="router.push(resolve文章路径('/articles/edit', selectedArticle.id))"
+                      @click="openWriting(selectedArticle.id)"
                     >
                       <ElIcon><ArticleEditIcon /></ElIcon><span>编辑文章</span>
                     </ElButton>
@@ -1437,7 +1593,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       type="button"
                       title="编辑文章"
                       aria-label="编辑文章"
-                      @click="router.push(resolve文章路径('/articles/edit', article.id))"
+                      @click="openWriting(article.id)"
                     >
                       <ElIcon><ArticleEditIcon /></ElIcon>
                     </button>
@@ -1551,6 +1707,51 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
         </div>
       </ElSkeleton>
     </section>
+
+    <Teleport
+      v-if="writingOpen"
+      :to="
+        writingInSplit && splitEditorHost
+          ? splitEditorHost
+          : isNarrowSplitViewport && pageContainerRef
+            ? pageContainerRef
+            : 'body'
+      "
+    >
+      <div
+        v-show="managerActive"
+        ref="writingLayerRef"
+        class="article-writing-layer"
+        :class="{
+          'article-writing-layer--split': writingInSplit,
+          'article-writing-layer--split-edit': writingInSplit,
+          'article-writing-layer--compact': isNarrowSplitViewport && !writingInSplit,
+        }"
+        :role="writingInSplit || isNarrowSplitViewport ? 'region' : 'dialog'"
+        :aria-modal="writingInSplit || isNarrowSplitViewport ? undefined : true"
+        aria-label="文章写作"
+        @keydown="handleWritingKeydown"
+      >
+        <button
+          v-if="!writingInSplit && !isNarrowSplitViewport"
+          class="article-writing-backdrop"
+          type="button"
+          tabindex="-1"
+          aria-label="保存并返回列表"
+          @click="writingEditorRef?.closeWriting()"
+        />
+        <ArticleEditor
+          ref="writingEditorRef"
+          embedded
+          :split="writingInSplit && !isNarrowSplitViewport"
+          :split-edit="writingInSplit"
+          :article-id="writingArticleId"
+          @close="closeWriting"
+          @saved="onWritingSaved"
+          @deleted="onWritingDeleted"
+        />
+      </div>
+    </Teleport>
 
     <BaseDialog
       v-model="showQuickDialog"
@@ -2597,10 +2798,13 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   overflow: hidden;
 }
 .article-manager .article-list-body {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: scroll;
-  scrollbar-gutter: stable;
+}
+.article-manager .article-list-body--writing {
+  overflow: hidden;
 }
 .article-manager .article-tabs,
 .article-manager .article-list-body,
@@ -3381,6 +3585,101 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 
   .article-table :deep(.el-button) {
     padding: 0 4px;
+  }
+}
+</style>
+
+<style scoped>
+.article-writing-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 40px 28px;
+}
+.article-writing-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(23 23 23 / 30%);
+  cursor: default;
+}
+.article-writing-layer > :deep(.writing-sheet) {
+  container-type: inline-size;
+  width: min(1180px, 100%);
+  height: min(880px, 100%);
+  box-shadow:
+    0 28px 72px -28px rgb(17 17 17 / 26%),
+    0 2px 10px rgb(17 17 17 / 5%);
+}
+.article-split-editor-host {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.article-writing-layer--split {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+}
+.article-writing-layer--compact {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  padding: 0;
+}
+.article-writing-layer--compact > :deep(.writing-sheet) {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.article-writing-layer--split > :deep(.writing-sheet) {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (max-width: 900px) {
+  .article-manager.is-split .article-split-list {
+    flex-basis: 240px;
+  }
+}
+@media (max-width: 680px) {
+  .article-writing-layer {
+    padding: 0;
+  }
+  .article-writing-layer > :deep(.writing-sheet) {
+    border: 0;
+    border-radius: 0;
+  }
+  .article-manager.is-split .article-split {
+    flex-direction: column;
+  }
+  .article-manager.is-split .article-split-list {
+    flex: 1 1 auto;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .article-manager.is-split .article-split-editor-host {
+    display: none;
+  }
+  .article-manager.is-narrow-split-writing .article-split-list {
+    display: none;
+  }
+  .article-manager.is-narrow-split-writing .article-split-editor-host {
+    display: flex;
   }
 }
 </style>

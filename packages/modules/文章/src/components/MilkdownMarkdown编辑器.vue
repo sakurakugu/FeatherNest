@@ -74,6 +74,8 @@ const props = withDefaults(defineProps<{
   outlineVisible?: boolean
   showOutlineToggle?: boolean
   showAiTools?: boolean
+  propertiesVisible?: boolean
+  showPropertiesToggle?: boolean
 }>(), {
   placeholder: '在此编写 Markdown 内容...',
   theme: 'light',
@@ -89,6 +91,8 @@ const props = withDefaults(defineProps<{
   outlineVisible: false,
   showOutlineToggle: false,
   showAiTools: false,
+  propertiesVisible: false,
+  showPropertiesToggle: false,
 })
 
 const emit = defineEmits<{
@@ -103,6 +107,7 @@ const emit = defineEmits<{
   'update:previewType': [value: 'preview' | 'html' | 'mindmap']
   'update:outlineVisible': [value: boolean]
   openAiTools: []
+  'update:propertiesVisible': [value: boolean]
 }>()
 
 const rootRef = ref<HTMLDivElement | null>(null)
@@ -252,6 +257,7 @@ const { runToolbarAction } = 使用MilkdownMarkdown工具栏动作({
   getScrollSync: () => props.scrollSync,
   getPreviewEnabled: () => props.previewEnabled,
   getOutlineVisible: () => props.outlineVisible,
+  toggleProperties: () => emit('update:propertiesVisible', !props.propertiesVisible),
   emitModelValue: (value) => emit('update:modelValue', value),
   emitScrollSync: (value) => emit('update:scrollSync', value),
   emitPreviewEnabled: (value) => emit('update:previewEnabled', value),
@@ -277,6 +283,8 @@ const toolbarItems = 创建MilkdownMarkdown工具栏项({
   outlineVisible: () => props.outlineVisible,
   showOutlineToggle: () => props.showOutlineToggle,
   showAiTools: () => props.showAiTools,
+  propertiesVisible: () => props.propertiesVisible,
+  showPropertiesToggle: () => props.showPropertiesToggle,
 })
 const {
   toolbarOverflowCount,
@@ -429,6 +437,8 @@ watch(
     props.showOutlineToggle,
     props.outlineVisible,
     props.showAiTools,
+    props.propertiesVisible,
+    props.showPropertiesToggle,
   ] as const,
   () => 调度工具栏折叠更新(),
 )
@@ -587,7 +597,7 @@ async function toggleScreenFullscreen() {
 }
 
 defineExpose<MilkdownMarkdown编辑器实例>({
-  getMarkdown,
+  getMarkdown: () => (isSourceMode.value ? sourceContent.value : getMarkdown()),
   setMarkdown,
   formatMarkdown,
   insertMarkdown,

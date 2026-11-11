@@ -41,6 +41,7 @@ export type ToolbarAction =
   | 'previewTypeHtml'
   | 'previewTypeMindmap'
   | 'outlineToggle'
+  | 'propertiesToggle'
   | 'pageFullscreen'
   | 'fullscreen'
   | 'sourceMode'
