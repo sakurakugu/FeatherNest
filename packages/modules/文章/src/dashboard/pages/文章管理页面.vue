@@ -2,20 +2,28 @@
 import { useInfiniteScroll, useStorage } from '@vueuse/core'
 /* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
 import {
-  Plus,
-  Filter,
-  Document,
+  ArrowRight,
+  Box,
+  CircleCheck,
   Delete,
+  Document,
   Download,
-  Upload,
+  Filter,
+  FolderOpened,
+  Link,
+  List,
   MoreFilled,
+  Plus,
   RefreshLeft,
   Search,
+  Upload,
 } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@feathernest/api'
+import { 创建待办 } from '@feathernest/domain/todos'
 import { BaseDialog, type ContentTabItem } from '@feathernest/ui'
 import {
   ElButton,
+  ElDrawer,
   ElDropdown,
   ElDropdownItem,
   ElDropdownMenu,
@@ -24,42 +32,42 @@ import {
   ElInput,
   ElMessage,
   ElOption,
-  ElPopconfirm,
   ElPopover,
   ElSelect,
   ElSkeleton,
   ElSwitch,
   ElTooltip,
 } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   删除文章 as removeArticle,
   恢复文章 as requestRestoreArticle,
   全部文章筛选值,
   创建文章草稿,
+  导入文章,
   文章转待办,
   文章转资料,
   更新文章,
-  导入文章,
   未分类文章筛选值,
   根据ID获取我的文章,
+  获取全部标签列表,
   获取我的文章分类列表,
   获取我的文章列表,
-  获取全部标签列表,
 } from '../../api'
 import MarkdownRenderer from '../../components/Markdown渲染器.vue'
-import ArticleSortIcon from '../components/文章排序图标.vue'
 import { 构建文章传输负载, 读取文章迁移文件 } from '../../transfer'
 import type {
   ArticleListResponse,
+  ArticleManagerQuery,
   ArticleOrganizationState,
   ArticleRecord,
+  ArticleSortField,
   CategoryRecord,
   TagRecord,
-  ArticleManagerQuery,
-  ArticleSortField,
 } from '../../types'
+import ArticleSortIcon from '../components/文章排序图标.vue'
+import ArticleEditIcon from '../components/文章编辑图标.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -141,6 +149,7 @@ const searchText = ref('')
 const appliedSearch = ref('')
 const quickContent = ref('')
 const quickSaving = ref(false)
+const quickWordCount = computed(() => quickContent.value.length)
 const showConvertDialog = ref(false)
 const converting = ref(false)
 const convertingArticle = ref<ArticleRecord | null>(null)
@@ -150,13 +159,9 @@ const convertContent = ref('')
 const convertNote = ref('')
 const convertMaterialType = ref<'text' | 'link'>('text')
 
-const CREATE_BUTTON_LONG_PRESS_MS = 600
 const ARTICLE_TRANSFER_VERSION = 2
 const ARTICLE_EXPORT_PAGE_SIZE = 50
 const ARTICLE_LIST_PAGE_SIZE = 10
-
-let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
-let ignoreNextCreateClick = false
 
 const hasMoreArticles = computed(() => pagination.value.page < pagination.value.pageCount)
 const showSkeleton = computed(() => initialLoading.value && articles.value.length === 0)
@@ -443,6 +448,11 @@ async function deleteArticle(id: string) {
   await reloadArticles(targetVisibleCount, { silent: true })
 }
 
+function closeArticleDeletePopover(event: MouseEvent) {
+  event.stopPropagation()
+  document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+}
+
 async function restoreArticle(id: string) {
   const targetVisibleCount = Math.max(
     articles.value.length - 1,
@@ -454,18 +464,25 @@ async function restoreArticle(id: string) {
   await reloadArticles(targetVisibleCount, { silent: true })
 }
 
-async function saveQuickArticle() {
+async function saveQuickArticle(target: 'article' | 'todo' = 'article') {
   const content = quickContent.value.trim()
-  if (!content) return
+  if (!content || quickSaving.value) return
   quickSaving.value = true
   try {
-    await 创建文章草稿({ content, organization_state: 'inbox' })
+    if (target === 'todo') {
+      await 创建待办({ title: content.split('\n')[0].slice(0, 300), description: content })
+    } else {
+      await 创建文章草稿({ content, organization_state: 'inbox' })
+    }
     quickContent.value = ''
     showQuickDialog.value = false
-    ElMessage.success('已存入待整理')
-    await reloadCategories()
-    await reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: true })
+    ElMessage.success(target === 'todo' ? '已存为待办事项' : '已存入待整理')
+    if (target === 'article') {
+      await reloadCategories()
+      await reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: true })
+    }
   } catch (error) {
+    console.error('保存快速记录失败', { target, error })
     ElMessage.error(获取API错误消息(error, '保存失败'))
   } finally {
     quickSaving.value = false
@@ -532,6 +549,9 @@ async function submitConversion() {
 }
 
 function handleArticleAction(article: ArticleRecord, action: string) {
+  if (action === 'edit') void router.push(resolve文章路径('/articles/edit', article.id))
+  if (action === 'copy-link') void copyArticleLink(article)
+  if (action === 'delete') openArticleDeletePopover(article)
   if (action === 'todo' || action === 'material') openConvertDialog(article, action)
   if (action === 'inbox' || action === 'organized' || action === 'archived')
     void changeOrganizationState(article, action)
@@ -540,6 +560,22 @@ function handleArticleAction(article: ArticleRecord, action: string) {
     void router.push(
       `${路由前缀.value}/${converted.target_type === 'todo' ? 'todos' : 'materials'}?open=${encodeURIComponent(converted.target_id)}`,
     )
+}
+
+function openArticleDeletePopover(article: ArticleRecord) {
+  const button = document.querySelector<HTMLButtonElement>(`[data-article-delete="${article.id}"]`)
+  button?.click()
+}
+
+async function copyArticleLink(article: ArticleRecord) {
+  const path = router.resolve(resolve文章路径('/articles/edit', article.id)).href
+  try {
+    await navigator.clipboard.writeText(new URL(path, window.location.href).href)
+    ElMessage.success('文章链接已复制')
+  } catch (error) {
+    console.error('复制文章链接失败', { articleId: article.id, error })
+    ElMessage.error('复制文章链接失败，请重试')
+  }
 }
 
 async function selectArticle(article: ArticleRecord) {
@@ -552,38 +588,23 @@ async function selectArticle(article: ArticleRecord) {
   }
 }
 
-function clearCreateButtonLongPress() {
-  if (createButtonLongPressTimer !== null) {
-    clearTimeout(createButtonLongPressTimer)
-    createButtonLongPressTimer = null
-  }
-}
-
 function openTransferDialog() {
   showTransferDialog.value = true
 }
-
-function startCreateButtonLongPress(event: Event) {
-  if (event instanceof MouseEvent && event.button !== 0) {
-    return
-  }
-  clearCreateButtonLongPress()
-  createButtonLongPressTimer = setTimeout(() => {
-    ignoreNextCreateClick = true
-    openTransferDialog()
-  }, CREATE_BUTTON_LONG_PRESS_MS)
+function openQuickDialog() {
+  quickContent.value = ''
+  showQuickDialog.value = true
 }
 
-function cancelCreateButtonLongPress() {
-  clearCreateButtonLongPress()
+function handleQuickKeydown(event: Event | KeyboardEvent) {
+  if (!(event instanceof KeyboardEvent)) return
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault()
+    void saveQuickArticle()
+  }
 }
 
 function handleCreateButtonClick() {
-  clearCreateButtonLongPress()
-  if (ignoreNextCreateClick) {
-    ignoreNextCreateClick = false
-    return
-  }
   void router.push(resolve文章路径('/articles/edit'))
 }
 
@@ -674,10 +695,6 @@ onMounted(() => {
     .catch((error) => {
       ElMessage.error(获取API错误消息(error, '加载标签失败'))
     })
-})
-
-onBeforeUnmount(() => {
-  clearCreateButtonLongPress()
 })
 
 watch(
@@ -792,7 +809,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
           <p>共 {{ allArticleTotal }} 篇文章</p>
         </div>
         <div class="page-actions">
-          <ElButton v-if="!isRecycleBinMode" class="article-action" @click="showQuickDialog = true">
+          <ElButton v-if="!isRecycleBinMode" class="article-action" @click="openQuickDialog">
             <ElIcon>
               <svg viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true">
                 <path
@@ -819,22 +836,10 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
               </svg> </ElIcon
             ><span>迁移</span>
           </ElButton>
-          <div
-            v-if="!isRecycleBinMode"
-            class="create-button-wrapper"
-            @touchstart.passive="startCreateButtonLongPress"
-            @touchmove="cancelCreateButtonLongPress"
-            @touchend="cancelCreateButtonLongPress"
-            @touchcancel="cancelCreateButtonLongPress"
-            @mousedown="startCreateButtonLongPress"
-            @mouseup="cancelCreateButtonLongPress"
-            @mouseleave="cancelCreateButtonLongPress"
-            @contextmenu.prevent
-          >
+          <div v-if="!isRecycleBinMode" class="create-button-wrapper">
             <ElButton
               class="article-action article-action--create"
               type="primary"
-              title="长按可打开文章迁移"
               @click="handleCreateButtonClick"
             >
               <ElIcon><Plus /></ElIcon><span>写文章</span>
@@ -1127,72 +1132,99 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     <ElIcon><RefreshLeft /></ElIcon>
                   </button>
                   <button
-                    v-else
+                    v-if="!isRecycleBinMode"
                     type="button"
-                    title="编辑"
-                    aria-label="编辑"
+                    title="编辑文章"
+                    aria-label="编辑文章"
                     @click="router.push(resolve文章路径('/articles/edit', article.id))"
                   >
-                    <ElIcon>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-                      </svg>
-                    </ElIcon>
+                    <ElIcon><ArticleEditIcon /></ElIcon>
                   </button>
                   <ElDropdown
                     v-if="!isRecycleBinMode"
                     trigger="click"
+                    popper-class="article-more-menu"
                     @command="(action: string) => handleArticleAction(article, action)"
                   >
                     <button type="button" title="更多" aria-label="更多">
                       <ElIcon><MoreFilled /></ElIcon>
                     </button>
                     <template #dropdown
-                      ><ElDropdownMenu
-                        ><ElDropdownItem command="inbox">待整理</ElDropdownItem
-                        ><ElDropdownItem command="organized">已整理</ElDropdownItem
-                        ><ElDropdownItem command="archived">归档</ElDropdownItem
-                        ><ElDropdownItem command="todo">转待办</ElDropdownItem
-                        ><ElDropdownItem command="material">转资料</ElDropdownItem
-                        ><ElDropdownItem
+                      ><ElDropdownMenu>
+                        <ElDropdownItem command="edit" :icon="ArticleEditIcon"
+                          >编辑文章</ElDropdownItem
+                        >
+                        <ElDropdownItem command="copy-link" :icon="Link">复制链接</ElDropdownItem>
+                        <ElDropdownItem command="inbox" :icon="Document" divided
+                          >待整理</ElDropdownItem
+                        >
+                        <ElDropdownItem command="organized" :icon="CircleCheck"
+                          >已整理</ElDropdownItem
+                        >
+                        <ElDropdownItem command="archived" :icon="Box">归档</ElDropdownItem>
+                        <ElDropdownItem command="todo" :icon="List" divided>转待办</ElDropdownItem>
+                        <ElDropdownItem command="material" :icon="FolderOpened"
+                          >转资料</ElDropdownItem
+                        >
+                        <ElDropdownItem
+                          command="delete"
+                          :icon="Delete"
+                          class="article-menu-delete"
+                          divided
+                          >移入回收站</ElDropdownItem
+                        >
+                        <ElDropdownItem
                           v-for="item in article.converted_items"
                           :key="item.id"
                           :command="item.id"
+                          :icon="item.target_type === 'todo' ? List : FolderOpened"
                           >查看{{ item.target_type === 'todo' ? '待办' : '资料' }}</ElDropdownItem
-                        ></ElDropdownMenu
-                      ></template
+                        >
+                      </ElDropdownMenu></template
                     >
                   </ElDropdown>
-                  <ElPopconfirm
-                    :title="
-                      isRecycleBinMode
-                        ? `确定永久删除文章《${article.title || '未命名'}》？`
-                        : `确定将文章《${article.title || '未命名'}》移入回收站？`
-                    "
-                    confirm-button-text="确定"
-                    cancel-button-text="取消"
-                    :width="280"
-                    popper-class="article-delete-confirm"
-                    @confirm="deleteArticle(article.id)"
+                  <ElPopover
+                    placement="bottom-end"
+                    :width="288"
+                    trigger="click"
+                    popper-class="article-delete-popover"
                   >
                     <template #reference
                       ><button
                         type="button"
+                        :data-article-delete="article.id"
                         :title="isRecycleBinMode ? '彻底删除' : '移入回收站'"
                         :aria-label="isRecycleBinMode ? '彻底删除' : '移入回收站'"
                       >
                         <ElIcon><Delete /></ElIcon></button
                     ></template>
-                  </ElPopconfirm>
+                    <div class="article-delete-content">
+                      <p class="article-delete-kicker">
+                        <i />{{ isRecycleBinMode ? '彻底删除' : '移入回收站' }}
+                      </p>
+                      <p class="article-delete-title">{{ article.title || '未命名' }}</p>
+                      <p class="article-delete-desc">
+                        {{
+                          isRecycleBinMode
+                            ? '这次无法恢复，文章和整理状态会被一起清除。'
+                            : '保留 30 天，期间可以随时从回收站恢复。'
+                        }}
+                      </p>
+                      <div class="article-delete-actions">
+                        <ElButton text size="small" @click="closeArticleDeletePopover"
+                          >取消</ElButton
+                        >
+                        <ElButton
+                          link
+                          type="danger"
+                          size="small"
+                          @click="deleteArticle(article.id)"
+                        >
+                          {{ isRecycleBinMode ? '彻底删除' : '移入回收站' }}
+                        </ElButton>
+                      </div>
+                    </div>
+                  </ElPopover>
                 </div>
               </div>
             </div>
@@ -1266,24 +1298,13 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       v-if="!isRecycleBinMode"
                       class="article-action"
                       @click="router.push(resolve文章路径('/articles/edit', selectedArticle.id))"
-                      ><ElIcon>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.6"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-                        </svg> </ElIcon
-                      ><span>编辑文章</span></ElButton
                     >
+                      <ElIcon><ArticleEditIcon /></ElIcon><span>编辑文章</span>
+                    </ElButton>
                     <ElDropdown
                       v-if="!isRecycleBinMode"
                       trigger="click"
+                      popper-class="article-more-menu"
                       @command="(action: string) => handleArticleAction(selectedArticle!, action)"
                     >
                       <ElButton class="article-action">
@@ -1291,15 +1312,35 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       </ElButton>
                       <template #dropdown>
                         <ElDropdownMenu>
-                          <ElDropdownItem command="inbox">待整理</ElDropdownItem>
-                          <ElDropdownItem command="organized">已整理</ElDropdownItem>
-                          <ElDropdownItem command="archived">归档</ElDropdownItem>
-                          <ElDropdownItem command="todo">转待办</ElDropdownItem>
-                          <ElDropdownItem command="material">转资料</ElDropdownItem>
+                          <ElDropdownItem command="edit" :icon="ArticleEditIcon"
+                            >编辑文章</ElDropdownItem
+                          >
+                          <ElDropdownItem command="copy-link" :icon="Link">复制链接</ElDropdownItem>
+                          <ElDropdownItem command="inbox" :icon="Document" divided
+                            >待整理</ElDropdownItem
+                          >
+                          <ElDropdownItem command="organized" :icon="CircleCheck"
+                            >已整理</ElDropdownItem
+                          >
+                          <ElDropdownItem command="archived" :icon="Box">归档</ElDropdownItem>
+                          <ElDropdownItem command="todo" :icon="List" divided
+                            >转待办</ElDropdownItem
+                          >
+                          <ElDropdownItem command="material" :icon="FolderOpened"
+                            >转资料</ElDropdownItem
+                          >
+                          <ElDropdownItem
+                            command="delete"
+                            :icon="Delete"
+                            class="article-menu-delete"
+                            divided
+                            >移入回收站</ElDropdownItem
+                          >
                           <ElDropdownItem
                             v-for="item in selectedArticle.converted_items"
                             :key="item.id"
                             :command="item.id"
+                            :icon="item.target_type === 'todo' ? List : FolderOpened"
                             >查看{{ item.target_type === 'todo' ? '待办' : '资料' }}</ElDropdownItem
                           >
                         </ElDropdownMenu>
@@ -1311,24 +1352,48 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       @click="restoreArticle(selectedArticle.id)"
                       >恢复文章</ElButton
                     >
-                    <ElPopconfirm
-                      :title="
-                        isRecycleBinMode
-                          ? `确定永久删除文章《${selectedArticle.title || '未命名'}》？`
-                          : `确定将文章《${selectedArticle.title || '未命名'}》移入回收站？`
-                      "
-                      confirm-button-text="确定"
-                      cancel-button-text="取消"
-                      :width="280"
-                      popper-class="article-delete-confirm"
-                      @confirm="deleteArticle(selectedArticle.id)"
+                    <ElPopover
+                      placement="bottom-end"
+                      :width="288"
+                      trigger="click"
+                      popper-class="article-delete-popover"
                     >
                       <template #reference>
-                        <button type="button" class="article-detail-delete">
+                        <button
+                          type="button"
+                          class="article-detail-delete"
+                          :data-article-delete="selectedArticle.id"
+                        >
                           {{ isRecycleBinMode ? '彻底删除' : '移入回收站' }}
                         </button>
                       </template>
-                    </ElPopconfirm>
+                      <div class="article-delete-content">
+                        <p class="article-delete-kicker">
+                          <i />{{ isRecycleBinMode ? '彻底删除' : '移入回收站' }}
+                        </p>
+                        <p class="article-delete-title">{{ selectedArticle.title || '未命名' }}</p>
+                        <p class="article-delete-desc">
+                          {{
+                            isRecycleBinMode
+                              ? '这次无法恢复，文章和整理状态会被一起清除。'
+                              : '保留 30 天，期间可以随时从回收站恢复。'
+                          }}
+                        </p>
+                        <div class="article-delete-actions">
+                          <ElButton text size="small" @click="closeArticleDeletePopover"
+                            >取消</ElButton
+                          >
+                          <ElButton
+                            link
+                            type="danger"
+                            size="small"
+                            @click="deleteArticle(selectedArticle.id)"
+                          >
+                            {{ isRecycleBinMode ? '彻底删除' : '移入回收站' }}
+                          </ElButton>
+                        </div>
+                      </div>
+                    </ElPopover>
                   </div>
                 </div>
               </div>
@@ -1368,68 +1433,99 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       <ElIcon><RefreshLeft /></ElIcon>
                     </button>
                     <button
-                      v-else
+                      v-if="!isRecycleBinMode"
                       type="button"
-                      title="编辑"
-                      aria-label="编辑"
+                      title="编辑文章"
+                      aria-label="编辑文章"
                       @click="router.push(resolve文章路径('/articles/edit', article.id))"
                     >
-                      <ElIcon>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.6"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-                        </svg>
-                      </ElIcon>
+                      <ElIcon><ArticleEditIcon /></ElIcon>
                     </button>
                     <ElDropdown
                       v-if="!isRecycleBinMode"
                       trigger="click"
+                      popper-class="article-more-menu"
                       @command="(action: string) => handleArticleAction(article, action)"
                       ><button type="button" title="更多" aria-label="更多">
                         <ElIcon><MoreFilled /></ElIcon></button
                       ><template #dropdown
-                        ><ElDropdownMenu
-                          ><ElDropdownItem command="inbox">待整理</ElDropdownItem
-                          ><ElDropdownItem command="organized">已整理</ElDropdownItem
-                          ><ElDropdownItem command="archived">归档</ElDropdownItem
-                          ><ElDropdownItem command="todo">转待办</ElDropdownItem
-                          ><ElDropdownItem command="material">转资料</ElDropdownItem
-                          ><ElDropdownItem
+                        ><ElDropdownMenu>
+                          <ElDropdownItem command="edit" :icon="ArticleEditIcon"
+                            >编辑文章</ElDropdownItem
+                          >
+                          <ElDropdownItem command="copy-link" :icon="Link">复制链接</ElDropdownItem>
+                          <ElDropdownItem command="inbox" :icon="Document" divided
+                            >待整理</ElDropdownItem
+                          >
+                          <ElDropdownItem command="organized" :icon="CircleCheck"
+                            >已整理</ElDropdownItem
+                          >
+                          <ElDropdownItem command="archived" :icon="Box">归档</ElDropdownItem>
+                          <ElDropdownItem command="todo" :icon="List" divided
+                            >转待办</ElDropdownItem
+                          >
+                          <ElDropdownItem command="material" :icon="FolderOpened"
+                            >转资料</ElDropdownItem
+                          >
+                          <ElDropdownItem
+                            command="delete"
+                            :icon="Delete"
+                            class="article-menu-delete"
+                            divided
+                            >移入回收站</ElDropdownItem
+                          >
+                          <ElDropdownItem
                             v-for="item in article.converted_items"
                             :key="item.id"
                             :command="item.id"
+                            :icon="item.target_type === 'todo' ? List : FolderOpened"
                             >查看{{ item.target_type === 'todo' ? '待办' : '资料' }}</ElDropdownItem
-                          ></ElDropdownMenu
-                        ></template
+                          >
+                        </ElDropdownMenu></template
                       ></ElDropdown
                     >
-                    <ElPopconfirm
-                      :title="
-                        isRecycleBinMode
-                          ? `确定永久删除文章《${article.title || '未命名'}》？`
-                          : `确定将文章《${article.title || '未命名'}》移入回收站？`
-                      "
-                      confirm-button-text="确定"
-                      cancel-button-text="取消"
-                      :width="280"
-                      popper-class="article-delete-confirm"
-                      @confirm="deleteArticle(article.id)"
-                      ><template #reference
+                    <ElPopover
+                      placement="bottom-end"
+                      :width="288"
+                      trigger="click"
+                      popper-class="article-delete-popover"
+                    >
+                      <template #reference
                         ><button
                           type="button"
+                          :data-article-delete="article.id"
                           :title="isRecycleBinMode ? '彻底删除' : '移入回收站'"
                           :aria-label="isRecycleBinMode ? '彻底删除' : '移入回收站'"
                         >
-                          <ElIcon><Delete /></ElIcon></button></template
-                    ></ElPopconfirm>
+                          <ElIcon><Delete /></ElIcon></button
+                      ></template>
+                      <div class="article-delete-content">
+                        <p class="article-delete-kicker">
+                          <i />{{ isRecycleBinMode ? '彻底删除' : '移入回收站' }}
+                        </p>
+                        <p class="article-delete-title">{{ article.title || '未命名' }}</p>
+                        <p class="article-delete-desc">
+                          {{
+                            isRecycleBinMode
+                              ? '这次无法恢复，文章和整理状态会被一起清除。'
+                              : '保留 30 天，期间可以随时从回收站恢复。'
+                          }}
+                        </p>
+                        <div class="article-delete-actions">
+                          <ElButton text size="small" @click="closeArticleDeletePopover"
+                            >取消</ElButton
+                          >
+                          <ElButton
+                            link
+                            type="danger"
+                            size="small"
+                            @click="deleteArticle(article.id)"
+                          >
+                            {{ isRecycleBinMode ? '彻底删除' : '移入回收站' }}
+                          </ElButton>
+                        </div>
+                      </div>
+                    </ElPopover>
                   </div>
                 </footer>
               </article>
@@ -1456,22 +1552,56 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
       </ElSkeleton>
     </section>
 
-    <BaseDialog v-model="showQuickDialog" title="快速记录" width="480px" style="max-width: 94vw">
-      <div class="article-filter-panel">
+    <BaseDialog
+      v-model="showQuickDialog"
+      class="article-quick-dialog"
+      modal-class="article-dialog-overlay"
+      width="560px"
+      style="max-width: 94vw"
+    >
+      <template #header>
+        <div class="article-dialog-header">
+          <i />
+          <strong>快速记录</strong>
+          <span>来不及想细节，就先存着</span>
+        </div>
+      </template>
+      <div class="article-quick-body">
         <ElInput
           v-model="quickContent"
+          class="article-quick-input"
           type="textarea"
           :rows="6"
-          placeholder="快速记录想法或信息"
+          placeholder="随手写点什么。标题会自动取第一行，之后也可以再到编辑器里改。"
           maxlength="20000"
-        /><ElButton
-          type="primary"
-          :loading="quickSaving"
-          :disabled="!quickContent.trim()"
-          @click="saveQuickArticle"
-          >存入待整理</ElButton
-        >
+          resize="vertical"
+          @keydown="handleQuickKeydown"
+        />
+        <div class="article-quick-meta">
+          <span>{{ quickWordCount }} 字</span>
+          <span>存入「待整理」</span>
+          <span class="article-quick-kbd"><kbd>Ctrl</kbd><kbd>Enter</kbd> 保存</span>
+        </div>
       </div>
+      <template #footer>
+        <div class="article-dialog-footer">
+          <ElButton
+            class="article-quick-todo-button"
+            text
+            :disabled="!quickContent.trim() || quickSaving"
+            @click="saveQuickArticle('todo')"
+            >存为待办事项</ElButton
+          >
+          <ElButton text @click="showQuickDialog = false">取消</ElButton>
+          <ElButton
+            type="primary"
+            :loading="quickSaving"
+            :disabled="!quickContent.trim()"
+            @click="saveQuickArticle()"
+            >存入待整理</ElButton
+          >
+        </div>
+      </template>
     </BaseDialog>
 
     <BaseDialog
@@ -1510,10 +1640,20 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
       </div>
     </BaseDialog>
 
-    <BaseDialog v-model="showTransferDialog" title="文章迁移" width="460px" style="max-width: 90vw">
+    <ElDrawer
+      v-model="showTransferDialog"
+      class="article-transfer-drawer"
+      title="迁移"
+      direction="rtl"
+      size="440px"
+      append-to="body"
+      :append-to-body="false"
+      modal-class="article-transfer-overlay"
+      :with-header="true"
+    >
       <div class="article-transfer-dialog">
         <div class="article-transfer-tip">
-          导入 Markdown 或本系统导出的 JSON 备份，也可以将当前账号的文章导出留档。
+          把文章带进来，或者带走一份备份。<br />Markdown 用来接手旧内容，JSON 用来完整还原。
         </div>
         <input
           ref="importFileInput"
@@ -1523,51 +1663,56 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
           hidden
           @change="importArticles"
         />
-        <ElButton
+        <button
           class="article-transfer-action"
-          type="primary"
-          plain
-          :loading="importingArticles"
+          type="button"
           :disabled="transferBusy"
           @click="importFileInput?.click()"
         >
+          <span class="article-transfer-icon"
+            ><ElIcon><Upload /></ElIcon
+          ></span>
           <span class="article-transfer-action-content">
             <span class="article-transfer-action-head">
-              <ElIcon><Upload /></ElIcon>
               <span class="article-transfer-action-label">导入文章</span>
             </span>
             <span class="article-transfer-action-desc"
               >支持多选 Markdown 和 JSON 文件，追加为私有文章</span
             >
           </span>
-        </ElButton>
-        <div class="article-transfer-count">
-          当前可导出 {{ exportArticleTotal }} 篇文章（不含回收站）
-        </div>
-        <ElButton
+          <ElIcon class="article-transfer-arrow"><ArrowRight /></ElIcon>
+        </button>
+        <button
           class="article-transfer-action"
-          type="primary"
-          plain
-          :loading="exportingArticles"
+          type="button"
           :disabled="transferBusy"
           @click="exportArticles"
         >
+          <span class="article-transfer-icon"
+            ><ElIcon><Download /></ElIcon
+          ></span>
           <span class="article-transfer-action-content">
             <span class="article-transfer-action-head">
-              <ElIcon><Download /></ElIcon>
               <span class="article-transfer-action-label">导出 JSON</span>
             </span>
             <span class="article-transfer-action-desc"
-              >保存正文、摘要、封面链接、分类、标签、整理状态与时间信息</span
+              >保存正文、摘要、封面链接、分类标签等信息</span
             >
           </span>
-        </ElButton>
+          <ElIcon class="article-transfer-arrow"><ArrowRight /></ElIcon>
+        </button>
+        <div class="article-transfer-count">
+          当前可导出 {{ exportArticleTotal }} 篇文章（不含回收站）
+        </div>
         <div class="article-transfer-note">
           导入不会覆盖已有文章。Markdown 进入“待整理”；JSON
           恢复整理状态及原始时间，发布信息仅作来源记录，不自动发布。图片保留链接，不包含图片文件。
         </div>
       </div>
-    </BaseDialog>
+      <template #footer>
+        <div class="article-transfer-foot">JSON 备份可以再次导入，用于换设备或留档</div>
+      </template>
+    </ElDrawer>
   </div>
 </template>
 
@@ -1845,10 +1990,145 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   color: var(--el-text-color-placeholder);
 }
 
+.article-dialog-header {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: 9px;
+}
+:global(.article-more-menu.el-popper) {
+  min-width: 168px;
+  border-radius: 7px;
+  box-shadow: none;
+}
+:global(.article-more-menu .el-dropdown-menu) {
+  padding: 4px;
+}
+:global(.article-more-menu .el-dropdown-menu__item) {
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: 4px;
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+  line-height: 30px;
+}
+:global(.article-more-menu .el-dropdown-menu__item i) {
+  margin-right: 8px;
+  font-size: 14px;
+}
+:global(.article-more-menu .el-dropdown-menu__item:not(.is-disabled):focus) {
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
+}
+:global(.article-more-menu .article-menu-delete.el-dropdown-menu__item) {
+  color: var(--el-color-danger);
+}
+:global(.article-more-menu .article-menu-delete.el-dropdown-menu__item:not(.is-disabled):focus) {
+  background: var(--el-color-danger-light-9);
+  color: var(--el-color-danger);
+}
+:global(.article-quick-dialog.el-dialog) {
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+:global(.article-quick-dialog.el-dialog .el-dialog__header) {
+  height: 52px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 18px 0 20px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+:global(.article-quick-dialog.el-dialog .el-dialog__body) {
+  padding: 0;
+}
+:global(.article-quick-dialog.el-dialog .el-dialog__footer) {
+  padding: 12px 20px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+.article-dialog-header > i,
+.article-delete-kicker i {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+}
+.article-dialog-header strong {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+.article-dialog-header span {
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+}
+.article-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.article-dialog-footer > .article-quick-todo-button {
+  margin-right: auto;
+  padding: 0;
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+}
+.article-dialog-footer > .article-quick-todo-button:not(:disabled):hover {
+  background: transparent;
+  color: var(--el-color-primary);
+}
+.article-quick-body {
+  padding: 18px 20px 16px;
+}
+.article-quick-input :deep(textarea) {
+  min-height: 150px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  line-height: 1.85;
+  resize: vertical;
+}
+.article-quick-input :deep(textarea:focus) {
+  box-shadow: none;
+}
+.article-quick-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--el-border-color-lighter);
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+}
+.article-quick-kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--el-text-color-secondary);
+}
+.article-quick-kbd kbd {
+  min-width: 18px;
+  padding: 1px 4px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 3px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-secondary);
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .article-transfer-dialog {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
+  padding: 10px 0 22px;
 }
 
 .article-transfer-tip,
@@ -1857,53 +2137,170 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   font-size: 13px;
   line-height: 1.7;
 }
+.article-transfer-tip {
+  margin-bottom: 22px;
+  color: var(--el-text-color-secondary);
+  font-size: 12.5px;
+}
+.article-transfer-note {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-light);
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+  line-height: 1.8;
+}
 
 .article-transfer-count {
+  margin-top: 18px;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: 11.5px;
 }
 
 .article-transfer-action {
+  display: flex;
+  width: 100%;
   height: auto;
-  min-height: 132px;
-  margin-left: 0;
-  padding: 18px 16px;
+  min-height: 66px;
+  margin: 0;
+  padding: 15px 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
   justify-content: flex-start;
   white-space: normal;
   text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.14s,
+    background 0.14s;
+}
+.article-transfer-action + .article-transfer-action {
+  margin-top: 10px;
 }
 
 .article-transfer-action:hover,
 .article-transfer-action:focus-visible {
-  transform: translateY(-1px);
+  border-color: var(--el-color-primary);
+  background: var(--el-fill-color-light);
 }
 
 .article-transfer-action-content {
   display: inline-flex;
+  min-width: 0;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 0;
 }
 
 .article-transfer-action-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.article-transfer-action-head .el-icon {
-  font-size: 16px;
+  gap: 0;
 }
 
 .article-transfer-action-label {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .article-transfer-action-desc {
+  display: block;
+  margin-top: 4px;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.6;
+}
+
+.article-transfer-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  margin-right: 14px;
+  border-radius: 8px;
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+  font-size: 17px;
+}
+.article-transfer-arrow {
+  margin-left: auto;
+  flex: none;
+  color: var(--el-text-color-placeholder);
+  transition:
+    color 0.14s,
+    transform 0.14s;
+}
+.article-transfer-action:hover .article-transfer-arrow,
+.article-transfer-action:focus-visible .article-transfer-arrow {
+  color: var(--el-color-primary);
+  transform: translateX(2px);
+}
+
+.article-transfer-foot {
+  padding: 14px 24px 20px;
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+}
+:global(.article-transfer-drawer.el-drawer .el-drawer__header) {
+  flex: none;
+  margin-bottom: 0;
+  padding: 24px 24px 8px;
+}
+:global(.article-transfer-drawer.el-drawer .el-drawer__title) {
+  font-size: 16px;
+  font-weight: 600;
+}
+:global(.article-transfer-drawer.el-drawer .el-drawer__body) {
+  padding: 0 24px;
+}
+:global(.article-transfer-drawer.el-drawer .el-drawer__footer) {
+  padding: 0;
+  text-align: left;
+}
+
+.article-delete-content {
+  padding: 1px;
+}
+.article-delete-kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.article-delete-title {
+  overflow: hidden;
+  margin: 7px 0 0;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.article-delete-desc {
+  margin: 5px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.article-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+.article-delete-actions :deep(.el-button) {
+  height: 22px;
+  padding: 0 7px;
+  font-size: 11px;
 }
 
 /* 文章管理页面使用独立的颜色和组件样式，避免受其他模块样式影响。 */
@@ -2167,6 +2564,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   --manager-line: var(--el-border-color-lighter, #e8e8e8);
   --manager-hover: var(--el-fill-color-light, #fafafa);
   height: 100%;
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2482,10 +2880,21 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   max-width: calc(100vw - 24px);
   white-space: nowrap;
 }
-:global(.article-delete-confirm.el-popover) {
-  width: 280px;
+:global(.article-delete-popover.el-popover) {
+  width: 288px;
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+:global(.article-dialog-overlay.el-overlay) {
+  background: rgba(23, 23, 23, 0.16);
+}
+:global(.article-transfer-overlay.el-overlay) {
+  position: absolute;
+  inset: 0;
+  background: rgba(23, 23, 23, 0.16);
 }
 .article-manager .manager-ops {
   display: flex;
@@ -2509,6 +2918,12 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .article-manager .manager-ops button:hover {
   background: var(--manager-hover);
   color: var(--el-color-primary);
+}
+.article-manager .manager-ops button[data-article-delete] {
+  color: var(--el-color-danger);
+}
+.article-manager .manager-ops button[data-article-delete]:hover {
+  background: var(--el-color-danger-light-9);
 }
 .article-manager .manager-cards {
   display: grid;
@@ -2808,7 +3223,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--manager-muted);
+  color: var(--el-color-danger);
   font: inherit;
   font-size: 12px;
   cursor: pointer;

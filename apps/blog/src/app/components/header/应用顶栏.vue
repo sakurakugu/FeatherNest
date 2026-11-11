@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { HomeFilled, House, Monitor, Moon, Plus, Sunny, SwitchButton } from '@element-plus/icons-vue'
-import { Icon } from '@iconify/vue'
 import { 使用认证存储 } from '@feathernest/domain/auth'
 import { 使用博客外观存储 } from '@feathernest/module-blog/store'
-import { 使用下拉面板, 顶栏搜索框 as TopbarSearchInput } from '@feathernest/ui'
+import { 顶栏搜索框 as TopbarSearchInput, 使用下拉面板 } from '@feathernest/ui'
+import { Icon } from '@iconify/vue'
 import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon } from 'element-plus'
 import type { Component } from 'vue'
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -239,11 +239,11 @@ onBeforeUnmount(() => {
               />
             </div>
             <router-link v-if="!isCompactHeader && isAuthed" to="/blog" class="logo logo-desktop">
-              <ElIcon><HomeFilled /></ElIcon>
+              <img class="logo-mark" src="/favicon/icon-192.png" alt="" aria-hidden="true" />
               <span>Sakurakuguの小窝</span>
             </router-link>
             <div v-else-if="!isCompactHeader" class="logo logo-desktop logo-static" aria-label="Sakurakuguの小窝">
-              <ElIcon><HomeFilled /></ElIcon>
+              <img class="logo-mark" src="/favicon/icon-192.png" alt="" aria-hidden="true" />
               <span>Sakurakuguの小窝</span>
             </div>
             <ElDropdown
@@ -501,6 +501,15 @@ onBeforeUnmount(() => {
 
 .logo:hover {
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* 站点图标替代原先的房子图标，尺寸跟文字字号联动 */
+.logo-mark {
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .mobile-nav-dropdown {

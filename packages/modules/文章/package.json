@@ -23,6 +23,7 @@
     "@milkdown/prose": "^7.22.3",
     "@milkdown/utils": "^7.22.3",
     "@feathernest/api": "*",
+    "@feathernest/domain": "*",
     "@feathernest/ui": "*",
     "@vueuse/core": "^15.0.0",
     "markdown-it-container": "^4.0.0"
