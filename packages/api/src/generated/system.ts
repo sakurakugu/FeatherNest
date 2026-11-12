@@ -2269,7 +2269,7 @@ export interface paths {
     delete: operations['\u79FB\u9664\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens__token_id__delete']
     options?: never
     head?: never
-    patch: operations['\u66F4\u6539\u63A8\u9001\u4EE4\u724C\u72B6\u6001_api_v1_notifications_tokens__token_id__patch']
+    patch: operations['\u7F16\u8F91\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens__token_id__patch']
     trace?: never
   }
   '/notifications/tokens/{token_id}/reset': {
@@ -3422,7 +3422,8 @@ export interface components {
       updated_at: string
     }
     app__modules__notifications__schemas______: {
-      channel_ids: string[]
+      channel_ids?: string[] | null
+      content_type?: ('text' | 'markdown' | 'html') | null
       title: string
       content: string
     }
@@ -3432,13 +3433,12 @@ export interface components {
       success: boolean
       error?: string | null
     }
-    'app__modules__notifications__schemas__________-Input': {
-      enabled: boolean
-    }
-    'app__modules__notifications__schemas__________-Output': {
+    app__modules__notifications__schemas__________: {
       id: string
       name: string
       channel_ids: string[]
+      default_channel_ids: string[]
+      default_content_type: 'text' | 'markdown' | 'html'
       enabled: boolean
       last_used_at: string | null
       created_at: string
@@ -3470,8 +3470,17 @@ export interface components {
     app__modules__notifications__schemas__________3: {
       name: string
       channel_ids: string[]
+      default_channel_ids: string[]
+      default_content_type?: 'text' | 'markdown' | 'html'
     }
     app__modules__notifications__schemas__________4: {
+      name?: string | null
+      channel_ids?: string[] | null
+      default_channel_ids?: string[] | null
+      default_content_type?: ('text' | 'markdown' | 'html') | null
+      enabled?: boolean | null
+    }
+    app__modules__notifications__schemas__________5: {
       id: string
       name: string
       provider:
@@ -3488,15 +3497,17 @@ export interface components {
       created_at: string
       updated_at: string
     }
-    app__modules__notifications__schemas__________5: {
+    app__modules__notifications__schemas__________6: {
       id: string
       name: string
       channel_ids: string[]
+      default_channel_ids: string[]
+      default_content_type: 'text' | 'markdown' | 'html'
       enabled: boolean
       last_used_at: string | null
       created_at: string
     }
-    app__modules__notifications__schemas__________6: {
+    app__modules__notifications__schemas__________7: {
       results: components['schemas']['app__modules__notifications__schemas_______'][]
     }
     app__modules__system__schemas_______: {
@@ -8629,7 +8640,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__notifications__schemas__________4'][]
+          'application/json': components['schemas']['app__modules__notifications__schemas__________5'][]
         }
       }
     }
@@ -8652,7 +8663,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__notifications__schemas__________4']
+          'application/json': components['schemas']['app__modules__notifications__schemas__________5']
         }
       }
       422: {
@@ -8712,7 +8723,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__notifications__schemas__________4']
+          'application/json': components['schemas']['app__modules__notifications__schemas__________5']
         }
       }
       422: {
@@ -8768,7 +8779,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__notifications__schemas__________5'][]
+          'application/json': components['schemas']['app__modules__notifications__schemas__________6'][]
         }
       }
     }
@@ -8791,7 +8802,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__notifications__schemas__________-Output']
+          'application/json': components['schemas']['app__modules__notifications__schemas__________']
         }
       }
       422: {
@@ -8831,7 +8842,7 @@ export interface operations {
       }
     }
   }
-  '\u66F4\u6539\u63A8\u9001\u4EE4\u724C\u72B6\u6001_api_v1_notifications_tokens__token_id__patch': {
+  '\u7F16\u8F91\u63A8\u9001\u4EE4\u724C_api_v1_notifications_tokens__token_id__patch': {
     parameters: {
       query?: never
       header?: never
@@ -8842,7 +8853,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['app__modules__notifications__schemas__________-Input']
+        'application/json': components['schemas']['app__modules__notifications__schemas__________4']
       }
     }
     responses: {
@@ -8878,7 +8889,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__notifications__schemas__________-Output']
+          'application/json': components['schemas']['app__modules__notifications__schemas__________']
         }
       }
       422: {
@@ -8911,7 +8922,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__notifications__schemas__________6']
+          'application/json': components['schemas']['app__modules__notifications__schemas__________7']
         }
       }
       422: {

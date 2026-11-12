@@ -32,9 +32,9 @@ import {
   重置推送令牌,
   测试推送渠道,
   更新推送渠道,
-  更新推送令牌状态,
+  更新推送令牌,
 } from '../../api'
-import type { PushChannel, PushProvider, PushToken, PushTokenCreated } from '../../types'
+import type { PushChannel, PushContentType, PushProvider, PushToken, PushTokenCreated } from '../../types'
 
 const channels = ref<PushChannel[]>([])
 const tokens = ref<PushToken[]>([])
@@ -42,12 +42,21 @@ const loading = ref(true)
 const saving = ref(false)
 const channelDialog = ref(false)
 const editingChannel = ref<PushChannel | null>(null)
+const tokenDialog = ref(false)
+const editingToken = ref<PushToken | null>(null)
+const tokenContentType = ref<PushContentType>('text')
+const contentTypeOptions: Array<{ label: string; value: PushContentType }> = [
+  { label: '纯文本', value: 'text' },
+  { label: 'Markdown', value: 'markdown' },
+  { label: 'HTML', value: 'html' },
+]
 const tokenName = ref('')
 const tokenChannelIds = ref<string[]>([])
+const tokenDefaultChannelIds = ref<string[]>([])
 const tokenSaving = ref(false)
 const createdToken = ref<PushTokenCreated | null>(null)
 const channelForm = reactive({ name: '', provider: 'bark' as PushProvider, configJson: '' })
-const wxpusherForm = reactive({ appToken: '', uids: '', topicIds: '', contentType: '' })
+const wxpusherForm = reactive({ appToken: '', uids: '', topicIds: '' })
 
 const providerOptions: Array<{ label: string; value: PushProvider }> = [
   { label: 'Bark', value: 'bark' },
@@ -63,8 +72,8 @@ const providerOptions: Array<{ label: string; value: PushProvider }> = [
 const configExamples: Record<PushProvider, string> = {
   bark: '{\n  "device_key": "你的设备推送密钥",\n  "server_url": "https://api.day.app"\n}',
   serverchan: '{\n  "send_key": "你的 SendKey"\n}',
-  pushplus: '{\n  "token": "你的 Token",\n  "template": "markdown"\n}',
-  wxpusher: '{\n  "app_token": "你的 AppToken",\n  "uids": "UID_xxx,UID_yyy",\n  "topic_ids": "123,456",\n  "content_type": "1"\n}',
+  pushplus: '{\n  "token": "你的 Token"\n}',
+  wxpusher: '{\n  "app_token": "你的 AppToken",\n  "uids": "UID_xxx,UID_yyy",\n  "topic_ids": "123,456"\n}',
   wecom: '{\n  "key": "企业微信机器人 Webhook 中的 key"\n}',
   feishu: '{\n  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/..."\n}',
   dingtalk: '{\n  "webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=...",\n  "secret": "可选的加签密钥"\n}',
@@ -72,7 +81,12 @@ const configExamples: Record<PushProvider, string> = {
 }
 
 const sendEndpoint = computed(() => `${解析当前API基地址().replace(/\/+$/, '')}/notifications/send`)
-const curlExample = computed(() => `curl -X POST '${sendEndpoint.value}' \\\n+  -H 'Authorization: Bearer <推送令牌>' \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{"channel_ids":["<渠道ID>"],"title":"任务完成","content":"脚本已执行完成"}'`)
+const curlExample = computed(() => [
+  `curl -X POST '${sendEndpoint.value}'`,
+  "  -H 'Authorization: Bearer <推送令牌>'",
+  "  -H 'Content-Type: application/json'",
+  `  -d '{"title":"任务完成","content":"脚本已执行完成"}'`,
+].join(' \\' + '\n'))
 
 function providerLabel(provider: PushProvider): string {
   return providerOptions.find((item) => item.value === provider)?.label ?? provider
@@ -102,7 +116,6 @@ function openCreateChannel() {
   channelForm.provider = 'bark'
   channelForm.configJson = configExamples.bark
   resetWxpusherForm()
-  wxpusherForm.contentType = '1'
   channelDialog.value = true
 }
 
@@ -124,7 +137,6 @@ function resetWxpusherForm() {
   wxpusherForm.appToken = ''
   wxpusherForm.uids = ''
   wxpusherForm.topicIds = ''
-  wxpusherForm.contentType = '1'
 }
 
 async function saveChannel() {
@@ -138,7 +150,6 @@ async function saveChannel() {
     if (wxpusherForm.appToken.trim()) wxpusherConfig.app_token = wxpusherForm.appToken.trim()
     if (wxpusherForm.uids.trim()) wxpusherConfig.uids = wxpusherForm.uids.trim()
     if (wxpusherForm.topicIds.trim()) wxpusherConfig.topic_ids = wxpusherForm.topicIds.trim()
-    if (wxpusherForm.contentType) wxpusherConfig.content_type = wxpusherForm.contentType
     if (Object.keys(wxpusherConfig).length) {
       config = wxpusherConfig
     }
@@ -207,20 +218,38 @@ async function removeChannel(channel: PushChannel) {
   }
 }
 
-async function createToken() {
-  if (!tokenName.value.trim() || !tokenChannelIds.value.length) {
-    ElMessage.warning('请填写令牌名称并至少选择一个渠道')
+function openTokenDialog(token: PushToken | null = null) {
+  editingToken.value = token
+  tokenName.value = token?.name ?? ''
+  tokenChannelIds.value = token ? [...token.channel_ids] : []
+  tokenDefaultChannelIds.value = token ? [...token.default_channel_ids] : []
+  tokenContentType.value = token?.default_content_type ?? 'text'
+  tokenDialog.value = true
+}
+
+function changeTokenChannels(ids: string[]) {
+  tokenDefaultChannelIds.value = tokenDefaultChannelIds.value.filter((id) => ids.includes(id))
+}
+
+async function saveToken() {
+  if (!tokenName.value.trim() || !tokenChannelIds.value.length || !tokenDefaultChannelIds.value.length) {
+    ElMessage.warning('请填写令牌名称，并至少选择一个允许渠道和默认渠道')
     return
   }
   tokenSaving.value = true
   try {
-    createdToken.value = await 创建推送令牌({ name: tokenName.value.trim(), channel_ids: tokenChannelIds.value })
-    tokenName.value = ''
-    tokenChannelIds.value = []
-    ElMessage.success('推送令牌已创建，请立即复制保存')
+    const payload = { name: tokenName.value.trim(), channel_ids: tokenChannelIds.value, default_channel_ids: tokenDefaultChannelIds.value, default_content_type: tokenContentType.value }
+    if (editingToken.value) {
+      await 更新推送令牌(editingToken.value.id, payload)
+      ElMessage.success('推送令牌已保存')
+    } else {
+      createdToken.value = await 创建推送令牌(payload)
+      ElMessage.success('推送令牌已创建，请立即复制保存')
+    }
+    tokenDialog.value = false
     await reload()
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, '推送令牌创建失败'))
+    ElMessage.error(获取API错误消息(error, '推送令牌保存失败'))
   } finally {
     tokenSaving.value = false
   }
@@ -228,7 +257,8 @@ async function createToken() {
 
 async function toggleToken(token: PushToken, enabled: boolean) {
   try {
-    await 更新推送令牌状态(token.id, enabled)
+    await 更新推送令牌(token.id, { enabled })
+    token.enabled = enabled
     ElMessage.success(enabled ? '令牌已启用' : '令牌已停用')
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '令牌状态更新失败'))
@@ -329,16 +359,12 @@ onMounted(reload)
       </ElCard>
 
       <ElCard shadow="never" class="section-card">
-        <template #header><div class="section-heading"><span>脚本调用令牌</span></div></template>
-        <ElForm inline class="token-form">
-          <ElFormItem label="令牌名称"><ElInput v-model="tokenName" placeholder="例如：备份脚本" maxlength="100" /></ElFormItem>
-          <ElFormItem label="允许渠道">
-            <ElSelect v-model="tokenChannelIds" multiple collapse-tags placeholder="选择可发送渠道" style="min-width: 280px">
-              <ElOption v-for="channel in channels" :key="channel.id" :label="channel.name" :value="channel.id" :disabled="!channel.enabled" />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem><ElButton type="primary" :loading="tokenSaving" :disabled="!channels.length" @click="createToken">创建令牌</ElButton></ElFormItem>
-        </ElForm>
+        <template #header>
+          <div class="section-heading">
+            <span>脚本调用令牌</span>
+            <ElButton type="primary" :icon="Plus" :disabled="!channels.length" @click="openTokenDialog()">创建令牌</ElButton>
+          </div>
+        </template>
         <ElAlert
           v-if="createdToken"
           class="token-result"
@@ -355,14 +381,23 @@ onMounted(reload)
               <ElTag v-for="id in scope.row.channel_ids" :key="id" class="channel-tag">{{ channels.find((item) => item.id === id)?.name || '已删除渠道' }}</ElTag>
             </template>
           </ElTableColumn>
+          <ElTableColumn label="默认渠道" min-width="200">
+            <template #default="scope">
+              <ElTag v-for="id in scope.row.default_channel_ids" :key="id" class="channel-tag">{{ channels.find((item) => item.id === id)?.name || '已删除渠道' }}</ElTag>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="默认文本类型" min-width="130">
+            <template #default="scope">{{ contentTypeOptions.find((item) => item.value === scope.row.default_content_type)?.label }}</template>
+          </ElTableColumn>
           <ElTableColumn label="最近调用" min-width="160">
             <template #default="scope">{{ formatDate(scope.row.last_used_at) }}</template>
           </ElTableColumn>
           <ElTableColumn label="状态" width="100">
             <template #default="scope"><ElSwitch :model-value="scope.row.enabled" @change="(value) => toggleToken(scope.row as PushToken, Boolean(value))" /></template>
           </ElTableColumn>
-          <ElTableColumn label="操作" width="140" fixed="right">
+          <ElTableColumn label="操作" width="190" fixed="right">
             <template #default="scope">
+              <ElButton link type="primary" @click="openTokenDialog(scope.row as PushToken)">编辑</ElButton>
               <ElButton link type="primary" @click="resetToken(scope.row as PushToken)">重置</ElButton>
               <ElButton link type="danger" @click="removeToken(scope.row as PushToken)">撤销</ElButton>
             </template>
@@ -374,9 +409,37 @@ onMounted(reload)
       <ElCard shadow="never" class="section-card">
         <template #header><div class="section-heading"><span>调用示例</span></div></template>
         <p class="endpoint-line"><strong>POST</strong> <code>{{ sendEndpoint }}</code></p>
+        <p class="form-hint">不传 channel_ids 时发送到令牌的全部默认渠道；可传 channel_ids 数组选择允许范围内的任意渠道。content_type 可选 text（纯文本）、markdown、html，不传时使用令牌的默认文本类型。</p>
+        <p class="form-hint">例如："channel_ids": ["渠道ID"], "content_type": "markdown"。WXPusher、PushPlus 支持三种类型；企业微信、钉钉支持 Markdown；Bark、飞书按纯文本发送，HTML 在不支持的渠道转换为纯文本。</p>
         <pre class="code-sample">{{ curlExample }}</pre>
         <ElButton size="small" @click="copy(curlExample)">复制 cURL 示例</ElButton>
       </ElCard>
+
+      <ElDialog v-model="tokenDialog" :title="editingToken ? '编辑脚本调用令牌' : '创建脚本调用令牌'" width="min(560px, 94vw)" destroy-on-close>
+        <ElForm label-position="top">
+          <ElFormItem label="令牌名称" required><ElInput v-model="tokenName" placeholder="例如：备份脚本" maxlength="100" /></ElFormItem>
+          <ElFormItem label="允许渠道" required>
+            <ElSelect v-model="tokenChannelIds" multiple placeholder="选择令牌可以使用的渠道" style="width: 100%" @change="changeTokenChannels">
+              <ElOption v-for="channel in channels" :key="channel.id" :label="channel.name" :value="channel.id" :disabled="!channel.enabled" />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="默认渠道" required>
+            <ElSelect v-model="tokenDefaultChannelIds" multiple placeholder="从允许渠道中选择默认发送渠道" style="width: 100%">
+              <ElOption v-for="channel in channels.filter((item) => tokenChannelIds.includes(item.id))" :key="channel.id" :label="channel.name" :value="channel.id" :disabled="!channel.enabled" />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="默认文本类型" required>
+            <ElSelect v-model="tokenContentType" style="width: 100%">
+              <ElOption v-for="item in contentTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </ElSelect>
+          </ElFormItem>
+          <p class="form-hint">调用方未传渠道或文本类型时，使用这里的默认配置。默认渠道必须从允许渠道中选择；调用方传入渠道时，可选择允许范围内的任意渠道。编辑配置后，现有令牌继续有效。</p>
+        </ElForm>
+        <template #footer>
+          <ElButton @click="tokenDialog = false">取消</ElButton>
+          <ElButton type="primary" :loading="tokenSaving" @click="saveToken">保存</ElButton>
+        </template>
+      </ElDialog>
 
       <ElDialog v-model="channelDialog" :title="editingChannel ? '编辑推送渠道' : '添加推送渠道'" width="min(620px, 94vw)" destroy-on-close>
         <ElForm label-position="top">
@@ -395,13 +458,6 @@ onMounted(reload)
             </ElFormItem>
             <ElFormItem label="主题 ID">
               <ElInput v-model="wxpusherForm.topicIds" :placeholder="editingChannel ? '填写以更新主题 ID；留空保留现有值' : '多个 ID 用英文逗号分隔，例如 123,456'" />
-            </ElFormItem>
-            <ElFormItem label="发送类型">
-              <ElSelect v-model="wxpusherForm.contentType" :placeholder="editingChannel ? '留空保留现有类型' : '选择发送类型'">
-                <ElOption label="文本" value="1" />
-                <ElOption label="HTML" value="2" />
-                <ElOption label="Markdown" value="3" />
-              </ElSelect>
             </ElFormItem>
             <p class="form-hint">UID 和主题 ID 至少配置一种；每次最多 2000 个 UID 或 5 个主题 ID。编辑时仅更新填写的项目，留空保留原配置。</p>
           </template>
@@ -426,7 +482,6 @@ onMounted(reload)
 .page-alert, .section-card { margin-bottom: 16px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
 .row-actions { display: flex; align-items: center; gap: 10px; }
-.token-form { margin-bottom: 8px; }
 .token-result { margin: 12px 0 18px; }
 .token-value { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
 .token-value code, .endpoint-line code { overflow-wrap: anywhere; }

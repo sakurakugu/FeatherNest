@@ -15,7 +15,7 @@ from app.modules.notifications.schemas import (
     推送令牌创建,
     推送令牌创建响应,
     推送令牌信息,
-    推送令牌状态更新,
+    推送令牌更新,
     推送消息,
     推送发送响应,
 )
@@ -27,7 +27,7 @@ from app.modules.notifications.service import (
     列出渠道,
     列出令牌,
     重置令牌,
-    设置令牌状态,
+    更新令牌,
     测试渠道,
     更新渠道,
     发送消息,
@@ -76,8 +76,8 @@ async def 新建推送令牌(body: 推送令牌创建, _: 用户 = Depends(要�
 
 
 @router.patch("/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def 更改推送令牌状态(token_id: UUID, body: 推送令牌状态更新, _: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
-    await 设置令牌状态(db, token_id, body.enabled)
+async def 编辑推送令牌(token_id: UUID, body: 推送令牌更新, _: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
+    await 更新令牌(db, token_id, body)
 
 
 @router.post("/tokens/{token_id}/reset", response_model=推送令牌创建响应)

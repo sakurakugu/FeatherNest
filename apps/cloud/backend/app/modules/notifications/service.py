@@ -15,6 +15,8 @@ from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 from uuid import UUID
 
 import httpx
+import markdown
+from bs4 import BeautifulSoup
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -27,6 +29,8 @@ from app.modules.notifications.schemas import (
     推送渠道创建,
     推送渠道更新,
     推送令牌创建,
+    推送令牌更新,
+    推送文本类型,
     推送消息,
     推送结果项,
 )
@@ -88,8 +92,7 @@ async def _校验渠道配置(provider: str, config: dict[str, str]) -> None:
             raise HTTPException(status_code=400, detail="WXPusher 单次最多支持 2000 个 UID 或 5 个 Topic ID")
         if any(not item.isdecimal() or int(item) <= 0 for item in topic_ids):
             raise HTTPException(status_code=400, detail="WXPusher Topic ID 必须是正整数")
-        if config.get("content_type", "1") not in {"1", "2", "3"}:
-            raise HTTPException(status_code=400, detail="WXPusher content_type 只能是 1、2 或 3")
+
 
 
 async def _校验公开HTTPS地址(url: str) -> None:
@@ -181,6 +184,7 @@ async def 删除渠道(db: AsyncSession, channel_id: UUID) -> None:
     tokens = (await db.execute(select(推送令牌))).scalars().all()
     for token in tokens:
         token.channel_ids = [item for item in token.channel_ids if item != str(channel_id)]
+        token.default_channel_ids = [item for item in token.default_channel_ids if item != str(channel_id)]
         if not token.channel_ids:
             token.enabled = False
     await db.delete(channel)
@@ -200,6 +204,8 @@ async def 列出令牌(db: AsyncSession) -> list[dict]:
             "id": item.id,
             "name": item.name,
             "channel_ids": [UUID(value) for value in item.channel_ids],
+            "default_channel_ids": [UUID(value) for value in item.default_channel_ids],
+            "default_content_type": item.default_content_type,
             "enabled": item.enabled,
             "last_used_at": item.last_used_at,
             "created_at": item.created_at,
@@ -208,17 +214,25 @@ async def 列出令牌(db: AsyncSession) -> list[dict]:
     ]
 
 
-async def 创建令牌(db: AsyncSession, body: 推送令牌创建) -> dict:
-    channels = (await db.execute(select(推送渠道).where(推送渠道.id.in_(body.channel_ids)))).scalars().all()
-    if len(channels) != len(body.channel_ids):
+async def _校验令牌渠道(db: AsyncSession, channel_ids: list[UUID]) -> None:
+    channels = (await db.execute(select(推送渠道).where(推送渠道.id.in_(channel_ids)))).scalars().all()
+    if len(channels) != len(channel_ids):
         raise HTTPException(status_code=400, detail="包含不存在的推送渠道")
     if any(not channel.enabled for channel in channels):
-        raise HTTPException(status_code=400, detail="不能授权已停用的推送渠道")
+        raise HTTPException(status_code=400, detail="不能选择已停用的推送渠道")
+
+
+async def 创建令牌(db: AsyncSession, body: 推送令牌创建) -> dict:
+    if not set(body.default_channel_ids).issubset(body.channel_ids):
+        raise HTTPException(status_code=400, detail="默认渠道必须包含在允许渠道中")
+    await _校验令牌渠道(db, body.channel_ids)
     token_value = f"fn_push_{secrets.token_urlsafe(32)}"
     token = 推送令牌(
         name=body.name,
         token_hash=hashlib.sha256(token_value.encode()).hexdigest(),
         channel_ids=[str(value) for value in body.channel_ids],
+        default_channel_ids=[str(value) for value in body.default_channel_ids],
+        default_content_type=body.default_content_type,
         enabled=True,
     )
     db.add(token)
@@ -227,6 +241,8 @@ async def 创建令牌(db: AsyncSession, body: 推送令牌创建) -> dict:
         "id": token.id,
         "name": token.name,
         "channel_ids": body.channel_ids,
+        "default_channel_ids": body.default_channel_ids,
+        "default_content_type": token.default_content_type,
         "enabled": token.enabled,
         "last_used_at": token.last_used_at,
         "created_at": token.created_at,
@@ -234,11 +250,28 @@ async def 创建令牌(db: AsyncSession, body: 推送令牌创建) -> dict:
     }
 
 
-async def 设置令牌状态(db: AsyncSession, token_id: UUID, enabled: bool) -> None:
+async def 更新令牌(db: AsyncSession, token_id: UUID, body: 推送令牌更新) -> None:
     token = await db.get(推送令牌, token_id)
     if token is None:
         raise HTTPException(status_code=404, detail="推送令牌不存在")
-    token.enabled = enabled
+    if body.channel_ids is not None or body.default_channel_ids is not None:
+        permitted = {str(value) for value in body.channel_ids} if body.channel_ids is not None else set(token.channel_ids)
+        defaults = {str(value) for value in body.default_channel_ids} if body.default_channel_ids is not None else set(token.default_channel_ids)
+        if not defaults.issubset(permitted):
+            raise HTTPException(status_code=400, detail="默认渠道必须包含在允许渠道中")
+    if body.channel_ids is not None:
+        if {str(value) for value in body.channel_ids} != set(token.channel_ids):
+            await _校验令牌渠道(db, body.channel_ids)
+        token.channel_ids = [str(value) for value in body.channel_ids]
+    if body.default_channel_ids is not None:
+        token.default_channel_ids = [str(value) for value in body.default_channel_ids]
+    if body.name is not None:
+        token.name = body.name
+    if body.default_content_type is not None:
+        token.default_content_type = body.default_content_type
+    if body.enabled is not None:
+        token.enabled = body.enabled
+    logger.info("推送令牌配置已更新 token_id=%s fields=%s", token.id, sorted(body.model_fields_set))
 
 
 async def 重置令牌(db: AsyncSession, token_id: UUID) -> dict:
@@ -252,6 +285,8 @@ async def 重置令牌(db: AsyncSession, token_id: UUID) -> dict:
         "id": token.id,
         "name": token.name,
         "channel_ids": [UUID(value) for value in token.channel_ids],
+        "default_channel_ids": [UUID(value) for value in token.default_channel_ids],
+        "default_content_type": token.default_content_type,
         "enabled": token.enabled,
         "last_used_at": token.last_used_at,
         "created_at": token.created_at,
@@ -276,31 +311,36 @@ async def 验证令牌(db: AsyncSession, token_value: str) -> 推送令牌:
 
 
 async def 发送消息(db: AsyncSession, token: 推送令牌, body: 推送消息) -> list[推送结果项]:
+    channel_ids = body.channel_ids if body.channel_ids is not None else [UUID(value) for value in token.default_channel_ids]
+    if not channel_ids:
+        raise HTTPException(status_code=400, detail="令牌没有默认渠道，请先编辑令牌配置")
+    content_type = body.content_type or token.default_content_type
     permitted = set(token.channel_ids)
-    requested = {str(item) for item in body.channel_ids}
+    requested = {str(item) for item in channel_ids}
     if not requested.issubset(permitted):
         raise HTTPException(status_code=403, detail="推送令牌无权使用请求中的渠道")
     channels = (
-        await db.execute(select(推送渠道).where(推送渠道.id.in_(body.channel_ids), 推送渠道.enabled.is_(True)))
+        await db.execute(select(推送渠道).where(推送渠道.id.in_(channel_ids), 推送渠道.enabled.is_(True)))
     ).scalars().all()
     by_id = {item.id: item for item in channels}
-    enabled_results = await asyncio.gather(*(_发送单渠道(channel, body.title, body.content) for channel in channels))
+    enabled_results = await asyncio.gather(*(_发送单渠道(channel, body.title, body.content, content_type) for channel in channels))
     results_by_id = {item.channel_id: item for item in enabled_results}
     results = []
-    for channel_id in body.channel_ids:
+    for channel_id in channel_ids:
         channel = by_id.get(channel_id)
         if channel is None:
             results.append(推送结果项(channel_id=channel_id, name="", success=False, error="渠道不存在或已停用"))
         else:
             results.append(results_by_id[channel_id])
+    logger.info("推送请求已处理 token_id=%s channel_count=%s content_type=%s default_channels=%s", token.id, len(channel_ids), content_type, body.channel_ids is None)
     return results
 
 
-async def _发送单渠道(channel: 推送渠道, title: str, content: str) -> 推送结果项:
+async def _发送单渠道(channel: 推送渠道, title: str, content: str, content_type: 推送文本类型 = "text") -> 推送结果项:
     config = _解密配置(channel.config_ciphertext)
     try:
         async with httpx.AsyncClient(timeout=10, follow_redirects=False, trust_env=False) as client:
-            response = await _构建请求(client, channel.provider, config, title, content)
+            response = await _构建请求(client, channel.provider, config, title, content, content_type)
         response.raise_for_status()
         payload = response.json() if response.content and channel.provider != "webhook" else {}
         if not isinstance(payload, dict):
@@ -366,7 +406,12 @@ async def _发送单渠道(channel: 推送渠道, title: str, content: str) -> �
     return 推送结果项(channel_id=channel.id, name=channel.name, success=True)
 
 
-async def _构建请求(client: httpx.AsyncClient, provider: str, config: dict[str, str], title: str, content: str) -> httpx.Response:
+async def _构建请求(client: httpx.AsyncClient, provider: str, config: dict[str, str], title: str, content: str, content_type: 推送文本类型 = "text") -> httpx.Response:
+    if (provider in {"bark", "feishu"} and content_type != "text") or (
+        provider in {"serverchan", "wecom", "dingtalk"} and content_type == "html"
+    ):
+        html = markdown.markdown(content) if content_type == "markdown" else content
+        content = BeautifulSoup(html, "html.parser").get_text(separator="\n")
     if provider == "bark":
         base = config.get("server_url", "https://api.day.app").rstrip("/")
         await _校验公开HTTPS地址(base)
@@ -374,13 +419,13 @@ async def _构建请求(client: httpx.AsyncClient, provider: str, config: dict[s
     if provider == "serverchan":
         return await client.post(f"https://sctapi.ftqq.com/{quote(config['send_key'], safe='')}.send", data={"title": title, "desp": content})
     if provider == "pushplus":
-        return await client.post("https://www.pushplus.plus/send", json={"token": config["token"], "title": title, "content": content, "template": config.get("template", "markdown")})
+        return await client.post("https://www.pushplus.plus/send", json={"token": config["token"], "title": title, "content": content, "template": {"text": "txt", "markdown": "markdown", "html": "html"}[content_type]})
     if provider == "wxpusher":
         body: dict[str, object] = {
             "appToken": config["app_token"],
             "content": content,
             "summary": title[:100],
-            "contentType": int(config.get("content_type", "1")),
+            "contentType": {"text": 1, "html": 2, "markdown": 3}[content_type],
         }
         uids = [item.strip() for item in config.get("uids", "").split(",") if item.strip()]
         topic_ids = [int(item.strip()) for item in config.get("topic_ids", "").split(",") if item.strip()]
@@ -391,6 +436,8 @@ async def _构建请求(client: httpx.AsyncClient, provider: str, config: dict[s
         return await client.post("https://wxpusher.zjiecode.com/api/send/message", json=body)
     if provider == "wecom":
         url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={quote(config['key'], safe='')}"
+        if content_type == "markdown":
+            return await client.post(url, json={"msgtype": "markdown", "markdown": {"content": f"{title}\n{content}"}})
         return await client.post(url, json={"msgtype": "text", "text": {"content": f"{title}\n{content}"}})
     if provider == "feishu":
         await _校验公开HTTPS地址(config["webhook_url"])
@@ -406,13 +453,15 @@ async def _构建请求(client: httpx.AsyncClient, provider: str, config: dict[s
             query = dict(parse_qsl(parsed.query, keep_blank_values=True))
             query.update({"timestamp": timestamp, "sign": sign})
             url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment))
+        if content_type == "markdown":
+            return await client.post(url, json={"msgtype": "markdown", "markdown": {"title": title, "text": content}})
         return await client.post(url, json={"msgtype": "text", "text": {"content": f"{title}\n{content}"}})
     if provider == "webhook":
         url = config["url"]
         await _校验公开HTTPS地址(url)
         headers = json.loads(config.get("headers", "{}"))
-        template = config.get("body_template", '{"title":"{{title}}","content":"{{content}}"}')
-        body = template.replace("{{title}}", json.dumps(title, ensure_ascii=False)[1:-1]).replace("{{content}}", json.dumps(content, ensure_ascii=False)[1:-1])
+        template = config.get("body_template", '{"title":"{{title}}","content":"{{content}}","content_type":"{{content_type}}"}')
+        body = template.replace("{{content_type}}", content_type).replace("{{title}}", json.dumps(title, ensure_ascii=False)[1:-1]).replace("{{content}}", json.dumps(content, ensure_ascii=False)[1:-1])
         return await client.request(config.get("method", "POST").upper(), url, content=body, headers={"Content-Type": "application/json", **headers})
     raise ValueError("未知推送平台")
 

@@ -174,10 +174,14 @@ export interface PushToken {
   id: string
   name: string
   channel_ids: string[]
+  default_channel_ids: string[]
+  default_content_type: PushContentType
   enabled: boolean
   last_used_at: string | null
   created_at: string
 }
+
+export type PushContentType = 'text' | 'markdown' | 'html'
 
 export interface PushTokenCreated extends PushToken {
   token: string

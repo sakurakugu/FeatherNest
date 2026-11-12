@@ -10,6 +10,7 @@ import type {
   MCPTokenCreatePayload,
   MCPTokenCreateResponse,
   PushChannel,
+  PushContentType,
   PushProvider,
   PushToken,
   PushTokenCreated,
@@ -140,13 +141,13 @@ export async function 获取推送令牌(): Promise<PushToken[]> {
   return data
 }
 
-export async function 创建推送令牌(payload: { name: string; channel_ids: string[] }): Promise<PushTokenCreated> {
+export async function 创建推送令牌(payload: { name: string; channel_ids: string[]; default_channel_ids: string[]; default_content_type: PushContentType }): Promise<PushTokenCreated> {
   const { data } = await api.post<PushTokenCreated>('/notifications/tokens', payload)
   return data
 }
 
-export async function 更新推送令牌状态(id: string, enabled: boolean): Promise<void> {
-  await api.patch(`/notifications/tokens/${id}`, { enabled })
+export async function 更新推送令牌(id: string, payload: { name?: string; channel_ids?: string[]; default_channel_ids?: string[]; default_content_type?: PushContentType; enabled?: boolean }): Promise<void> {
+  await api.patch(`/notifications/tokens/${id}`, payload)
 }
 
 export async function 重置推送令牌(id: string): Promise<PushTokenCreated> {

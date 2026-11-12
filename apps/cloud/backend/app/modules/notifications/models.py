@@ -38,6 +38,8 @@ class 推送令牌(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     channel_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    default_channel_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    default_content_type: Mapped[str] = mapped_column(String(16), default="text", nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
