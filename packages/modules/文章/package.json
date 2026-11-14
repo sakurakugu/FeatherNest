@@ -10,6 +10,9 @@
     "./markdown-schema": "./src/markdown-schema.ts"
   },
   "dependencies": {
+    "@feathernest/api": "*",
+    "@feathernest/domain": "*",
+    "@feathernest/ui": "*",
     "@lucide/vue": "^1.61.0",
     "@milkdown/core": "^7.22.3",
     "@milkdown/plugin-clipboard": "^7.22.3",
@@ -22,10 +25,8 @@
     "@milkdown/preset-gfm": "^7.22.3",
     "@milkdown/prose": "^7.22.3",
     "@milkdown/utils": "^7.22.3",
-    "@feathernest/api": "*",
-    "@feathernest/domain": "*",
-    "@feathernest/ui": "*",
     "@vueuse/core": "^15.0.0",
+    "diff": "^9.0.0",
     "fflate": "^0.8.3",
     "markdown-it-container": "^4.0.0"
   },

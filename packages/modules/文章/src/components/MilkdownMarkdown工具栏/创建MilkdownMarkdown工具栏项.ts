@@ -65,7 +65,9 @@ interface 创建MilkdownMarkdown工具栏项选项 {
   showPropertiesToggle: () => boolean
 }
 
-export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdown工具栏项选项): ToolbarItem[] {
+export function 创建MilkdownMarkdown工具栏项(
+  options: 创建MilkdownMarkdown工具栏项选项,
+): ToolbarItem[] {
   return [
     { label: '加粗', title: '加粗', action: 'strong', icon: Bold },
     { label: '下划线', title: '下划线', action: 'underline', icon: Underline },
@@ -99,13 +101,43 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
       dropdown: [
         { label: '普通引用块', title: '普通引用块', action: 'blockquote' },
         { label: '常用提示块', kind: 'divider' },
-        { label: '说明块', title: '插入 GitHub 风格说明提示块', action: 'customMarkdown', payload: 'github-alert-note' },
-        { label: '提示块', title: '插入 GitHub 风格提示提示块', action: 'customMarkdown', payload: 'github-alert-tip' },
-        { label: '重要块', title: '插入 GitHub 风格重要提示块', action: 'customMarkdown', payload: 'github-alert-important' },
-        { label: '警告块', title: '插入 GitHub 风格警告提示块', action: 'customMarkdown', payload: 'github-alert-warning' },
-        { label: '注意块', title: '插入 GitHub 风格注意提示块', action: 'customMarkdown', payload: 'github-alert-caution' },
+        {
+          label: '说明块',
+          title: '插入 GitHub 风格说明提示块',
+          action: 'customMarkdown',
+          payload: 'github-alert-note',
+        },
+        {
+          label: '提示块',
+          title: '插入 GitHub 风格提示提示块',
+          action: 'customMarkdown',
+          payload: 'github-alert-tip',
+        },
+        {
+          label: '重要块',
+          title: '插入 GitHub 风格重要提示块',
+          action: 'customMarkdown',
+          payload: 'github-alert-important',
+        },
+        {
+          label: '警告块',
+          title: '插入 GitHub 风格警告提示块',
+          action: 'customMarkdown',
+          payload: 'github-alert-warning',
+        },
+        {
+          label: '注意块',
+          title: '插入 GitHub 风格注意提示块',
+          action: 'customMarkdown',
+          payload: 'github-alert-caution',
+        },
         { label: '说明', kind: 'divider' },
-        { label: '查看提示块语法', title: '查看全部提示块语法', action: 'customMarkdown', payload: 'github-alert-syntax' },
+        {
+          label: '查看提示块语法',
+          title: '查看全部提示块语法',
+          action: 'customMarkdown',
+          payload: 'github-alert-syntax',
+        },
       ],
     },
     { label: '无序列表', title: '无序列表', action: 'bulletList', icon: List },
@@ -123,13 +155,24 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
       dropdown: [
         { label: '默认代码块', title: '插入默认代码块', action: 'codeBlock' },
         { label: '说明', kind: 'divider' },
-        { label: '查看代码块语法', title: '查看增强代码块语法', action: 'customMarkdown', payload: 'code-syntax' },
+        {
+          label: '查看代码块语法',
+          title: '查看增强代码块语法',
+          action: 'customMarkdown',
+          payload: 'code-syntax',
+        },
       ],
     },
     { label: '超链接', title: '超链接', action: 'link', icon: Link },
     { label: '脚注', title: '脚注', action: 'footnote', icon: Pilcrow },
     { label: '缩写', title: '缩写', action: 'abbr', icon: 缩写图标 },
-    { type: 'dropdown', label: 'Emoji 短码', title: 'Emoji 短码', action: 'emojiShortcode', icon: Smile },
+    {
+      type: 'dropdown',
+      label: 'Emoji 短码',
+      title: 'Emoji 短码',
+      action: 'emojiShortcode',
+      icon: Smile,
+    },
     {
       type: 'dropdown',
       label: '图片',
@@ -140,7 +183,12 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
         { label: '上传图片', title: '上传图片', action: 'image' },
         { label: '添加图片链接', title: '添加图片链接', action: 'imageLink' },
         { label: '裁剪上传', title: '裁剪上传', action: 'imageCropUpload' },
-        { label: '图片网络', title: '插入图片网络', action: 'customMarkdown', payload: 'image-grid' },
+        {
+          label: '图片网络',
+          title: '插入图片网络',
+          action: 'customMarkdown',
+          payload: 'image-grid',
+        },
       ],
       disabled: () => options.isUploading(),
     },
@@ -151,15 +199,53 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
       action: 'customMarkdown',
       icon: Blocks,
       dropdown: [
-        { label: '容器式提示块', title: '插入 :::type[title] 提示块', action: 'customMarkdown', payload: 'container-alert' },
-        { label: '缩进式提示块', title: '插入 !!! type 提示块', action: 'customMarkdown', payload: 'indented-alert' },
-        { label: '折叠块（已折叠）', title: '插入默认收起的 ??? type 折叠块', action: 'customMarkdown', payload: 'details-alert-collapsed' },
-        { label: '折叠块（未折叠）', title: '插入默认展开的 ???+ type 折叠块', action: 'customMarkdown', payload: 'details-alert-expanded' },
+        {
+          label: '容器式提示块',
+          title: '插入 :::type[title] 提示块',
+          action: 'customMarkdown',
+          payload: 'container-alert',
+        },
+        {
+          label: '缩进式提示块',
+          title: '插入 !!! type 提示块',
+          action: 'customMarkdown',
+          payload: 'indented-alert',
+        },
+        {
+          label: '折叠块（已折叠）',
+          title: '插入默认收起的 ??? type 折叠块',
+          action: 'customMarkdown',
+          payload: 'details-alert-collapsed',
+        },
+        {
+          label: '折叠块（未折叠）',
+          title: '插入默认展开的 ???+ type 折叠块',
+          action: 'customMarkdown',
+          payload: 'details-alert-expanded',
+        },
       ],
     },
-    { label: '标签页', title: '标签页', action: 'customMarkdown', payload: 'tabs', icon: 标签页图标 },
-    { label: 'GitHub 仓库卡片', title: 'GitHub 仓库卡片', action: 'customMarkdown', payload: 'github-card', icon: Github图标 },
-    { label: '剧透文本', title: '剧透文本', action: 'customMarkdown', payload: 'spoiler', icon: EyeOff },
+    {
+      label: '标签页',
+      title: '标签页',
+      action: 'customMarkdown',
+      payload: 'tabs',
+      icon: 标签页图标,
+    },
+    {
+      label: 'GitHub 仓库卡片',
+      title: 'GitHub 仓库卡片',
+      action: 'customMarkdown',
+      payload: 'github-card',
+      icon: Github图标,
+    },
+    {
+      label: '剧透文本',
+      title: '剧透文本',
+      action: 'customMarkdown',
+      payload: 'spoiler',
+      icon: EyeOff,
+    },
     { type: 'dropdown', label: '表格', title: '表格', action: 'table', icon: Table },
     {
       type: 'dropdown',
@@ -194,11 +280,18 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
     { label: '前进', title: '前进', action: 'redo', icon: Forward },
     { type: 'spacer', label: '', title: '' },
     {
-      label: 'AI工具',
-      title: 'AI 工具',
+      label: 'AI润色',
+      title: 'AI 润色选区',
       action: 'aiTools',
       icon: Sparkles,
       hidden: () => !options.showAiTools(),
+    },
+    {
+      label: '美化',
+      title: '美化选区',
+      action: 'format',
+      icon: 美化图标,
+      hidden: () => !options.hasFormatContent(),
     },
     { type: 'separator', label: '', title: '' },
     {
@@ -237,33 +330,46 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
     {
       label: '同步滚动',
       title: '同步滚动',
-      dynamicTitle: () => (
-        options.previewEnabled() && options.previewLayoutMode() === 'split' && options.previewType() !== 'mindmap'
+      dynamicTitle: () =>
+        options.previewEnabled() &&
+        options.previewLayoutMode() === 'split' &&
+        options.previewType() !== 'mindmap'
           ? '同步滚动'
-          : '仅半屏正文和 HTML 预览支持同步滚动'
-      ),
+          : '仅半屏正文和 HTML 预览支持同步滚动',
       action: 'scrollSync',
       icon: ArrowDownUp,
       hidden: () => !options.showScrollSync(),
-      disabled: () => !options.previewEnabled() || options.previewLayoutMode() !== 'split' || options.previewType() === 'mindmap',
-      active: () => options.previewEnabled() && options.previewLayoutMode() === 'split' && options.previewType() !== 'mindmap' && options.scrollSync(),
+      disabled: () =>
+        !options.previewEnabled() ||
+        options.previewLayoutMode() !== 'split' ||
+        options.previewType() === 'mindmap',
+      active: () =>
+        options.previewEnabled() &&
+        options.previewLayoutMode() === 'split' &&
+        options.previewType() !== 'mindmap' &&
+        options.scrollSync(),
     },
     { type: 'separator', label: '', title: '' },
     {
       label: '预览',
       title: '预览',
-      dynamicTitle: () => !options.previewEnabled()
-        ? '当前书写，点击切换为预览'
-        : options.previewLayoutMode() === 'full'
-          ? '当前预览，点击切换为双屏'
-          : '当前双屏，点击切换为书写',
+      dynamicTitle: () =>
+        !options.previewEnabled()
+          ? '当前书写，点击切换为预览'
+          : options.previewLayoutMode() === 'full'
+            ? '当前预览，点击切换为双屏'
+            : '当前双屏，点击切换为书写',
       action: 'previewToggle',
-      dynamicIcon: () => !options.previewEnabled() ? FilePenLine : options.previewLayoutMode() === 'full' ? Eye : Columns2,
+      dynamicIcon: () =>
+        !options.previewEnabled()
+          ? FilePenLine
+          : options.previewLayoutMode() === 'full'
+            ? Eye
+            : Columns2,
       hidden: () => !options.showPreviewToggle() || !options.showPreviewLayoutToggle(),
       active: () => options.previewEnabled(),
     },
     { type: 'separator', label: '', title: '' },
-    { label: '美化', title: '美化', action: 'format', icon: 美化图标, hidden: () => !options.hasFormatContent() },
     {
       label: '大纲',
       title: '大纲',

@@ -49,3 +49,16 @@ class AnnouncementPublicRead(BaseModel):
     title: str
     content: str
     created_at: datetime
+
+
+class AnnouncementListRead(BaseModel):
+    """后台公告分页列表，附带各状态总数用于标签计数。"""
+
+    items: list[AnnouncementRead]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+    active_total: int
+    inactive_total: int
+    trash_total: int

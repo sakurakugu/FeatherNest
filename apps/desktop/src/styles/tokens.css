@@ -16,9 +16,6 @@
   --header-bg: color-mix(in srgb, var(--desktop-panel) 98%, white 2%);
   --input-bg: color-mix(in srgb, white 92%, var(--el-color-primary-light-9) 8%);
   --code-bg: color-mix(in srgb, white 82%, var(--el-color-primary-light-9) 18%);
-  --scrollbar-track: color-mix(in srgb, white 74%, var(--el-color-primary-light-9) 26%);
-  --scrollbar-thumb: color-mix(in srgb, var(--desktop-text-muted) 26%, white 74%);
-  --scrollbar-thumb-hover: color-mix(in srgb, var(--desktop-text-muted) 38%, white 62%);
   --theme-accent-bright: var(--el-color-primary-light-5);
   --theme-accent-surface: color-mix(in srgb, var(--el-color-primary) 12%, var(--bg-card));
   --theme-accent-surface-hover: color-mix(in srgb, var(--el-color-primary) 18%, var(--bg-card));
@@ -47,9 +44,6 @@
   --header-bg: color-mix(in srgb, var(--desktop-panel) 94%, #020617 6%);
   --input-bg: color-mix(in srgb, oklch(0.24 0.018 var(--hue)) 86%, var(--el-color-primary) 14%);
   --code-bg: color-mix(in srgb, oklch(0.28 0.022 var(--hue)) 90%, var(--el-color-primary) 10%);
-  --scrollbar-track: color-mix(in srgb, #020617 72%, var(--desktop-panel) 28%);
-  --scrollbar-thumb: color-mix(in srgb, var(--desktop-text-muted) 42%, transparent);
-  --scrollbar-thumb-hover: color-mix(in srgb, var(--desktop-text-muted) 58%, transparent);
   --theme-accent-bright: var(--el-color-primary-light-5);
   --theme-accent-surface: color-mix(in srgb, var(--el-color-primary-light-5) 18%, var(--bg-card));
   --theme-accent-surface-hover: color-mix(in srgb, var(--el-color-primary-light-5) 24%, var(--bg-card));

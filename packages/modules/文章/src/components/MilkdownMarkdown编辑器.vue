@@ -41,9 +41,7 @@ import type {
   MilkdownMarkdown编辑器实例,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器类型'
 import MilkdownMarkdown表格插入弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown表格插入弹窗.vue'
-import {
-  GitHub卡片语法名称,
-} from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
+import { GitHub卡片语法名称 } from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
 import MilkdownMarkdown语法说明弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown语法说明弹窗.vue'
 import { 使用Markdown常用表情 } from './MilkdownMarkdown编辑器/使用Markdown常用表情'
 import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
@@ -55,47 +53,50 @@ import { 使用MilkdownMarkdown编辑器核心 } from './MilkdownMarkdown编辑�
 export type {
   MilkdownMarkdownImagePayload,
   MilkdownMarkdownImageUploader,
-  MilkdownMarkdown编辑器实例
+  MilkdownMarkdown编辑器实例,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器类型'
 
-const props = withDefaults(defineProps<{
-  modelValue: string
-  placeholder?: string
-  theme?: 'light' | 'dark'
-  uploadImages?: MilkdownMarkdownImageUploader
-  formatContent?: () => void | Promise<unknown>
-  fullscreenRootSelector?: string
-  scrollSync?: boolean
-  showScrollSync?: boolean
-  previewEnabled?: boolean
-  previewLayoutMode?: 'split' | 'full'
-  previewType?: 'preview' | 'html' | 'mindmap'
-  showPreviewToggle?: boolean
-  showPreviewLayoutToggle?: boolean
-  outlineVisible?: boolean
-  showOutlineToggle?: boolean
-  showAiTools?: boolean
-  propertiesVisible?: boolean
-  showPropertiesToggle?: boolean
-}>(), {
-  placeholder: '在此编写 Markdown 内容...',
-  theme: 'light',
-  uploadImages: undefined,
-  formatContent: undefined,
-  fullscreenRootSelector: '',
-  scrollSync: true,
-  showScrollSync: false,
-  previewEnabled: false,
-  previewLayoutMode: 'split',
-  previewType: 'preview',
-  showPreviewToggle: false,
-  showPreviewLayoutToggle: true,
-  outlineVisible: false,
-  showOutlineToggle: false,
-  showAiTools: false,
-  propertiesVisible: false,
-  showPropertiesToggle: false,
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    placeholder?: string
+    theme?: 'light' | 'dark'
+    uploadImages?: MilkdownMarkdownImageUploader
+    formatContent?: () => void | Promise<unknown>
+    fullscreenRootSelector?: string
+    scrollSync?: boolean
+    showScrollSync?: boolean
+    previewEnabled?: boolean
+    previewLayoutMode?: 'split' | 'full'
+    previewType?: 'preview' | 'html' | 'mindmap'
+    showPreviewToggle?: boolean
+    showPreviewLayoutToggle?: boolean
+    outlineVisible?: boolean
+    showOutlineToggle?: boolean
+    showAiTools?: boolean
+    propertiesVisible?: boolean
+    showPropertiesToggle?: boolean
+  }>(),
+  {
+    placeholder: '在此编写 Markdown 内容...',
+    theme: 'light',
+    uploadImages: undefined,
+    formatContent: undefined,
+    fullscreenRootSelector: '',
+    scrollSync: true,
+    showScrollSync: false,
+    previewEnabled: false,
+    previewLayoutMode: 'split',
+    previewType: 'preview',
+    showPreviewToggle: false,
+    showPreviewLayoutToggle: true,
+    outlineVisible: false,
+    showOutlineToggle: false,
+    showAiTools: false,
+    propertiesVisible: false,
+    showPropertiesToggle: false,
+  },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -146,19 +147,15 @@ const 轻量Emoji选项 = Object.entries(lightEmojiMap).map(([shortcode, emoji])
   shortcode,
   emoji,
 }))
-const 颜文字选项 = Object.entries(emojiShortcutsMap)
-  .flatMap(([shortcode, shortcuts]) => shortcuts.map((shortcut) => ({
+const 颜文字选项 = Object.entries(emojiShortcutsMap).flatMap(([shortcode, shortcuts]) =>
+  shortcuts.map((shortcut) => ({
     shortcode,
     shortcut,
     emoji: fullEmojiMap[shortcode] ?? '',
-  })))
-const {
-  常用Emoji选项,
-  常用颜文字选项,
-  初始化常用表情记录,
-  记录常用Emoji,
-  记录常用颜文字,
-} = 使用Markdown常用表情()
+  })),
+)
+const { 常用Emoji选项, 常用颜文字选项, 初始化常用表情记录, 记录常用Emoji, 记录常用颜文字 } =
+  使用Markdown常用表情()
 const {
   editor,
   loading,
@@ -167,6 +164,8 @@ const {
   getMarkdown,
   setMarkdown,
   formatMarkdown,
+  获取选区,
+  美化选区,
   insertMarkdown,
   getEditorView,
   redoEdit,
@@ -224,19 +223,15 @@ const {
   getEditorView,
   updateCursorStatus,
 })
-const {
-  handleSourceInput,
-  handleSourceKeydown,
-  toggleSourceStrong,
-  updateSourceSelectionStatus,
-} = 使用MilkdownMarkdown源码模式({
-  sourceTextareaRef,
-  sourceContent,
-  lastMarkdown,
-  insertMarkdown,
-  updateCursorStatus,
-  emitModelValue: (value) => emit('update:modelValue', value),
-})
+const { handleSourceInput, handleSourceKeydown, toggleSourceStrong, updateSourceSelectionStatus } =
+  使用MilkdownMarkdown源码模式({
+    sourceTextareaRef,
+    sourceContent,
+    lastMarkdown,
+    insertMarkdown,
+    updateCursorStatus,
+    emitModelValue: (value) => emit('update:modelValue', value),
+  })
 const { runToolbarAction } = 使用MilkdownMarkdown工具栏动作({
   editor,
   isSourceMode,
@@ -355,7 +350,9 @@ const 溢出工具栏菜单项 = computed<ToolbarOverflowMenuEntry[]>(() => {
 
   return entries
 })
-const currentMarkdown = computed(() => (isSourceMode.value ? sourceContent.value : lastMarkdown.value))
+const currentMarkdown = computed(() =>
+  isSourceMode.value ? sourceContent.value : lastMarkdown.value,
+)
 const editorStats = computed(() => buildEditorStats(currentMarkdown.value))
 const editorModeLabel = computed(() => (isSourceMode.value ? '源码' : '所见即所得'))
 const rootClass = computed(() => ({
@@ -430,20 +427,21 @@ watch(isSourceMode, async (sourceMode) => {
 })
 
 watch(
-  () => [
-    props.showScrollSync,
-    props.formatContent,
-    props.showPreviewToggle,
-    props.showPreviewLayoutToggle,
-    props.previewEnabled,
-    props.previewLayoutMode,
-    props.previewType,
-    props.showOutlineToggle,
-    props.outlineVisible,
-    props.showAiTools,
-    props.propertiesVisible,
-    props.showPropertiesToggle,
-  ] as const,
+  () =>
+    [
+      props.showScrollSync,
+      props.formatContent,
+      props.showPreviewToggle,
+      props.showPreviewLayoutToggle,
+      props.previewEnabled,
+      props.previewLayoutMode,
+      props.previewType,
+      props.showOutlineToggle,
+      props.outlineVisible,
+      props.showAiTools,
+      props.propertiesVisible,
+      props.showPropertiesToggle,
+    ] as const,
   () => 调度工具栏折叠更新(),
 )
 
@@ -493,7 +491,11 @@ function updateCursorStatus() {
     const textarea = sourceTextareaRef.value
     const selectionStart = textarea?.selectionStart ?? 0
     const selectionEnd = textarea?.selectionEnd ?? selectionStart
-    cursorStatus.value = buildCursorStatusFromOffsets(sourceContent.value, selectionStart, selectionEnd)
+    cursorStatus.value = buildCursorStatusFromOffsets(
+      sourceContent.value,
+      selectionStart,
+      selectionEnd,
+    )
     return
   }
 
@@ -519,10 +521,10 @@ function toggleSourceMode() {
 }
 
 function openCustomMarkdownSyntaxDialog(type: 'github-alert-syntax' | 'code-syntax') {
-  syntaxDialogTitle.value = type === 'github-alert-syntax' ? 'GitHub 风格提示块语法' : '增强代码块语法'
-  syntaxDialogContent.value = type === 'github-alert-syntax'
-    ? buildGithubAlertSyntaxSnippet()
-    : buildCodeSyntaxSnippet()
+  syntaxDialogTitle.value =
+    type === 'github-alert-syntax' ? 'GitHub 风格提示块语法' : '增强代码块语法'
+  syntaxDialogContent.value =
+    type === 'github-alert-syntax' ? buildGithubAlertSyntaxSnippet() : buildCodeSyntaxSnippet()
   syntaxDialogVisible.value = true
 }
 
@@ -565,7 +567,7 @@ function closeTableDialog() {
   tableDialogVisible.value = false
 }
 
-function confirmTableDialogInsert(payload: { row: number, col: number }) {
+function confirmTableDialogInsert(payload: { row: number; col: number }) {
   const row = normalizeCustomTableSize(payload.row, 8)
   const col = normalizeCustomTableSize(payload.col, 8)
   tableDialogInitialRows.value = row
@@ -604,6 +606,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   getMarkdown: () => (isSourceMode.value ? sourceContent.value : getMarkdown()),
   setMarkdown,
   formatMarkdown,
+  获取选区,
+  美化选区,
   insertMarkdown,
   getEditorView,
   getScrollElement,
@@ -667,14 +671,14 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         accept="image/*"
         multiple
         @change="handleFileInputChange"
-      >
+      />
       <input
         ref="cropFileInputRef"
         class="milkdown-markdown-editor__file-input"
         type="file"
         accept="image/*"
         @change="handleCropFileInputChange"
-      >
+      />
     </MilkdownMarkdown工具栏>
 
     <div ref="contentRef" class="milkdown-markdown-editor__content">
@@ -682,13 +686,13 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         <slot name="content-header" />
       </div>
       <div
-        v-show="!isSourceMode"
+        v-show="!isSourceMode && !$slots['content-override']"
         ref="rootRef"
         class="milkdown-markdown-editor__milkdown"
         :data-placeholder="placeholder"
       />
       <textarea
-        v-show="isSourceMode"
+        v-show="isSourceMode && !$slots['content-override']"
         ref="sourceTextareaRef"
         v-model="sourceContent"
         class="milkdown-markdown-editor__source"
@@ -699,9 +703,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         @keyup="updateSourceSelectionStatus"
         @select="updateSourceSelectionStatus"
       />
-      <div v-if="loading" class="milkdown-markdown-editor__loading">
-        正在加载编辑器...
-      </div>
+      <slot name="content-override" />
+      <div v-if="loading" class="milkdown-markdown-editor__loading">正在加载编辑器...</div>
     </div>
 
     <MilkdownMarkdown编辑器底部状态栏
@@ -769,7 +772,10 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     var(--bg-secondary, var(--el-fill-color-light)) 72%,
     var(--milkdown-markdown-card-bg)
   );
-  --milkdown-markdown-hover-bg: var(--bg-hover, color-mix(in srgb, var(--el-color-primary) 8%, transparent));
+  --milkdown-markdown-hover-bg: var(
+    --bg-hover,
+    color-mix(in srgb, var(--el-color-primary) 8%, transparent)
+  );
   --milkdown-markdown-border: var(--border-color, var(--el-border-color));
   --milkdown-markdown-inline-code-bg: color-mix(
     in srgb,
@@ -835,7 +841,14 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   background: transparent;
   color: var(--milkdown-markdown-text-primary);
   caret-color: var(--milkdown-markdown-text-primary);
-  font: 14px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font:
+    14px/1.7 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    monospace;
 }
 
 .milkdown-markdown-editor__source::placeholder {
@@ -904,6 +917,5 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   .milkdown-markdown-editor__source {
     padding: 16px;
   }
-
 }
 </style>

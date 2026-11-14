@@ -20,7 +20,7 @@ import {
 } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@feathernest/api'
 import { 创建待办 } from '@feathernest/domain/todos'
-import { BaseDialog, type ContentTabItem } from '@feathernest/ui'
+import { BaseDialog, PencilEditIcon, SortDirectionIcon, type ContentTabItem } from '@feathernest/ui'
 import {
   ElButton,
   ElDrawer,
@@ -75,8 +75,6 @@ import type {
   CategoryRecord,
   TagRecord,
 } from '../../types'
-import ArticleSortIcon from '../components/文章排序图标.vue'
-import ArticleEditIcon from '../components/文章编辑图标.vue'
 
 const ArticleEditor = defineAsyncComponent(() => import('./文章编辑页面.vue'))
 
@@ -128,6 +126,7 @@ const refreshing = ref(false)
 const loadingMore = ref(false)
 const pagination = ref({ page: 0, pageSize: 10, total: 0, pageCount: 0 })
 const allArticleTotal = ref(0)
+const recycleBinTotal = ref(0)
 const showTransferDialog = ref(false)
 const exportingArticles = ref(false)
 const importingArticles = ref(false)
@@ -137,10 +136,14 @@ type ArticleListMode = 'active-card' | 'active-table' | 'active-split' | 'delete
 const currentListMode = computed<ArticleListMode>({
   get: () => {
     switch (route.query.view) {
-      case 'card': return 'active-card'
-      case 'split': return 'active-split'
-      case 'deleted': return 'deleted'
-      default: return 'active-table'
+      case 'card':
+        return 'active-card'
+      case 'split':
+        return 'active-split'
+      case 'deleted':
+        return 'deleted'
+      default:
+        return 'active-table'
     }
   },
   set: (mode) => {
@@ -419,14 +422,22 @@ async function 刷新全部文章数量(requestVersion: number, totalFromCurrent
     selectedTagIds.value.length === 0
   ) {
     allArticleTotal.value = totalFromCurrentPage
-    if (!isRecycleBinMode.value) emit('article-count-change', totalFromCurrentPage)
+    if (isRecycleBinMode.value) {
+      recycleBinTotal.value = totalFromCurrentPage
+    } else {
+      emit('article-count-change', totalFromCurrentPage)
+    }
     return
   }
 
   const data = await 获取我的文章列表(1, 1, isRecycleBinMode.value, 全部文章筛选值)
   if (requestVersion !== listRequestVersion) return
   allArticleTotal.value = data.total
-  if (!isRecycleBinMode.value) emit('article-count-change', data.total)
+  if (isRecycleBinMode.value) {
+    recycleBinTotal.value = data.total
+  } else {
+    emit('article-count-change', data.total)
+  }
 }
 
 async function reloadArticles(
@@ -446,6 +457,11 @@ async function reloadArticles(
     if (requestVersion !== listRequestVersion) return
     await 刷新全部文章数量(requestVersion, data.total)
     if (requestVersion !== listRequestVersion) return
+    if (!isRecycleBinMode.value) {
+      const recycleBinData = await 获取我的文章列表(1, 1, true, 全部文章筛选值)
+      if (requestVersion !== listRequestVersion) return
+      recycleBinTotal.value = recycleBinData.total
+    }
     articles.value = data.items
     pagination.value = {
       page: data.page,
@@ -962,10 +978,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
       'is-narrow-split-writing': writingFromNarrowSplit,
     }"
   >
-    <section
-      class="article-page"
-      :inert="writingOpen && !writingInSplit && !isNarrowSplitViewport"
-    >
+    <section class="article-page" :inert="writingOpen && !writingInSplit && !isNarrowSplitViewport">
       <header class="article-page-head">
         <div>
           <button
@@ -1107,7 +1120,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                   </div>
                   <div class="article-filter-group">
                     <label>标签 · 可多选</label>
-                    <div class="article-filter-chips">
+                    <div class="article-filter-chips article-filter-chips--tags">
                       <button
                         v-for="tag in tags"
                         :key="tag.id"
@@ -1140,7 +1153,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       >
                         <span>{{ item.label }}</span>
                         <ElIcon>
-                          <ArticleSortIcon :direction="sortBy === item.value ? sortOrder : ''" />
+                          <SortDirectionIcon :direction="sortBy === item.value ? sortOrder : ''" />
                         </ElIcon>
                       </button>
                     </div>
@@ -1189,7 +1202,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
               :aria-pressed="isRecycleBinMode"
               @click="toggleRecycleBin"
             >
-              回收站
+              回收站 <small>{{ recycleBinTotal }}</small>
             </button>
           </div>
 
@@ -1197,8 +1210,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
             ref="pageContainerRef"
             class="article-list-body"
             :class="{
-              'article-list-body--writing':
-                writingOpen && isNarrowSplitViewport && !writingInSplit,
+              'article-list-body--writing': writingOpen && isNarrowSplitViewport && !writingInSplit,
             }"
           >
             <div v-if="isTableViewMode" class="manager-table">
@@ -1214,12 +1226,12 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                   :key="column.value"
                   type="button"
                   class="manager-sort-heading"
-                  :class="column.class"
+                  :class="[column.class, { 'is-active': sortBy === column.value }]"
                   @click="changeSort(column.value)"
                 >
                   {{ column.label
                   }}<ElIcon
-                    ><ArticleSortIcon :direction="sortBy === column.value ? sortOrder : ''"
+                    ><SortDirectionIcon :direction="sortBy === column.value ? sortOrder : ''"
                   /></ElIcon>
                 </button>
                 <div class="manager-column-actions">
@@ -1316,7 +1328,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     aria-label="编辑文章"
                     @click="openWriting(article.id)"
                   >
-                    <ElIcon><ArticleEditIcon /></ElIcon>
+                    <ElIcon><PencilEditIcon /></ElIcon>
                   </button>
                   <ElDropdown
                     v-if="!isRecycleBinMode"
@@ -1329,7 +1341,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     </button>
                     <template #dropdown
                       ><ElDropdownMenu>
-                        <ElDropdownItem command="edit" :icon="ArticleEditIcon"
+                        <ElDropdownItem command="edit" :icon="PencilEditIcon"
                           >编辑文章</ElDropdownItem
                         >
                         <ElDropdownItem command="copy-link" :icon="Link">复制链接</ElDropdownItem>
@@ -1482,7 +1494,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       class="article-action"
                       @click="openWriting(selectedArticle.id)"
                     >
-                      <ElIcon><ArticleEditIcon /></ElIcon><span>编辑文章</span>
+                      <ElIcon><PencilEditIcon /></ElIcon><span>编辑文章</span>
                     </ElButton>
                     <ElDropdown
                       v-if="!isRecycleBinMode"
@@ -1495,7 +1507,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       </ElButton>
                       <template #dropdown>
                         <ElDropdownMenu>
-                          <ElDropdownItem command="edit" :icon="ArticleEditIcon"
+                          <ElDropdownItem command="edit" :icon="PencilEditIcon"
                             >编辑文章</ElDropdownItem
                           >
                           <ElDropdownItem command="copy-link" :icon="Link">复制链接</ElDropdownItem>
@@ -1622,7 +1634,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       aria-label="编辑文章"
                       @click="openWriting(article.id)"
                     >
-                      <ElIcon><ArticleEditIcon /></ElIcon>
+                      <ElIcon><PencilEditIcon /></ElIcon>
                     </button>
                     <ElDropdown
                       v-if="!isRecycleBinMode"
@@ -1633,7 +1645,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                         <ElIcon><MoreFilled /></ElIcon></button
                       ><template #dropdown
                         ><ElDropdownMenu>
-                          <ElDropdownItem command="edit" :icon="ArticleEditIcon"
+                          <ElDropdownItem command="edit" :icon="PencilEditIcon"
                             >编辑文章</ElDropdownItem
                           >
                           <ElDropdownItem command="copy-link" :icon="Link">复制链接</ElDropdownItem>
@@ -2833,35 +2845,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .article-manager .article-list-body--writing {
   overflow: hidden;
 }
-.article-manager .article-tabs,
-.article-manager .article-list-body,
-.article-manager .article-split-list,
-.article-manager .article-split-detail {
-  scrollbar-width: thin;
-  scrollbar-color: #d4d4d4 transparent;
-}
-.article-manager .article-tabs::-webkit-scrollbar,
-.article-manager .article-list-body::-webkit-scrollbar,
-.article-manager .article-split-list::-webkit-scrollbar,
-.article-manager .article-split-detail::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
-}
-.article-manager .article-tabs::-webkit-scrollbar-track,
-.article-manager .article-list-body::-webkit-scrollbar-track,
-.article-manager .article-split-list::-webkit-scrollbar-track,
-.article-manager .article-split-detail::-webkit-scrollbar-track {
-  background: transparent;
-}
-.article-manager .article-tabs::-webkit-scrollbar-thumb,
-.article-manager .article-list-body::-webkit-scrollbar-thumb,
-.article-manager .article-split-list::-webkit-scrollbar-thumb,
-.article-manager .article-split-detail::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 99px;
-  background-clip: content-box;
-  background-color: #d4d4d4;
-}
 .article-manager .article-tabs::-webkit-scrollbar {
   display: none;
 }
@@ -3277,6 +3260,18 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   flex-wrap: wrap;
   gap: 6px;
 }
+.article-filter-chips--tags {
+  max-height: calc(26px * 5 + 6px * 4);
+  overflow-y: auto;
+}
+.article-filter-chips--tags .article-filter-chip {
+  box-sizing: border-box;
+  height: 26px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .article-filter-chip {
   min-height: 26px;
   padding: 0 9px;
@@ -3290,11 +3285,11 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 }
 .article-filter-chip:hover,
 .article-filter-chip.is-active {
-  border-color: var(--el-text-color-primary);
+  border-color: var(--el-color-primary);
 }
 .article-filter-chip.is-active {
-  background: var(--el-text-color-primary);
-  color: var(--el-bg-color);
+  background: var(--el-color-primary);
+  color: #fff;
 }
 .article-filter-empty {
   color: var(--el-text-color-secondary);
@@ -3375,6 +3370,12 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   flex: none;
   font-size: 12px;
 }
+.article-sort-option.is-active {
+  color: var(--el-text-color-secondary);
+}
+.article-sort-option.is-active .el-icon {
+  color: var(--el-color-primary);
+}
 .manager-sort-heading {
   justify-content: flex-start;
   padding: 0;
@@ -3384,9 +3385,15 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .manager-sort-heading:hover {
   color: var(--manager-ink);
 }
+.manager-sort-heading.is-active {
+  color: var(--manager-muted);
+}
 .manager-sort-heading .el-icon {
   flex: none;
   font-size: 12px;
+}
+.manager-sort-heading.is-active .el-icon {
+  color: var(--el-color-primary);
 }
 .article-manager.is-split {
   display: flex;

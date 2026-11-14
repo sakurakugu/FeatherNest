@@ -3,11 +3,13 @@ import {
   Editor,
   editorViewOptionsCtx,
   editorViewCtx,
+  parserCtx,
   rootCtx,
   serializerCtx,
 } from '@milkdown/core'
 import { listenerCtx } from '@milkdown/plugin-listener'
 import { redo, undo } from '@milkdown/prose/history'
+import { Slice } from '@milkdown/prose/model'
 import type { EditorView } from '@milkdown/prose/view'
 import { insert, replaceAll } from '@milkdown/utils'
 import { ref, shallowRef, type Ref } from 'vue'
@@ -56,38 +58,35 @@ export function 使用MilkdownMarkdown编辑器核心({
     loading.value = true
     emitLoadingChange(true)
 
-    const milkdownEditor = Editor.make()
-      .config((ctx) => {
-        ctx.set(rootCtx, root)
-        ctx.set(defaultValueCtx, getModelValue())
-        ctx.update(editorViewOptionsCtx, (options) => ({
-          ...options,
-          attributes: (state) => {
-            const currentAttributes = typeof options.attributes === 'function'
+    const milkdownEditor = Editor.make().config((ctx) => {
+      ctx.set(rootCtx, root)
+      ctx.set(defaultValueCtx, getModelValue())
+      ctx.update(editorViewOptionsCtx, (options) => ({
+        ...options,
+        attributes: (state) => {
+          const currentAttributes =
+            typeof options.attributes === 'function'
               ? options.attributes(state)
               : (options.attributes ?? {})
 
-            return {
-              ...currentAttributes,
-              class: [
-                currentAttributes.class,
-                'markdown-content',
-              ].filter(Boolean).join(' '),
-            }
-          },
-        }))
-        configureMarkdownSerializer(ctx)
-        configureImageGridMarkdownSerializer(ctx)
-        ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
-          if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {
-            return
+          return {
+            ...currentAttributes,
+            class: [currentAttributes.class, 'markdown-content'].filter(Boolean).join(' '),
           }
+        },
+      }))
+      configureMarkdownSerializer(ctx)
+      configureImageGridMarkdownSerializer(ctx)
+      ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
+        if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {
+          return
+        }
 
-          const normalizedMarkdown = normalizeSerializedMarkdown(markdown)
-          lastMarkdown.value = normalizedMarkdown
-          emitModelValue(normalizedMarkdown)
-        })
+        const normalizedMarkdown = normalizeSerializedMarkdown(markdown)
+        lastMarkdown.value = normalizedMarkdown
+        emitModelValue(normalizedMarkdown)
       })
+    })
 
     for (const plugin of 创建MilkdownMarkdown编辑器插件({ 更新光标状态: updateCursorStatus })) {
       milkdownEditor.use(plugin)
@@ -162,6 +161,72 @@ export function 使用MilkdownMarkdown编辑器核心({
     }
     emitModelValue(formattedMarkdown)
     return formattedMarkdown
+  }
+
+  function 获取选区() {
+    if (isSourceMode.value) {
+      const textarea = sourceTextareaRef.value
+      if (!textarea || textarea.selectionStart === textarea.selectionEnd) return null
+      const start = textarea.selectionStart
+      let end = textarea.selectionEnd
+      let original = sourceContent.value
+      return {
+        text: original.slice(start, end),
+        replace: (markdown: string) => {
+          if (!isSourceMode.value || sourceContent.value !== original) return false
+          sourceContent.value = original.slice(0, start) + markdown + original.slice(end)
+          end = start + markdown.length
+          original = sourceContent.value
+          lastMarkdown.value = sourceContent.value
+          emitModelValue(sourceContent.value)
+          return true
+        },
+      }
+    }
+    const currentEditor = editor.value
+    if (!currentEditor) return null
+    return currentEditor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const { from, empty } = view.state.selection
+      let to = view.state.selection.to
+      if (empty) return null
+      let original = view.state.doc
+      const fragment = view.state.selection.content().content
+      const content = fragment.firstChild?.isInline
+        ? original.type.schema.nodes.paragraph.create(null, fragment)
+        : fragment
+      const selected = original.type.createAndFill(null, content)
+      if (!selected) return null
+      const text = normalizeSerializedMarkdown(ctx.get(serializerCtx)(selected)).trim()
+      return {
+        text,
+        replace: (markdown: string) => {
+          if (isSourceMode.value || !view.state.doc.eq(original)) return false
+          const parsed = ctx.get(parserCtx)(markdown)
+          if (!parsed) return false
+          view.dispatch(
+            view.state.tr.replaceRange(from, to, Slice.maxOpen(parsed.content)).scrollIntoView(),
+          )
+          to += view.state.doc.content.size - original.content.size
+          original = view.state.doc
+          lastMarkdown.value = getMarkdown()
+          emitModelValue(lastMarkdown.value)
+          return true
+        },
+      }
+    })
+  }
+
+  function 美化选区(): boolean | null {
+    const selection = 获取选区()
+    if (!selection || !selection.text.trim()) return null
+    const currentEditor = editor.value
+    if (!currentEditor) return null
+    const formatted = currentEditor.action((ctx) => {
+      const parsed = ctx.get(parserCtx)(selection.text)
+      return parsed ? normalizeSerializedMarkdown(ctx.get(serializerCtx)(parsed)).trim() : null
+    })
+    return formatted !== null && selection.replace(formatted)
   }
 
   function insertMarkdown(markdown: string) {
@@ -248,6 +313,8 @@ export function 使用MilkdownMarkdown编辑器核心({
     getMarkdown,
     setMarkdown,
     formatMarkdown,
+    获取选区,
+    美化选区,
     insertMarkdown,
     getEditorView,
     redoEdit,

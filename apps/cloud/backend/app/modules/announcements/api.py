@@ -12,11 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.http_cache import UTC时间戳起点, 构建条件JSON响应
 from app.modules.users.models import 用户
 from app.modules.announcements.models import Announcement
-from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
+from app.modules.announcements.schemas import (
+    AnnouncementCreate,
+    AnnouncementListRead,
+    AnnouncementPublicRead,
+    AnnouncementRead,
+    AnnouncementUpdate,
+)
 from app.modules.announcements.service import (
     创建公告 as 创建公告_service,
     删除公告 as 删除公告_service,
     恢复公告 as 恢复公告_service,
+    清空公告回收站 as 清空公告回收站_service,
     获取公告或404,
     获取最新公开公告,
     列出公告 as 列出公告_service,
@@ -74,16 +81,31 @@ async def 获取最新公告(
     )
 
 
-@router.get("", response_model=object)
+@router.get("", response_model=AnnouncementListRead)
 async def 列出公告(
-    page: int = 1,
-    page_size: int = 10,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站公告"),
+    is_active: bool | None = Query(None, description="按生效状态筛选，不传为全部"),
+    search: str | None = Query(None, max_length=200, description="搜索标题或内容"),
+    content_state: str = Query("all", pattern="^(all|has|empty)$", description="正文筛选"),
+    sort_by: str = Query("created_at", pattern="^(created_at|updated_at|title|deleted_at)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取公告列表。"""
-    return await 列出公告_service(db, page=page, page_size=page_size, is_deleted=is_deleted)
+    return await 列出公告_service(
+        db,
+        page=page,
+        page_size=page_size,
+        is_deleted=is_deleted,
+        is_active=is_active,
+        search=search,
+        content_state=content_state,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
 
 
 @router.post("", response_model=AnnouncementRead, status_code=status.HTTP_201_CREATED)
@@ -115,6 +137,15 @@ async def 更新公告(
 ):
     """更新公告。"""
     return await 更新公告_service(db, announcement_id, body)
+
+
+@router.delete("/trash", status_code=status.HTTP_204_NO_CONTENT)
+async def 清空公告回收站(
+    current_user: 用户 = Depends(要求当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """永久删除回收站中的全部公告。"""
+    await 清空公告回收站_service(db)
 
 
 @router.delete("/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT)

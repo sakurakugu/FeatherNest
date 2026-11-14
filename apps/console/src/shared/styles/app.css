@@ -25,9 +25,6 @@
   --sidebar-bg: #ffffff;
   --input-bg: #ffffff;
   --code-bg: oklch(0.96 0.008 var(--hue));
-  --scrollbar-track: oklch(0.94 0.01 var(--hue));
-  --scrollbar-thumb: oklch(0.78 0.02 var(--hue));
-  --scrollbar-thumb-hover: oklch(0.72 0.025 var(--hue));
 }
 
 @supports (height: 100dvh) {
@@ -75,43 +72,6 @@ body {
   --el-border-color: oklch(0.32 0.025 var(--hue));
   --el-border-color-light: oklch(0.32 0.025 var(--hue));
   --el-border-color-dark: oklch(0.32 0.025 var(--hue));
-  --scrollbar-track: oklch(0.19 0.018 var(--hue));
-  --scrollbar-thumb: oklch(0.40 0.03 var(--hue));
-  --scrollbar-thumb-hover: oklch(0.48 0.035 var(--hue));
-}
-
-html,
-body,
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-
-html::-webkit-scrollbar,
-body::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-html::-webkit-scrollbar-track,
-body::-webkit-scrollbar-track,
-*::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-}
-
-html::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 999px;
-  border: 2px solid var(--scrollbar-track);
-}
-
-html::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover,
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
 }
 
 .dark body {

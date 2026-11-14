@@ -1,4 +1,5 @@
 <template>
+  <!-- 编辑（铅笔）图标：文章管理与公告管理共用 -->
   <svg
     viewBox="0 0 24 24"
     fill="none"

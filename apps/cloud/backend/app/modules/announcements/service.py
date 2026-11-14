@@ -6,13 +6,18 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import desc, func, select
+from sqlalchemy import delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import 用户
 from app.modules.announcements.models import Announcement
-from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
-from app.shared.kernel.pagination import PaginatedResponse
+from app.modules.announcements.schemas import (
+    AnnouncementCreate,
+    AnnouncementListRead,
+    AnnouncementPublicRead,
+    AnnouncementRead,
+    AnnouncementUpdate,
+)
 from app.shared.kernel.soft_delete import 可软删除对象
 
 
@@ -50,26 +55,70 @@ async def 列出公告(
     page: int,
     page_size: int,
     is_deleted: bool = False,
-) -> PaginatedResponse:
-    """获取公告分页列表。"""
-    offset = (page - 1) * page_size
+    is_active: bool | None = None,
+    search: str | None = None,
+    content_state: str = "all",
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+) -> AnnouncementListRead:
+    """获取公告分页列表，状态筛选、搜索与排序都在分页前执行。"""
     query = select(Announcement).where(Announcement.is_deleted.is_(is_deleted))
+    if is_active is not None:
+        query = query.where(Announcement.is_active.is_(is_active))
+    if search and search.strip():
+        keyword = f"%{search.strip()}%"
+        query = query.where(
+            or_(Announcement.title.ilike(keyword), Announcement.content.ilike(keyword))
+        )
+    if content_state == "has":
+        query = query.where(func.trim(Announcement.content) != "")
+    elif content_state == "empty":
+        query = query.where(func.trim(Announcement.content) == "")
+
     count_result = await db.execute(select(func.count()).select_from(query.subquery()))
     total = count_result.scalar() or 0
-    primary_order_column = desc(Announcement.deleted_at) if is_deleted else desc(Announcement.created_at)
+
+    排序列 = {
+        "title": Announcement.title,
+        "created_at": Announcement.created_at,
+        "updated_at": Announcement.updated_at,
+        "deleted_at": Announcement.deleted_at,
+    }[sort_by]
+    排序表达式 = 排序列.asc() if sort_order == "asc" else 排序列.desc()
     result = await db.execute(
-        query.order_by(primary_order_column)
-        .offset(offset)
+        query.order_by(排序表达式, Announcement.id.asc())
+        .offset((page - 1) * page_size)
         .limit(page_size)
     )
     items = result.scalars().all()
     pages = (total + page_size - 1) // page_size if page_size > 0 else 1
-    return PaginatedResponse(
+
+    active_result = await db.execute(
+        select(func.count())
+        .select_from(Announcement)
+        .where(Announcement.is_deleted.is_(False), Announcement.is_active.is_(True))
+    )
+    inactive_result = await db.execute(
+        select(func.count())
+        .select_from(Announcement)
+        .where(Announcement.is_deleted.is_(False), Announcement.is_active.is_(False))
+    )
+    trash_result = await db.execute(
+        select(func.count()).select_from(Announcement).where(Announcement.is_deleted.is_(True))
+    )
+    active_total = active_result.scalar() or 0
+    inactive_total = inactive_result.scalar() or 0
+    trash_total = trash_result.scalar() or 0
+
+    return AnnouncementListRead(
         items=[AnnouncementRead.model_validate(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
         pages=pages,
+        active_total=active_total,
+        inactive_total=inactive_total,
+        trash_total=trash_total,
     )
 
 
@@ -167,3 +216,10 @@ async def 恢复公告(db: AsyncSession, announcement_id: UUID) -> Announcement:
     await db.commit()
     await db.refresh(announcement)
     return announcement
+
+
+async def 清空公告回收站(db: AsyncSession) -> int:
+    """永久删除回收站中的全部公告，返回删除数量。"""
+    result = await db.execute(delete(Announcement).where(Announcement.is_deleted.is_(True)))
+    await db.commit()
+    return getattr(result, "rowcount", 0) or 0

@@ -17,6 +17,20 @@ export interface AnnouncementListResponse {
   page: number
   page_size: number
   pages: number
+  active_total: number
+  inactive_total: number
+  trash_total: number
+}
+
+export interface AnnouncementListQuery {
+  page: number
+  pageSize: number
+  isDeleted?: boolean
+  isActive?: boolean
+  search?: string
+  contentState?: 'all' | 'has' | 'empty'
+  sortBy?: 'created_at' | 'updated_at' | 'title' | 'deleted_at'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface AnnouncementPayload {

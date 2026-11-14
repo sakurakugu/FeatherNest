@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ArrowLeft, Delete, DocumentAdd, EditPen, MagicStick, Select } from '@element-plus/icons-vue'
+import {
+  ArrowLeft,
+  Delete,
+  DocumentAdd,
+  EditPen,
+  MagicStick,
+  Select,
+} from '@element-plus/icons-vue'
 import api, { 获取API错误消息 } from '@feathernest/api'
 import { PageSectionShell } from '@feathernest/ui'
 import { Columns2, Eye, FilePenLine } from '@lucide/vue'
+import { diffLines, diffWordsWithSpace } from 'diff'
 import {
   ElButton,
-  ElDrawer,
   ElForm,
   ElFormItem,
   ElInput,
@@ -14,7 +21,6 @@ import {
   ElOption,
   ElSelect,
   ElSkeleton,
-  ElSpace,
   ElTag,
 } from 'element-plus'
 import {
@@ -238,11 +244,71 @@ const articleImagesLoading = ref(false)
 const deletingArticleImages = ref(false)
 const selectedUnusedArticleImageIds = ref<string[]>([])
 const articleImagePanelExpanded = ref(false)
-const aiDrawerVisible = ref(false)
+const 正在预览AI润色 = ref(false)
 const aiLoading = ref(false)
 const aiMetadataSuggestion = ref<ArticleAIMetadataSuggestion | null>(null)
 const aiPolishResult = ref<ArticleAIContentPolishResult | null>(null)
 const aiStatusMessage = ref('')
+const AI润色原文 = ref('')
+let AI选区替换: ((content: string) => boolean) | null = null
+interface AI差异行 {
+  before: string
+  after: string
+  changed: boolean
+  decision: 'pending' | 'accepted' | 'rejected'
+}
+const AI差异行列表 = ref<AI差异行[]>([])
+let AI应用后正文 = ''
+function 构建AI差异行() {
+  const parts = diffLines(AI润色原文.value, aiPolishResult.value!.content)
+  const rows: AI差异行[] = []
+  const lines = (text: string) => text.match(/[^\n]*\n|[^\n]+$/g) || []
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!
+    if (!part.added && !part.removed) {
+      rows.push(
+        ...lines(part.value).map((text) => ({
+          before: text,
+          after: text,
+          changed: false,
+          decision: 'pending' as const,
+        })),
+      )
+      continue
+    }
+    const before = part.removed ? lines(part.value) : []
+    let after = part.added ? lines(part.value) : []
+    if (part.removed && parts[i + 1]?.added) after = lines(parts[++i]!.value)
+    for (let j = 0; j < Math.max(before.length, after.length); j++) {
+      rows.push({
+        before: before[j] || '',
+        after: after[j] || '',
+        changed: true,
+        decision: 'pending',
+      })
+    }
+  }
+  AI差异行列表.value = rows
+  AI应用后正文 = editorRef.value!.getMarkdown()
+}
+async function 处理AI差异行(index: number, decision: 'accepted' | 'rejected') {
+  const row = AI差异行列表.value[index]!
+  const previous = row.decision
+  row.decision = decision
+  if (previous !== 'accepted' && decision === 'rejected') return
+  const content = AI差异行列表.value
+    .map((row) => (row.decision === 'accepted' ? row.after : row.before))
+    .join('')
+  if (editorRef.value!.getMarkdown() !== AI应用后正文 || (AI选区替换 && !AI选区替换(content))) {
+    row.decision = previous
+    ElMessage.warning('正文已发生变化，请重新生成润色结果')
+    return
+  }
+  if (!AI选区替换) editorRef.value!.setMarkdown(content)
+  form.value.content = editorRef.value!.getMarkdown()
+  AI应用后正文 = form.value.content
+  await nextTick()
+}
 
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
@@ -283,18 +349,12 @@ const 文章图片移动端摘要 = computed(() =>
 )
 const 已有分类名称列表 = computed(() => categories.value.map((item) => item.label))
 const 已有标签名称列表 = computed(() => tags.value.map((item) => item.label))
-const AI建议分类已存在 = computed(() => {
-  const categoryName = aiMetadataSuggestion.value?.category_name?.trim()
-  return Boolean(categoryName && categories.value.some((item) => item.label === categoryName))
-})
-const AI建议新标签列表 = computed(() => {
-  const suggestion = aiMetadataSuggestion.value
-  if (!suggestion) {
-    return []
-  }
-  const existingNames = new Set(tags.value.map((item) => item.label))
-  return suggestion.tag_names.filter((name) => !existingNames.has(name))
-})
+const AI标题差异 = computed(() =>
+  diffWordsWithSpace(form.value.title, aiMetadataSuggestion.value?.title || ''),
+)
+const AI摘要差异 = computed(() =>
+  diffWordsWithSpace(form.value.excerpt, aiMetadataSuggestion.value?.excerpt || ''),
+)
 
 interface SaveArticleOptions {
   redirectAfterSave: boolean
@@ -407,7 +467,8 @@ function toggleTag(tagId: string) {
 }
 
 function handleTitleKeydown(event: globalThis.Event | globalThis.KeyboardEvent) {
-  if (!(event instanceof globalThis.KeyboardEvent) || event.key !== 'Enter' || event.isComposing) return
+  if (!(event instanceof globalThis.KeyboardEvent) || event.key !== 'Enter' || event.isComposing)
+    return
   event.preventDefault()
   editorRef.value?.focus()
 }
@@ -435,12 +496,13 @@ async function 构建文章AI请求(): Promise<ArticleAIRequestPayload | null> {
 }
 
 function 打开AI工具面板() {
-  aiDrawerVisible.value = true
+  propertiesVisible.value = true
 }
 
 async function 生成AI元信息建议() {
+  const 请求文章序号 = 文章加载序号
   const payload = await 构建文章AI请求()
-  if (!payload) {
+  if (!payload || 请求文章序号 !== 文章加载序号) {
     return
   }
 
@@ -448,24 +510,29 @@ async function 生成AI元信息建议() {
   aiLoading.value = true
   aiStatusMessage.value = '正在生成元信息建议...'
   try {
-    aiMetadataSuggestion.value = await 生成文章AI元信息建议(payload)
-    aiStatusMessage.value = '元信息建议已生成，可选择应用。'
-    ElMessage.success('AI 元信息建议已生成')
+    const result = await 生成文章AI元信息建议(payload)
+    if (请求文章序号 !== 文章加载序号) return
+    aiMetadataSuggestion.value = result
+    aiStatusMessage.value = ''
+    ElMessage.success('AI 元信息建议已生成，请在文章属性中选择分类和标签')
   } catch (error) {
+    if (请求文章序号 !== 文章加载序号) return
     const message = 获取API错误消息(error, '生成 AI 元信息建议失败')
     aiStatusMessage.value = message
     ElMessage.error(message)
   } finally {
-    aiLoading.value = false
+    if (请求文章序号 === 文章加载序号) aiLoading.value = false
   }
 }
 
-async function 生成AI润色正文() {
+async function 生成AI润色正文(selection?: { text: string; replace: (content: string) => boolean }) {
+  const 请求文章序号 = 文章加载序号
   const payload = await 构建文章AI请求()
-  if (!payload) {
+  if (!payload || 请求文章序号 !== 文章加载序号) {
     return
   }
 
+  if (selection) payload.content = selection.text
   void 打开AI工具面板()
   aiLoading.value = true
   aiStatusMessage.value = '正在润色正文...'
@@ -475,11 +542,15 @@ async function 生成AI润色正文() {
   })
   try {
     const result = await AI润色文章正文(payload)
+    if (请求文章序号 !== 文章加载序号) return
     console.info('[ArticleAI] 润色正文完成', {
       contentLength: result.content.length,
       summaryLength: result.summary.length,
     })
     aiPolishResult.value = result
+    AI润色原文.value = payload.content
+    AI选区替换 = selection?.replace ?? null
+    构建AI差异行()
     if (!result.content.trim()) {
       aiStatusMessage.value = 'AI 返回了空正文，请重试或缩短正文后再试。'
       ElMessage.warning(aiStatusMessage.value)
@@ -489,14 +560,16 @@ async function 生成AI润色正文() {
       result.content.trim() === payload.content.trim()
         ? 'AI 已返回润色结果，但正文与当前内容基本一致。'
         : '正文润色结果已生成，可预览后替换。'
+    查看AI润色结果()
     ElMessage.success('AI 润色结果已生成')
   } catch (error) {
+    if (请求文章序号 !== 文章加载序号) return
     const message = 获取API错误消息(error, 'AI 润色正文失败')
     console.error('[ArticleAI] 润色正文失败', error)
     aiStatusMessage.value = message
     ElMessage.error(message)
   } finally {
-    aiLoading.value = false
+    if (请求文章序号 === 文章加载序号) aiLoading.value = false
   }
 }
 
@@ -567,49 +640,41 @@ async function 应用AI分类() {
   }
 }
 
-async function 应用AI标签() {
-  const suggestion = aiMetadataSuggestion.value
-  if (!suggestion || suggestion.tag_names.length === 0) {
+function 工具栏AI润色() {
+  const selection = editorRef.value?.获取选区()
+  if (!selection?.text.trim()) {
+    ElMessage.info('请先选中需要润色的内容')
     return
   }
+  void 生成AI润色正文(selection)
+}
 
+function 工具栏美化选区() {
+  const result = editorRef.value?.美化选区()
+  if (result == null) ElMessage.info('请先选中需要美化的内容')
+  else if (!result) ElMessage.error('选区美化失败')
+}
+
+async function 应用AI单个标签(name: string) {
   try {
-    const tagIds: Array<string | null> = []
-    const normalizedNames = Array.from(
-      new Set(suggestion.tag_names.map((name) => name.trim()).filter(Boolean)),
-    )
-    for (const name of normalizedNames) {
-      tagIds.push(await 确保标签存在(name))
-    }
-    const mergedIds = new Set(form.value.tag_ids)
-    for (const tagId of tagIds) {
-      if (tagId) {
-        mergedIds.add(tagId)
-      }
-    }
-    form.value.tag_ids = [...mergedIds]
-    ElMessage.success('已应用 AI 标签')
+    const id = await 确保标签存在(name)
+    if (id && !form.value.tag_ids.includes(id)) form.value.tag_ids.push(id)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '应用 AI 标签失败'))
   }
 }
 
-async function 应用AI全部元信息() {
-  应用AI标题()
-  应用AI摘要()
-  await 应用AI分类()
-  await 应用AI标签()
-}
-
 async function 替换为AI润色正文() {
-  const polishedContent = aiPolishResult.value?.content
-  if (!polishedContent) {
+  const polishedContent = AI差异行列表.value
+    .map((row) => (row.decision === 'rejected' ? row.before : row.after))
+    .join('')
+  if (!aiPolishResult.value) {
     return
   }
 
   try {
     await ElMessageBox.confirm(
-      '确定用 AI 润色结果替换当前正文？替换后仍需手动保存文章。',
+      AI选区替换 ? '确定用润色结果替换选中内容？' : '确定用润色结果替换当前正文？',
       '替换正文',
       {
         type: 'warning',
@@ -617,8 +682,22 @@ async function 替换为AI润色正文() {
         cancelButtonText: '取消',
       },
     )
-    editorRef.value?.setMarkdown(polishedContent)
-    form.value.content = polishedContent
+    if (AI选区替换) {
+      if (!AI选区替换(polishedContent)) {
+        ElMessage.warning('正文已发生变化，请重新选中内容并润色')
+        return
+      }
+    } else {
+      if (editorRef.value?.getMarkdown() !== AI应用后正文) {
+        ElMessage.warning('正文已发生变化，请重新生成润色结果')
+        return
+      }
+      editorRef.value?.setMarkdown(polishedContent)
+      form.value.content = polishedContent
+    }
+    正在预览AI润色.value = false
+    aiPolishResult.value = null
+    AI选区替换 = null
     await nextTick()
     ElMessage.success('已替换为 AI 润色正文')
   } catch (error) {
@@ -1012,6 +1091,13 @@ async function 同步文章图片(articleId: string) {
 async function syncArticleByRoute(articleId: string) {
   const 当前加载序号 = ++文章加载序号
 
+  aiLoading.value = false
+  aiMetadataSuggestion.value = null
+  aiPolishResult.value = null
+  AI选区替换 = null
+  AI润色原文.value = ''
+  aiStatusMessage.value = ''
+  正在预览AI润色.value = false
   currentArticleId.value = articleId
   loadFailed.value = false
   saveFailed.value = false
@@ -1158,9 +1244,10 @@ watch(propertiesVisible, (visible) => {
 
 watch([previewType, previewLayoutMode], async (_, [previousType, previousLayout]) => {
   const previousPreview = previousType === 'html' ? htmlOverlayRef.value : markdownOverlayRef.value
-  const ratio = previousLayout === 'full' && previousPreview
-    ? 获取滚动比例(previousPreview)
-    : editorRef.value?.getScrollRatio() ?? 0
+  const ratio =
+    previousLayout === 'full' && previousPreview
+      ? 获取滚动比例(previousPreview)
+      : (editorRef.value?.getScrollRatio() ?? 0)
   清理滚动同步监听()
   await nextTick()
   初始化编辑器内容区尺寸观察()
@@ -1804,9 +1891,17 @@ async function exportWriting() {
 }
 
 function showWritingPreview(mode: 预览布局模式) {
+  正在预览AI润色.value = false
   if (editorRef.value) form.value.content = editorRef.value.getMarkdown()
   previewType.value = 'preview'
   previewLayoutMode.value = mode
+}
+
+function 查看AI润色结果() {
+  正在预览AI润色.value = true
+  previewType.value = 'preview'
+  previewLayoutMode.value = 'hidden'
+  if (isMobileViewport.value) propertiesVisible.value = false
 }
 
 defineExpose({ prepareToLeave, closeWriting })
@@ -1970,7 +2065,15 @@ async function 删除选中未使用文章图片() {
     }"
   >
     <header v-if="props.embedded" class="writing-head">
-      <button class="writing-back" type="button" aria-label="返回列表" title="返回列表" @click="closeWriting"><ArrowLeft /></button>
+      <button
+        class="writing-back"
+        type="button"
+        aria-label="返回列表"
+        title="返回列表"
+        @click="closeWriting"
+      >
+        <ArrowLeft />
+      </button>
       <span class="writing-divider" />
       <span class="writing-name">{{ form.title || '未命名草稿' }}</span>
       <button
@@ -2123,7 +2226,7 @@ async function 删除选中未使用文章图片() {
                   :theme="editorTheme"
                   placeholder="在此编写 Markdown 内容..."
                   :upload-images="handleEditorImageUpload"
-                  :format-content="formatArticleContent"
+                  :format-content="工具栏美化选区"
                   v-model:scroll-sync="scrollSyncEnabled"
                   v-model:preview-enabled="previewEnabled"
                   v-model:preview-layout-mode="activePreviewLayoutMode"
@@ -2139,8 +2242,56 @@ async function 删除选中未使用文章图片() {
                   @ready="handleEditorReady"
                   @upload-error="handleEditorUploadError"
                   @mode-change="handleEditorModeChange"
-                  @open-ai-tools="打开AI工具面板"
+                  @open-ai-tools="工具栏AI润色"
                 >
+                  <template v-if="正在预览AI润色" #content-override>
+                    <div class="article-ai-diff-header">
+                      <span>AI 润色 · 源码差异</span>
+                      <ElButton link @click="正在预览AI润色 = false">返回书写</ElButton>
+                    </div>
+                    <div v-if="正在预览AI润色" class="article-ai-diff" aria-label="润色前后差异">
+                      <section
+                        v-for="(row, index) in AI差异行列表"
+                        :key="index"
+                        class="article-ai-diff-row"
+                      >
+                        <template v-if="row.changed">
+                          <div v-if="row.before" class="is-removed">
+                            <span>−</span>
+                            <pre>{{ row.before }}</pre>
+                          </div>
+                          <div v-if="row.after" class="is-added">
+                            <span>+</span>
+                            <pre>{{ row.after }}</pre>
+                          </div>
+                          <div class="article-ai-diff-row-actions">
+                            <ElButton
+                              link
+                              type="primary"
+                              size="small"
+                              :disabled="row.decision === 'accepted'"
+                              @click="处理AI差异行(index, 'accepted')"
+                              >{{ row.decision === 'accepted' ? '已采纳' : '采纳此行' }}</ElButton
+                            >
+                            <ElButton
+                              link
+                              size="small"
+                              :disabled="row.decision === 'rejected'"
+                              @click="处理AI差异行(index, 'rejected')"
+                              >{{ row.decision === 'rejected' ? '已忽略' : '忽略此行' }}</ElButton
+                            >
+                          </div>
+                        </template>
+                        <div v-else>
+                          <span> </span>
+                          <pre>{{ row.before }}</pre>
+                        </div>
+                      </section>
+                      <ElButton type="primary" size="small" @click="替换为AI润色正文"
+                        >采纳全部剩余修改</ElButton
+                      >
+                    </div>
+                  </template>
                   <template #content-header>
                     <div class="article-editor-title-area">
                       <div class="article-editor-title-area__editor">
@@ -2189,145 +2340,247 @@ async function 删除选中未使用文章图片() {
             class="article-editor-properties"
             :aria-label="props.embedded ? '文章属性' : undefined"
           >
-            <template v-if="props.embedded">
-              <div class="writing-props-title">文章属性</div>
-            </template>
-            <ElFormItem v-if="props.embedded" label="可见性">
-              <div class="article-editor-chips" role="group" aria-label="可见性">
-                <button
-                  v-for="item in visibilityOptions"
-                  :key="item.value"
-                  class="article-editor-chip"
-                  :class="{ 'is-active': visibility === item.value }"
-                  type="button"
-                  :aria-pressed="visibility === item.value"
-                  @click="visibility = item.value"
+            <div class="writing-props-title">文章属性</div>
+            <div class="article-ai-panel__actions">
+              <ElButton plain :icon="MagicStick" :loading="aiLoading" @click="生成AI元信息建议"
+                >生成属性建议</ElButton
+              >
+              <ElButton plain :icon="MagicStick" :loading="aiLoading" @click="生成AI润色正文()"
+                >润色正文</ElButton
+              >
+            </div>
+            <p v-if="aiStatusMessage" class="article-ai-status">{{ aiStatusMessage }}</p>
+            <ElButton v-if="aiPolishResult" link type="primary" @click="查看AI润色结果"
+              >查看润色差异</ElButton
+            >
+            <div>
+              <ElFormItem label="标题">
+                <ElInput v-model="form.title" placeholder="文章标题" />
+                <div
+                  v-if="aiMetadataSuggestion?.title && aiMetadataSuggestion.title !== form.title"
+                  class="article-ai-field-suggestion"
                 >
-                  {{ item.label }}
-                </button>
-              </div>
-            </ElFormItem>
-            <div class="article-editor-metadata-grid">
-              <ElFormItem>
-                <template #label>
-                  <div class="article-editor-metadata-label">
-                    <span>分类</span>
-                    <ElButton link type="primary" size="small" @click="handleCreateCategory"
-                      >+ 新增</ElButton
+                  <div class="article-ai-inline-diff">
+                    <span
+                      v-for="(part, index) in AI标题差异"
+                      :key="index"
+                      :class="{ 'is-added': part.added, 'is-removed': part.removed }"
+                      >{{ part.value }}</span
                     >
                   </div>
-                </template>
-                <ElSelect v-model="form.category_id" placeholder="选择分类" clearable>
-                  <ElOption
-                    v-for="item in categories"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </ElSelect>
+                  <ElButton link type="primary" size="small" @click="应用AI标题"
+                    >应用 AI 标题</ElButton
+                  >
+                </div>
+                <span
+                  v-if="
+                    aiMetadataSuggestion &&
+                    (!aiMetadataSuggestion.title || aiMetadataSuggestion.title === form.title)
+                  "
+                  class="article-ai-muted"
+                  >{{
+                    aiMetadataSuggestion.title ? 'AI 标题与当前一致' : 'AI 未返回标题建议'
+                  }}</span
+                >
               </ElFormItem>
-              <ElFormItem>
-                <template #label>
-                  <div class="article-editor-metadata-label">
-                    <span>标签</span>
-                    <ElButton link type="primary" size="small" @click="handleCreateTag"
-                      >+ 新增</ElButton
-                    >
-                  </div>
-                </template>
-                <div class="article-editor-chips" role="group" aria-label="标签">
+              <ElFormItem v-if="props.embedded" label="可见性">
+                <div class="article-editor-chips" role="group" aria-label="可见性">
                   <button
-                    v-for="item in tags"
+                    v-for="item in visibilityOptions"
                     :key="item.value"
                     class="article-editor-chip"
-                    :class="{ 'is-active': form.tag_ids.includes(item.value) }"
+                    :class="{ 'is-active': visibility === item.value }"
                     type="button"
-                    :aria-pressed="form.tag_ids.includes(item.value)"
-                    @click="toggleTag(item.value)"
+                    :aria-pressed="visibility === item.value"
+                    @click="visibility = item.value"
                   >
                     {{ item.label }}
                   </button>
-                  <span v-if="tags.length === 0" class="article-editor-tags-empty">暂无标签</span>
                 </div>
               </ElFormItem>
-            </div>
+              <div class="article-editor-metadata-grid">
+                <ElFormItem>
+                  <template #label>
+                    <div class="article-editor-metadata-label">
+                      <span>分类</span>
+                      <ElButton link type="primary" size="small" @click="handleCreateCategory"
+                        >+ 新增</ElButton
+                      >
+                    </div>
+                  </template>
+                  <ElSelect v-model="form.category_id" placeholder="选择分类" clearable>
+                    <ElOption
+                      v-for="item in categories"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                    />
+                  </ElSelect>
+                  <button
+                    v-if="
+                      aiMetadataSuggestion?.category_name &&
+                      categories.find((item) => item.label === aiMetadataSuggestion?.category_name)
+                        ?.value !== form.category_id
+                    "
+                    class="article-ai-suggestion"
+                    type="button"
+                    @click="应用AI分类"
+                  >
+                    {{ aiMetadataSuggestion.category_name }}
+                  </button>
+                </ElFormItem>
+                <ElFormItem>
+                  <template #label>
+                    <div class="article-editor-metadata-label">
+                      <span>标签</span>
+                      <ElButton link type="primary" size="small" @click="handleCreateTag"
+                        >+ 新增</ElButton
+                      >
+                    </div>
+                  </template>
+                  <div class="article-editor-chips" role="group" aria-label="标签">
+                    <button
+                      v-for="item in tags.filter(
+                        (item) =>
+                          form.tag_ids.includes(item.value) ||
+                          !aiMetadataSuggestion?.tag_names.includes(item.label),
+                      )"
+                      :key="item.value"
+                      class="article-editor-chip"
+                      :class="{ 'is-active': form.tag_ids.includes(item.value) }"
+                      type="button"
+                      :aria-pressed="form.tag_ids.includes(item.value)"
+                      @click="toggleTag(item.value)"
+                    >
+                      {{ item.label }}
+                    </button>
+                    <button
+                      v-for="name in aiMetadataSuggestion?.tag_names.filter(
+                        (name) =>
+                          !form.tag_ids.includes(
+                            tags.find((item) => item.label === name)?.value || '',
+                          ),
+                      )"
+                      :key="'ai-' + name"
+                      class="article-ai-suggestion"
+                      type="button"
+                      @click="应用AI单个标签(name)"
+                    >
+                      {{ name }}
+                    </button>
+                    <span
+                      v-if="tags.length === 0 && !aiMetadataSuggestion?.tag_names.length"
+                      class="article-editor-tags-empty"
+                      >暂无标签</span
+                    >
+                  </div>
+                </ElFormItem>
+              </div>
 
-            <ElFormItem label="摘要">
-              <ElInput
-                v-model="form.excerpt"
-                type="textarea"
-                placeholder="文章摘要（可选）"
-                :rows="2"
-              />
-            </ElFormItem>
-
-            <ElFormItem label="封面图 URL">
-              <ElInput v-model="form.cover_url" placeholder="https://..." />
-            </ElFormItem>
-
-            <ArticleImagePanel
-              :expanded="articleImagePanelExpanded"
-              :current-article-id="currentArticleId"
-              :loading="articleImagesLoading"
-              :deleting="deletingArticleImages"
-              :items="文章图片列表项"
-              :desktop-summary="文章图片桌面摘要"
-              :mobile-summary="文章图片移动端摘要"
-              :selected-ids="selectedUnusedArticleImageIds"
-              :unused-count="未使用文章图片列表.length"
-              :resolve-preview-url="获取文章图片预览地址"
-              :format-size="格式化文章图片大小"
-              :format-time="格式化文章图片时间"
-              @toggle="切换文章图片面板展开状态"
-              @refresh="同步文章图片(currentArticleId)"
-              @select-all-unused="选中全部未使用文章图片"
-              @clear-selection="清空未使用文章图片选择"
-              @delete-selected="删除选中未使用文章图片"
-              @selection-change="切换未使用文章图片选择"
-            />
-
-            <ElButton
-              v-if="props.embedded && isEdit"
-              class="writing-delete"
-              text
-              type="danger"
-              :loading="deletingArticle"
-              :disabled="saving || formatting || isUploadingImages"
-              @click="deleteCurrentArticle"
-              >移入回收站</ElButton
-            >
-            <div v-if="!props.embedded" class="article-editor-actions">
-              <div class="article-editor-buttons">
-                <ElButton
-                  v-if="isEdit"
-                  type="danger"
-                  plain
-                  :icon="Delete"
-                  :loading="deletingArticle"
-                  :disabled="saving || formatting || isUploadingImages"
-                  @click="deleteCurrentArticle"
+              <ElFormItem label="摘要">
+                <ElInput
+                  v-model="form.excerpt"
+                  type="textarea"
+                  placeholder="文章摘要（可选）"
+                  :rows="2"
+                />
+                <div
+                  v-if="
+                    aiMetadataSuggestion?.excerpt && aiMetadataSuggestion.excerpt !== form.excerpt
+                  "
+                  class="article-ai-field-suggestion"
                 >
-                  删除
-                </ElButton>
-                <div class="article-editor-buttons__main">
-                  <ElButton @click="router.back()">取消</ElButton>
+                  <div class="article-ai-inline-diff">
+                    <span
+                      v-for="(part, index) in AI摘要差异"
+                      :key="index"
+                      :class="{ 'is-added': part.added, 'is-removed': part.removed }"
+                      >{{ part.value }}</span
+                    >
+                  </div>
+                  <ElButton link type="primary" size="small" @click="应用AI摘要"
+                    >应用 AI 摘要</ElButton
+                  >
+                </div>
+              </ElFormItem>
+
+              <p
+                v-if="
+                  aiMetadataSuggestion &&
+                  (!aiMetadataSuggestion.excerpt || aiMetadataSuggestion.excerpt === form.excerpt)
+                "
+                class="article-ai-muted"
+              >
+                {{ aiMetadataSuggestion.excerpt ? 'AI 摘要与当前一致' : 'AI 未返回摘要建议' }}
+              </p>
+              <ElFormItem label="封面图 URL">
+                <ElInput v-model="form.cover_url" placeholder="https://..." />
+              </ElFormItem>
+
+              <ArticleImagePanel
+                :expanded="articleImagePanelExpanded"
+                :current-article-id="currentArticleId"
+                :loading="articleImagesLoading"
+                :deleting="deletingArticleImages"
+                :items="文章图片列表项"
+                :desktop-summary="文章图片桌面摘要"
+                :mobile-summary="文章图片移动端摘要"
+                :selected-ids="selectedUnusedArticleImageIds"
+                :unused-count="未使用文章图片列表.length"
+                :resolve-preview-url="获取文章图片预览地址"
+                :format-size="格式化文章图片大小"
+                :format-time="格式化文章图片时间"
+                @toggle="切换文章图片面板展开状态"
+                @refresh="同步文章图片(currentArticleId)"
+                @select-all-unused="选中全部未使用文章图片"
+                @clear-selection="清空未使用文章图片选择"
+                @delete-selected="删除选中未使用文章图片"
+                @selection-change="切换未使用文章图片选择"
+              />
+
+              <ElButton
+                v-if="props.embedded && isEdit"
+                class="writing-delete"
+                text
+                type="danger"
+                :loading="deletingArticle"
+                :disabled="saving || formatting || isUploadingImages"
+                @click="deleteCurrentArticle"
+                >移入回收站</ElButton
+              >
+              <div v-if="!props.embedded" class="article-editor-actions">
+                <div class="article-editor-buttons">
                   <ElButton
+                    v-if="isEdit"
+                    type="danger"
                     plain
-                    :icon="Select"
-                    :loading="saving || formatting || isUploadingImages"
-                    :disabled="deletingArticle"
-                    @click="save"
+                    :icon="Delete"
+                    :loading="deletingArticle"
+                    :disabled="saving || formatting || isUploadingImages"
+                    @click="deleteCurrentArticle"
                   >
-                    保存并退出
+                    删除
                   </ElButton>
-                  <ElButton
-                    type="primary"
-                    :loading="saving || formatting || isUploadingImages"
-                    :disabled="deletingArticle"
-                    @click="updateArticleAndStay"
-                  >
-                    {{ isEdit ? '保存文章' : '创建文章' }}
-                  </ElButton>
+                  <div class="article-editor-buttons__main">
+                    <ElButton @click="router.back()">取消</ElButton>
+                    <ElButton
+                      plain
+                      :icon="Select"
+                      :loading="saving || formatting || isUploadingImages"
+                      :disabled="deletingArticle"
+                      @click="save"
+                    >
+                      保存并退出
+                    </ElButton>
+                    <ElButton
+                      type="primary"
+                      :loading="saving || formatting || isUploadingImages"
+                      :disabled="deletingArticle"
+                      @click="updateArticleAndStay"
+                    >
+                      {{ isEdit ? '保存文章' : '创建文章' }}
+                    </ElButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2335,112 +2588,6 @@ async function 删除选中未使用文章图片() {
         </ElForm>
       </ElSkeleton>
     </PageSectionShell>
-    <ElDrawer v-model="aiDrawerVisible" title="AI 辅助" size="520px" class="article-ai-drawer">
-      <div class="article-ai-panel">
-        <div class="article-ai-panel__actions">
-          <ElButton plain :icon="MagicStick" :loading="aiLoading" @click="生成AI元信息建议">
-            生成元信息
-          </ElButton>
-          <ElButton plain :icon="MagicStick" :loading="aiLoading" @click="生成AI润色正文">
-            润色正文
-          </ElButton>
-        </div>
-
-        <div v-if="aiStatusMessage" class="article-ai-status">
-          {{ aiStatusMessage }}
-        </div>
-
-        <section v-if="aiMetadataSuggestion" class="article-ai-section">
-          <div class="article-ai-section__header">
-            <h3>元信息建议</h3>
-            <ElButton type="primary" plain size="small" @click="应用AI全部元信息"
-              >全部应用</ElButton
-            >
-          </div>
-
-          <div class="article-ai-field">
-            <div class="article-ai-field__label">
-              <span>标题</span>
-              <ElButton link type="primary" size="small" @click="应用AI标题">应用</ElButton>
-            </div>
-            <p>{{ aiMetadataSuggestion.title }}</p>
-          </div>
-
-          <div class="article-ai-field">
-            <div class="article-ai-field__label">
-              <span>摘要</span>
-              <ElButton link type="primary" size="small" @click="应用AI摘要">应用</ElButton>
-            </div>
-            <p>{{ aiMetadataSuggestion.excerpt }}</p>
-          </div>
-
-          <div class="article-ai-field">
-            <div class="article-ai-field__label">
-              <span>分类</span>
-              <ElButton link type="primary" size="small" @click="应用AI分类">应用</ElButton>
-            </div>
-            <ElSpace wrap>
-              <ElTag v-if="aiMetadataSuggestion.category_name" effect="plain">
-                {{ aiMetadataSuggestion.category_name }}
-              </ElTag>
-              <ElTag
-                v-if="aiMetadataSuggestion.category_name && !AI建议分类已存在"
-                type="warning"
-                effect="plain"
-              >
-                将新建
-              </ElTag>
-              <span v-if="!aiMetadataSuggestion.category_name" class="article-ai-muted"
-                >未建议分类</span
-              >
-            </ElSpace>
-          </div>
-
-          <div class="article-ai-field">
-            <div class="article-ai-field__label">
-              <span>标签</span>
-              <ElButton link type="primary" size="small" @click="应用AI标签">应用</ElButton>
-            </div>
-            <ElSpace wrap>
-              <ElTag
-                v-for="tagName in aiMetadataSuggestion.tag_names"
-                :key="tagName"
-                effect="plain"
-              >
-                {{ tagName }}
-              </ElTag>
-              <ElTag v-if="AI建议新标签列表.length > 0" type="warning" effect="plain">
-                {{ AI建议新标签列表.length }} 个将新建
-              </ElTag>
-            </ElSpace>
-          </div>
-
-          <div v-if="aiMetadataSuggestion.reason" class="article-ai-field">
-            <div class="article-ai-field__label">
-              <span>依据</span>
-            </div>
-            <p>{{ aiMetadataSuggestion.reason }}</p>
-          </div>
-        </section>
-
-        <section v-if="aiPolishResult" class="article-ai-section">
-          <div class="article-ai-section__header">
-            <h3>正文润色</h3>
-            <ElButton type="primary" plain size="small" @click="替换为AI润色正文"
-              >替换正文</ElButton
-            >
-          </div>
-          <p v-if="aiPolishResult.summary" class="article-ai-summary">
-            {{ aiPolishResult.summary }}
-          </p>
-          <pre class="article-ai-content-preview">{{ aiPolishResult.content }}</pre>
-        </section>
-
-        <div v-if="!aiMetadataSuggestion && !aiPolishResult" class="article-ai-empty">
-          生成结果会显示在这里。
-        </div>
-      </div>
-    </ElDrawer>
   </div>
 </template>
 
@@ -2487,6 +2634,9 @@ async function 删除选中未使用文章图片() {
 }
 
 .article-editor-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 26px;
   padding: 0 9px;
   border: 1px solid var(--el-border-color-lighter);
@@ -2495,6 +2645,7 @@ async function 删除选中未使用文章图片() {
   color: var(--el-text-color-regular);
   font: inherit;
   font-size: 11.5px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -2512,31 +2663,6 @@ async function 删除选中未使用文章图片() {
 .article-editor-tags-empty {
   color: var(--el-text-color-secondary);
   font-size: 12px;
-}
-
-.page-container,
-.page-container :deep(*) {
-  scrollbar-width: thin;
-  scrollbar-color: #d4d4d4 transparent;
-}
-
-.page-container::-webkit-scrollbar,
-.page-container :deep(*::-webkit-scrollbar) {
-  width: 9px;
-  height: 9px;
-}
-
-.page-container::-webkit-scrollbar-track,
-.page-container :deep(*::-webkit-scrollbar-track) {
-  background: transparent;
-}
-
-.page-container::-webkit-scrollbar-thumb,
-.page-container :deep(*::-webkit-scrollbar-thumb) {
-  border: 3px solid transparent;
-  border-radius: 99px;
-  background-clip: content-box;
-  background-color: #d4d4d4;
 }
 
 .editor-workspace {
@@ -2837,7 +2963,9 @@ async function 删除选中未使用文章图片() {
 
 .page-container.milkdown-markdown-editor--page-fullscreen .editor-wrapper,
 .page-container:fullscreen .editor-wrapper,
-.page-container.milkdown-markdown-editor--page-fullscreen .editor-wrapper :deep(.milkdown-markdown-editor),
+.page-container.milkdown-markdown-editor--page-fullscreen
+  .editor-wrapper
+  :deep(.milkdown-markdown-editor),
 .page-container:fullscreen .editor-wrapper :deep(.milkdown-markdown-editor) {
   display: contents;
 }
@@ -2875,7 +3003,9 @@ async function 删除选中未使用文章图片() {
   border-radius: 0;
 }
 
-.writing-form.milkdown-markdown-editor--page-fullscreen .editor-wrapper :deep(.milkdown-markdown-editor),
+.writing-form.milkdown-markdown-editor--page-fullscreen
+  .editor-wrapper
+  :deep(.milkdown-markdown-editor),
 .writing-form:fullscreen .editor-wrapper :deep(.milkdown-markdown-editor) {
   display: contents;
   width: 100% !important;
@@ -3045,6 +3175,105 @@ async function 删除选中未使用文章图片() {
   margin-left: 3px;
 }
 
+.article-ai-field-suggestion {
+  position: relative;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed var(--el-color-primary);
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+.article-ai-inline-diff {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.article-ai-inline-diff .is-added {
+  background: color-mix(in srgb, #28a745 20%, transparent);
+}
+.article-ai-inline-diff .is-removed {
+  background: color-mix(in srgb, #e5534b 20%, transparent);
+  text-decoration: line-through;
+}
+.article-ai-diff-row-actions {
+  justify-content: flex-end;
+  gap: 12px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+.article-ai-diff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  font-size: 13px;
+}
+.article-ai-suggestion {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  box-sizing: border-box;
+  border: 1px dashed var(--el-color-primary);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--el-color-primary);
+  padding: 3px 7px;
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.article-ai-suggestion::after,
+.article-ai-field-suggestion::after {
+  content: 'AI';
+  position: absolute;
+  right: 4px;
+  bottom: 0;
+  transform: translateY(50%);
+  padding: 0 2px;
+  background: var(--el-bg-color);
+  color: var(--el-color-primary);
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: none;
+}
+.article-ai-diff {
+  overflow: auto;
+  padding: 24px;
+  font:
+    13px/1.7 ui-monospace,
+    monospace;
+}
+.article-ai-diff-row > div {
+  display: flex;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.article-ai-diff-row > div > span {
+  width: 20px;
+  flex: none;
+  user-select: none;
+}
+.article-ai-diff pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.article-ai-diff .is-added {
+  background: color-mix(in srgb, #28a745 18%, transparent);
+  color: var(--el-text-color-primary);
+}
+.article-ai-diff .is-removed {
+  background: color-mix(in srgb, #e5534b 18%, transparent);
+  color: var(--el-text-color-primary);
+}
+.article-ai-diff > .el-button {
+  margin-top: 16px;
+}
 .article-ai-panel {
   display: flex;
   flex-direction: column;
@@ -3052,10 +3281,18 @@ async function 删除选中未使用文章图片() {
 }
 
 .article-ai-panel__actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.article-ai-panel__actions :deep(.el-button) {
+  min-width: 0;
+  margin-left: 0;
+  padding-right: 6px;
+  padding-left: 6px;
+  font-size: 12px;
 }
 
 .article-ai-section {
@@ -3181,7 +3418,6 @@ async function 删除选中未使用文章图片() {
 
   .article-ai-panel__actions {
     align-items: stretch;
-    flex-direction: column;
   }
 
   .article-ai-panel__actions :deep(.el-button) {
@@ -3481,7 +3717,9 @@ async function 删除选中未使用文章图片() {
 .writing-sheet :deep(.milkdown-markdown-editor) {
   display: contents;
 }
-.writing-sheet .editor-wrapper.milkdown-markdown-editor--page-fullscreen :deep(.milkdown-markdown-editor),
+.writing-sheet
+  .editor-wrapper.milkdown-markdown-editor--page-fullscreen
+  :deep(.milkdown-markdown-editor),
 .writing-sheet .editor-wrapper:fullscreen :deep(.milkdown-markdown-editor) {
   display: flex;
 }
@@ -3574,6 +3812,22 @@ async function 删除选中未使用文章图片() {
   padding: 26px 40px 96px;
   font-size: 15px;
   line-height: 1.92;
+}
+.writing-sheet .article-ai-diff-header,
+.writing-sheet .article-ai-diff {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.writing-sheet .article-ai-diff-header {
+  padding-right: 40px;
+  padding-left: 40px;
+}
+.writing-sheet .article-ai-diff {
+  flex: 1 0 auto;
+  overflow: visible;
+  padding: 26px 40px 96px;
 }
 .writing-sheet .markdown-editor-overlay__title {
   width: 100%;
@@ -3739,9 +3993,16 @@ async function 删除选中未使用文章图片() {
     gap: 3px;
     min-width: 0;
   }
-  .writing-head-actions .el-button { padding: 5px 7px; }
-  .writing-pane-switch button { padding-right: 6px; padding-left: 6px; }
-  .writing-divider { display: none; }
+  .writing-head-actions .el-button {
+    padding: 5px 7px;
+  }
+  .writing-pane-switch button {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+  .writing-divider {
+    display: none;
+  }
   .writing-name {
     display: none;
   }
@@ -3750,6 +4011,8 @@ async function 删除选中未使用文章图片() {
   }
   .writing-sheet :deep(.ProseMirror),
   .writing-sheet :deep(.milkdown-markdown-editor__source),
+  .writing-sheet .article-ai-diff-header,
+  .writing-sheet .article-ai-diff,
   .writing-sheet .markdown-editor-overlay__content {
     padding-right: 24px;
     padding-left: 24px;
@@ -3762,9 +4025,18 @@ async function 删除选中未使用文章图片() {
   }
 }
 @container (max-width: 420px) {
-  .writing-save-state { display: none; }
-  .writing-head-actions .el-button { padding: 4px 5px; font-size: 10px; }
-  .writing-pane-switch button { padding-right: 4px; padding-left: 4px; font-size: 10px; }
+  .writing-save-state {
+    display: none;
+  }
+  .writing-head-actions .el-button {
+    padding: 4px 5px;
+    font-size: 10px;
+  }
+  .writing-pane-switch button {
+    padding-right: 4px;
+    padding-left: 4px;
+    font-size: 10px;
+  }
 }
 
 /* 页面全屏规则必须放在写作稿纸基础样式之后，避免被基础 position 和圆角覆盖。 */

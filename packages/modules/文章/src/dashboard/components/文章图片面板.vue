@@ -34,49 +34,44 @@ const emit = defineEmits<{
 <template>
   <section class="article-image-panel">
     <div class="article-image-panel__header">
-      <div
-        class="article-image-panel__header-main"
-        :class="{ 'is-expanded': expanded }"
-      >
-        <div class="article-image-panel__header-info">
-          <div class="article-image-panel__title">文章图片</div>
-          <div class="article-image-panel__header-summary article-image-panel__header-summary--desktop">
-            {{ desktopSummary }}
-          </div>
-          <div class="article-image-panel__header-summary article-image-panel__header-summary--mobile">
-            {{ mobileSummary }}
-          </div>
-        </div>
-        <div v-if="expanded" class="article-image-panel__actions">
-          <ElButton size="small" :disabled="!currentArticleId || loading" @click="emit('refresh')">
-            刷新
-          </ElButton>
-          <ElButton
-            size="small"
-            :disabled="unusedCount === 0 || deleting"
-            @click="emit('select-all-unused')"
-          >
-            选中未使用
-          </ElButton>
-          <ElButton
-            size="small"
-            :disabled="selectedIds.length === 0"
-            @click="emit('clear-selection')"
-          >
-            清空选择
-          </ElButton>
-          <ElButton
-            size="small"
-            type="danger"
-            :loading="deleting"
-            :disabled="selectedIds.length === 0"
-            @click="emit('delete-selected')"
-          >
-            删除选中未使用图片
-          </ElButton>
-        </div>
+      <div class="article-image-panel__header-main">
+        <div class="article-image-panel__title">文章图片</div>
         <ElButton class="article-image-panel__toggle" size="small" @click="emit('toggle')">
           {{ expanded ? '收起' : '展开' }}
+        </ElButton>
+      </div>
+      <div class="article-image-panel__header-summary article-image-panel__header-summary--desktop">
+        {{ desktopSummary }}
+      </div>
+      <div class="article-image-panel__header-summary article-image-panel__header-summary--mobile">
+        {{ mobileSummary }}
+      </div>
+      <div v-if="expanded" class="article-image-panel__actions">
+        <ElButton size="small" :disabled="!currentArticleId || loading" @click="emit('refresh')">
+          刷新
+        </ElButton>
+        <ElButton
+          size="small"
+          :disabled="unusedCount === 0 || deleting"
+          @click="emit('select-all-unused')"
+        >
+          选中未使用
+        </ElButton>
+        <ElButton
+          size="small"
+          :disabled="selectedIds.length === 0"
+          @click="emit('clear-selection')"
+        >
+          清空选择
+        </ElButton>
+        <ElButton
+          size="small"
+          type="danger"
+          :loading="deleting"
+          :disabled="selectedIds.length === 0"
+          @click="emit('delete-selected')"
+        >
+          删除选中未使用图片
         </ElButton>
       </div>
     </div>
@@ -85,7 +80,10 @@ const emit = defineEmits<{
       首次上传正文图片时会自动创建草稿，随后这里会显示该文章的全部图片，并标记哪些图片当前未被正文或封面引用。
     </div>
 
-    <div v-else-if="expanded && loading && items.length === 0" class="article-image-panel__placeholder">
+    <div
+      v-else-if="expanded && loading && items.length === 0"
+      class="article-image-panel__placeholder"
+    >
       正在加载文章图片...
     </div>
 
@@ -120,17 +118,23 @@ const emit = defineEmits<{
         </div>
 
         <div class="article-image-card__preview">
-          <img :src="resolvePreviewUrl(image)" :alt="image.original_name">
+          <img :src="resolvePreviewUrl(image)" :alt="image.original_name" />
         </div>
 
         <div class="article-image-card__body">
-          <div class="article-image-card__name" :title="image.original_name">{{ image.original_name }}</div>
+          <div class="article-image-card__name" :title="image.original_name">
+            {{ image.original_name }}
+          </div>
           <div class="article-image-card__meta">
             <span>{{ formatSize(image.size) }}</span>
             <span>{{ formatTime(image.created_at) }}</span>
           </div>
           <div class="article-image-card__hint">
-            {{ image.isUsed ? '保留中：当前正文或封面仍在引用这张图片' : '可清理：当前正文和封面都没引用这张图片' }}
+            {{
+              image.isUsed
+                ? '保留中：当前正文或封面仍在引用这张图片'
+                : '可清理：当前正文和封面都没引用这张图片'
+            }}
           </div>
         </div>
       </article>
@@ -158,14 +162,6 @@ const emit = defineEmits<{
   justify-content: space-between;
   gap: 16px;
   flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.article-image-panel__header-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -204,7 +200,7 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   flex: 0 0 auto;
 }
 
@@ -306,18 +302,6 @@ const emit = defineEmits<{
     gap: 8px;
   }
 
-  .article-image-panel__header-info {
-    align-items: center;
-    justify-content: space-between;
-    flex: 1 1 auto;
-    min-width: 0;
-    gap: 12px;
-  }
-
-  .article-image-panel__header-main.is-expanded .article-image-panel__header-info {
-    flex: 1 1 calc(100% - 96px);
-  }
-
   .article-image-panel__header-summary--desktop {
     display: none;
   }
@@ -326,7 +310,6 @@ const emit = defineEmits<{
     display: block;
     order: 2;
     width: 100%;
-    text-align: center;
   }
 
   .article-image-panel__actions :deep(.el-button) {

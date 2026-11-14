@@ -13,9 +13,6 @@ body,
 html {
   background: var(--bg-primary);
   color: var(--text-primary);
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--el-color-primary) 36%, transparent)
-    transparent;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -32,25 +29,6 @@ body {
   transition:
     background 0.25s ease,
     color 0.25s ease;
-}
-
-body,
-* {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--el-color-primary) 36%, transparent)
-    transparent;
-}
-
-body::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-body::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--el-color-primary) 36%, transparent);
 }
 
 button,

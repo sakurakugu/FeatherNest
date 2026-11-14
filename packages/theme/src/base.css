@@ -14,6 +14,7 @@
   --text-secondary: #4b5563;
   --text-tertiary: #6b7280;
   --text-quaternary: #9ca3af;
+  --scrollbar-thumb: #d4d4d4;
   --theme-card-border: color-mix(in srgb, var(--theme-primary) 16%, transparent);
   --theme-card-bg: rgba(255, 255, 255, 0.84);
   --theme-card-bg-strong: rgba(255, 255, 255, 0.96);
@@ -40,6 +41,7 @@
 }
 
 :root[data-theme="dark"] {
+  --scrollbar-thumb: #4a4a4a;
   --text-primary: #f3f4f6;
   --text-secondary: #d1d5db;
   --text-tertiary: #9ca3af;
@@ -67,4 +69,27 @@
   --theme-success-strong: #86efac;
   --theme-success-soft: rgba(34, 197, 94, 0.2);
   --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
+}
+
+/* 各端页面与弹层共用文章管理的灰色细滚动条。 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 99px;
+  background-clip: content-box;
+  background-color: var(--scrollbar-thumb);
 }

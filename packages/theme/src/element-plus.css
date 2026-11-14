@@ -11,3 +11,24 @@ html:root[data-theme="dark"] {
   --el-color-primary-dark-2: var(--theme-primary-dark-2);
   --el-color-primary-dark-8: var(--theme-primary-dark-8);
 }
+
+/* 组件库模拟滚动条与原生滚动条保持一致。 */
+.el-scrollbar__bar.is-vertical {
+  right: 0;
+  width: 9px;
+}
+
+.el-scrollbar__bar.is-horizontal {
+  bottom: 0;
+  height: 9px;
+}
+
+.el-scrollbar__thumb,
+.el-scrollbar__thumb:hover {
+  box-sizing: border-box;
+  border: 3px solid transparent;
+  border-radius: 99px;
+  background-clip: content-box;
+  background-color: var(--scrollbar-thumb);
+  opacity: 1;
+}

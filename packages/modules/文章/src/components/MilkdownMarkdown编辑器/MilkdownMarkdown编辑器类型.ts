@@ -14,6 +14,8 @@ export interface MilkdownMarkdown编辑器实例 {
   getMarkdown: () => string
   setMarkdown: (markdown: string) => void
   formatMarkdown: () => string | null
+  获取选区: () => { text: string; replace: (markdown: string) => boolean } | null
+  美化选区: () => boolean | null
   insertMarkdown: (markdown: string) => void
   getEditorView: () => EditorView | null
   getScrollElement: () => HTMLElement | null

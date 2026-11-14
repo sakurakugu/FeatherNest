@@ -122,17 +122,10 @@ defineProps<{
   padding: 0 0 6px;
   background: transparent;
   scrollbar-width: thin;
-  scrollbar-color: #dcdcdc transparent;
 }
 .console-layout :deep(.console-sider .el-menu::-webkit-scrollbar) {
   display: block;
-  width: 8px;
-}
-.console-layout :deep(.console-sider .el-menu::-webkit-scrollbar-thumb) {
-  border: 2px solid transparent;
-  border-radius: 99px;
-  background-clip: content-box;
-  background-color: #dcdcdc;
+  width: 9px;
 }
 .console-layout :deep(.console-sider .el-menu-item) {
   display: flex;
@@ -258,12 +251,6 @@ defineProps<{
 .dark .console-layout :deep(.console-sider .ps-console-sider__menu-icon),
 .dark .console-layout :deep(.console-sider .ps-sidebar-handle__trigger-icon) {
   color: var(--text-tertiary);
-}
-.dark .console-layout :deep(.console-sider .el-menu) {
-  scrollbar-color: #475569 transparent;
-}
-.dark .console-layout :deep(.console-sider .el-menu::-webkit-scrollbar-thumb) {
-  background-color: #475569;
 }
 .dark .console-layout :deep(.console-sider .el-menu-item.is-active .ps-console-sider__menu-icon) {
   color: var(--el-color-primary-light-5);

@@ -4,6 +4,7 @@ import type {
   AICallLogListResponse,
   AISettings,
   AITestResponse,
+  AnnouncementListQuery,
   AnnouncementListResponse,
   AnnouncementPayload,
   AnnouncementRecord,
@@ -18,12 +19,17 @@ import type {
   TwikooPasswordState,
 } from './types'
 
-export async function 获取公告列表(page: number, pageSize: number, isDeleted = false): Promise<AnnouncementListResponse> {
+export async function 获取公告列表(query: AnnouncementListQuery): Promise<AnnouncementListResponse> {
   const { data } = await api.get<AnnouncementListResponse>('/announcements', {
     params: {
-      page,
-      page_size: pageSize,
-      is_deleted: isDeleted,
+      page: query.page,
+      page_size: query.pageSize,
+      is_deleted: query.isDeleted ?? false,
+      is_active: query.isActive,
+      search: query.search?.trim() || undefined,
+      content_state: query.contentState ?? 'all',
+      sort_by: query.sortBy ?? 'created_at',
+      sort_order: query.sortOrder ?? 'desc',
     },
   })
   return data
@@ -41,6 +47,10 @@ export async function 更新公告(id: string, payload: AnnouncementPayload): Pr
 
 export async function 删除公告(id: string, permanent = false): Promise<void> {
   await api.delete(`/announcements/${id}`, { params: { permanent } })
+}
+
+export async function 清空公告回收站(): Promise<void> {
+  await api.delete('/announcements/trash')
 }
 
 export async function 恢复公告(id: string): Promise<AnnouncementRecord> {
