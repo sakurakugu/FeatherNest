@@ -111,7 +111,8 @@ const loading = ref(false)
 const saving = ref(false)
 const loadFailed = ref(false)
 const saveFailed = ref(false)
-const propertiesVisible = ref(true)
+// 文章属性面板默认收起，只允许用户主动打开，避免进入编辑页时自动弹出
+const propertiesVisible = ref(false)
 const exporting = ref(false)
 const visibility = ref<'private' | 'public' | 'login_required'>('private')
 const savedVisibility = ref(visibility.value)
@@ -1064,6 +1065,15 @@ async function syncEditorStateFromRoute(force = false) {
 }
 
 /**
+ * 窄屏下大纲与属性都会变成覆盖正文的浮层。
+ * 属性面板不再自动弹出，统一等用户点顶栏按钮打开。
+ */
+function 同步窄屏面板默认值() {
+  propertiesVisible.value = false
+  outlineVisible.value = false
+}
+
+/**
  * 判断本次离开是否来自控制台标签切换（一次性标记，读取后立即消费）。
  * 标记由 apps/console 的控制台标签栏写入，键名与那边保持一致；
  * 标签切换时本页会被 KeepAlive 保留，不应弹出未保存确认。
@@ -1086,8 +1096,7 @@ onMounted(() => {
   previewType.value = 'preview'
   previewLayoutMode.value = props.embedded || isMobileViewport.value ? 'hidden' : 'split'
   if (props.embedded && isMobileViewport.value) {
-    propertiesVisible.value = true
-    outlineVisible.value = false
+    同步窄屏面板默认值()
   }
 
   void loadEditorOptions().catch((error) => {
@@ -1133,8 +1142,7 @@ watch(
   isMobileViewport,
   async () => {
     if (isMobileViewport.value) {
-      propertiesVisible.value = true
-      outlineVisible.value = false
+      同步窄屏面板默认值()
     }
     await nextTick()
     初始化编辑器内容区尺寸观察()
@@ -3277,17 +3285,23 @@ async function 删除选中未使用文章图片() {
   --article-editor-hover-bg: var(--writing-soft);
   display: contents;
 }
+/* 大纲与属性统一沿用弹出面板的观感：白底、四周 1px 描边、无圆角；
+   宽屏列栏与窄屏浮层用同一套尺寸，上下各溢出 1px 盖住工具栏、状态栏的边线 */
+.writing-sheet .article-editor-outline,
+.writing-sheet .article-editor-properties {
+  position: relative;
+  z-index: 3;
+  height: calc(100% + 2px);
+  margin-block: -1px;
+  border: 1px solid var(--writing-line);
+  border-radius: 0;
+  background: var(--writing-bg);
+}
 .writing-sheet .article-editor-outline {
   grid-column: 1;
   grid-row: 2;
   min-width: 0;
   max-height: none;
-  border-top: 0;
-  border-bottom: 0;
-  border-left: 0;
-  border-right: 1px solid var(--writing-line);
-  border-radius: 0;
-  background: var(--writing-soft);
 }
 .writing-sheet .article-editor-outline__header {
   min-height: 42px;
@@ -3427,9 +3441,8 @@ async function 删除选中未使用文章图片() {
   grid-column: 3;
   grid-row: 2;
   min-width: 0;
-  padding: 18px 16px 28px;
+  padding: 14px 12px 18px;
   overflow-y: auto;
-  border-left: 1px solid var(--writing-line);
   scrollbar-width: thin;
 }
 .writing-props-title {
@@ -3492,20 +3505,31 @@ async function 删除选中未使用文章图片() {
   }
 }
 @container (max-width: 800px) {
-  .writing-form {
+  /* 单列布局必须连修饰类一起覆盖：--no-outline / --no-props 的三列模板选择器更具体，否则会盖掉这里的声明 */
+  .writing-form,
+  .writing-sheet--no-outline .writing-form,
+  .writing-sheet--no-props .writing-form,
+  .writing-sheet--no-outline.writing-sheet--no-props .writing-form {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* 正文与三种预览层都回到唯一的一列，避免生成隐式第二列把正文挤扁 */
+  .writing-sheet :deep(.milkdown-markdown-editor__content),
+  .writing-sheet .markdown-editor-overlay,
+  .writing-sheet .html-editor-overlay,
+  .writing-sheet .mindmap-editor-overlay {
+    grid-column: 1;
+  }
+  /* 大纲与属性在窄屏下改为浮层，需要自带底色，否则会透出下方正文 */
   .writing-sheet .article-editor-outline,
   .writing-sheet .article-editor-properties {
     grid-column: 1;
     grid-row: 2;
     z-index: 5;
     width: min(320px, 88%);
-    height: 100%;
     max-height: none;
     border: 1px solid var(--writing-line);
     border-radius: 0;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+    background: var(--writing-bg);
   }
   .writing-sheet .article-editor-outline {
     justify-self: start;
@@ -3577,9 +3601,6 @@ async function 删除选中未使用文章图片() {
   }
 }
 @container (max-width: 620px) {
-  .writing-form {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .writing-head-actions {
     flex: 0 1 auto;
     justify-content: flex-end;

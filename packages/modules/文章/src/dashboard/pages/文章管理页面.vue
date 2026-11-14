@@ -2770,7 +2770,8 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 26px 24px 48px;
+  /* 底部不再留白：列表/卡片里写作浮层要贴住页面底边，和分栏保持一致 */
+  padding: 26px 24px 0;
   background: var(--manager-bg);
   color: var(--manager-ink);
   font:
@@ -3365,7 +3366,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-bottom: 0;
 }
 .article-manager.is-split .article-page,
 .article-manager.is-split :deep(.el-skeleton) {
@@ -3497,7 +3497,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
     display: none;
   }
   .article-manager {
-    padding: 20px 16px 32px;
+    padding: 20px 16px 0;
   }
   .article-manager .manager-search {
     flex: 1;
@@ -3680,6 +3680,10 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   }
   .article-manager.is-narrow-split-writing .article-split-editor-host {
     display: flex;
+  }
+  /* 窄屏分栏写作时去掉 2px 上间距，让「返回 / 保存」这行与列表、卡片里的高度保持一致 */
+  .article-manager.is-narrow-split-writing .article-split {
+    margin-top: 0;
   }
 }
 </style>

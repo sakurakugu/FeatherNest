@@ -100,6 +100,7 @@ def 存在进程(pid: int) -> bool:
             check=True,
             capture_output=True,
             text=True,
+            errors="replace",
         )
         return any(len(row) > 1 and row[1] == str(pid) for row in csv.reader(result.stdout.splitlines()))
     try:
