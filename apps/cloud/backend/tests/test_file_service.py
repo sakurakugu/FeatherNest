@@ -32,7 +32,7 @@ from app.modules.files.trash import (
 from app.modules.media.models import 文娱条目, 文娱资源
 from app.modules.moments.models import 动态, 动态图片
 from app.modules.files.upload_preparation import 按内容类型规范化文件名, 准备上传载荷
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 
 
 def create_png_bytes() -> bytes:
@@ -64,7 +64,6 @@ def build_user() -> 用户:
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=用户角色.user,
     )
 
 

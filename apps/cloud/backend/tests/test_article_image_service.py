@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from app.modules.articles.image import 列出文章图片
 from app.modules.articles.models import 文章, 文章图片
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -25,7 +25,6 @@ def build_user() -> 用户:
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=用户角色.user,
     )
 
 

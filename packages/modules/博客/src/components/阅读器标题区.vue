@@ -27,7 +27,7 @@ const emit = defineEmits<{
   'update:articleViewMode': [value: 'markdown' | 'mindmap']
 }>()
 
-const authorName = computed(() => props.article.author.nickname || props.article.author.username)
+const authorName = computed(() => props.article.author.username)
 
 const articleViewModeModel = computed({
   get: () => props.articleViewMode,

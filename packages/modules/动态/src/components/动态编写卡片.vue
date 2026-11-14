@@ -46,7 +46,7 @@ const momentImagesUploading = ref(false)
 const momentImagesExpanded = ref(false)
 const 动态图片上限 = 20
 
-const avatarText = computed(() => (auth.user?.nickname?.trim() || auth.user?.username || '你').slice(0, 1).toUpperCase())
+const avatarText = computed(() => (auth.user?.username || '你').slice(0, 1).toUpperCase())
 const isOverLimit = computed(() => draftForm.value.content.length > 1000)
 const currentMomentDraftId = computed(() => momentStore.draft?.id || '')
 const 文章编辑页路径 = computed(() => (route.path.startsWith('/admin') ? '/admin/articles/edit' : '/articles/edit'))

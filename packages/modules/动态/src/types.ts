@@ -13,7 +13,6 @@ export interface MomentImageRecord {
 export interface MomentAuthor {
   id: string
   username: string
-  nickname: string | null
   avatar_url: string | null
 }
 

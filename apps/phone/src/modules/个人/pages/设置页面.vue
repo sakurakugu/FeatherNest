@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
-import { Brush, Connection, Grid, Monitor } from '@element-plus/icons-vue'
+import { Brush, Connection, Grid, User } from '@element-plus/icons-vue'
 import { 使用认证存储 } from '@feathernest/domain/auth'
 import { PageSectionShell } from '@feathernest/ui'
 import { computed } from 'vue'
@@ -24,9 +24,9 @@ const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironme
     <div class="settings-groups">
       <div v-if="isAuthenticated" class="panel-card panel-list">
         <ProfileEntryCard
-          title="登录设备"
-          to="/device-sessions"
-          :icon="Monitor"
+          title="账号与安全"
+          to="/me/account"
+          :icon="User"
         />
       </div>
 

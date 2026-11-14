@@ -7,10 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import 哈希密码, 验证密码
 from app.modules.users.common import (
-    应用设置更新,
     确保邮箱可用,
     确保用户名可用,
-    规范化昵称输入,
     规范化用户名输入,
 )
 from app.modules.users.models import 用户
@@ -27,24 +25,19 @@ async def 更新当前用户(
     data = body.model_dump(exclude_unset=True)
     if "username" in data and isinstance(data["username"], str):
         data["username"] = 规范化用户名输入(data["username"])
-    if "nickname" in data:
-        data["nickname"] = 规范化昵称输入(data["nickname"])
     if "username" in data and data["username"] != user.username:
         await 确保用户名可用(db, data["username"], exclude_user_id=user.id)
     if "email" in data:
         await 确保邮箱可用(
             db,
             data["email"],
-            current_email_identity=user.email_identity,
             exclude_user_id=user.id,
         )
 
-    settings_data = data.pop("settings", None)
-    应用设置更新(user, settings_data)
     for key, value in data.items():
         setattr(user, key, value)
     await db.flush()
-    await db.refresh(user, ["settings"])
+    await db.refresh(user)
     return user
 
 

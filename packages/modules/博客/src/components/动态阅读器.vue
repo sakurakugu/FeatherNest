@@ -125,13 +125,13 @@ watch(
             <div class="moment-author">
               <UniversalAvatar
                 :src="moment.user?.avatar_url"
-                :text="(moment.user?.nickname || moment.user?.username || '我').slice(0, 1)"
+                :text="(moment.user?.username || '我').slice(0, 1)"
                 :size="48"
-                :alt="moment.user?.nickname || moment.user?.username || '动态作者头像'"
+                :alt="moment.user?.username || '动态作者头像'"
                 class="moment-avatar"
               />
               <div class="moment-author-meta">
-                <strong>{{ moment.user?.nickname || moment.user?.username || '未知用户' }}</strong>
+                <strong>{{ moment.user?.username || '未知用户' }}</strong>
                 <span :title="getEditedTooltip(moment.published_at, moment.last_edited_at) || undefined">
                   {{ formatDateTime(moment.published_at) }}
                 </span>

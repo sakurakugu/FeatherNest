@@ -2765,7 +2765,6 @@ export interface components {
     WidgetSummaryRead: {
       user_id: string
       username: string
-      nickname?: string | null
       pending_count: number
       pinned_count: number
       overdue_count: number
@@ -3619,30 +3618,19 @@ export interface components {
     }
     'app__modules__users__schemas______-Input': {
       username?: string | null
-      nickname?: string | null
       email?: string | null
       bio?: string | null
       avatar_url?: string | null
-      settings?: components['schemas']['app__modules__users__schemas__________1'] | null
     }
     'app__modules__users__schemas______-Output': {
       id: string
       username: string
-      nickname?: string | null
       email: string
       avatar_url?: string | null
       bio?: string | null
-      settings: components['schemas']['app__modules__users__schemas________-Output']
-      is_active: boolean
       created_at: string
     }
-    'app__modules__users__schemas________-Output': {
-      show_private_articles_on_home?: boolean
-    }
-    app__modules__users__schemas__________1: {
-      show_private_articles_on_home?: boolean | null
-    }
-    app__modules__users__schemas__________2: {
+    app__modules__users__schemas________: {
       current_password: string
       new_password: string
     }
@@ -4157,7 +4145,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['app__modules__users__schemas__________2']
+        'application/json': components['schemas']['app__modules__users__schemas________']
       }
     }
     responses: {

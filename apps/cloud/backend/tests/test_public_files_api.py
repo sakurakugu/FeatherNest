@@ -19,7 +19,7 @@ from app.api.public_files import 构建原文件ETag, 构建缩略图ETag, 获�
 from app.modules.articles.models import 文章, 文章图片
 from app.modules.files.models import File, FilePurpose
 from app.modules.media.models import 文娱资源, 文娱条目
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.shared.storage.file_url import 构建签名文件URL
 
 
@@ -35,7 +35,6 @@ def build_user(*, user_id: UUID | None = None) -> 用户:
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=用户角色.user,
     )
 
 

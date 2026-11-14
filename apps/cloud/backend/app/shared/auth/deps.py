@@ -26,7 +26,7 @@ async def 从会话ID获取用户(session_id: str, db: AsyncSession) -> 用户:
     except ValueError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的会话")
 
-    result = await db.execute(select(用户).where(用户.id == user_id, 用户.is_active.is_(True)))
+    result = await db.execute(select(用户).where(用户.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")

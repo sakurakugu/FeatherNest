@@ -23,7 +23,7 @@ test('JSON 导出后可再次导入，保留正文、分类标签、整理状态
     converted_items: [],
     view_count: 3,
     like_count: 2,
-    author: { id: 'author-id', username: '作者', nickname: null, avatar_url: null },
+    author: { id: 'author-id', username: '作者', avatar_url: null },
     category: { id: 'category-id', name: '随笔', slug: 'essays' },
     tags: [{ id: 'tag-id', name: '测试', slug: 'test' }],
     created_at: '2026-10-01T00:00:00Z',

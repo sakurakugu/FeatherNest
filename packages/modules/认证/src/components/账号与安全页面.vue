@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Delete, Monitor, RefreshRight } from '@element-plus/icons-vue'
+import { Delete, RefreshRight, User } from '@element-plus/icons-vue'
 import {
   ElAlert,
   ElButton,
@@ -16,6 +16,7 @@ import {
   ElText,
 } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import {
   获取设备会话列表,
   撤销所有设备会话,
@@ -25,6 +26,7 @@ import {
 import type { DeviceSessionInfo } from '@feathernest/domain/auth'
 import { 获取API错误消息 } from '@feathernest/api'
 import { PageSectionShell } from '@feathernest/ui'
+import AccountProfilePanel from './账号资料面板.vue'
 
 type DeviceSessionTableItem = DeviceSessionInfo & {
   is_current: boolean
@@ -34,11 +36,15 @@ const props = withDefaults(defineProps<{
   infoTitle?: string
   showBack?: boolean
   backTo?: string
+  sessionEndRedirect?: RouteLocationRaw
 }>(), {
   infoTitle: '这里管理的是原生设备令牌会话，当前浏览器 Cookie 登录不会出现在列表中。',
   showBack: false,
   backTo: '/',
+  sessionEndRedirect: () => ({ path: '/' }),
 })
+
+const profilePanel = ref<InstanceType<typeof AccountProfilePanel> | null>(null)
 
 const auth = 使用认证存储()
 const loading = ref(true)
@@ -117,6 +123,7 @@ async function handleRevokeAll() {
 onMounted(async () => {
   try {
     await auth.需要时恢复用户()
+    profilePanel.value?.syncFormFromUser()
     await loadSessions()
   } finally {
     loading.value = false
@@ -127,8 +134,8 @@ onMounted(async () => {
 <template>
   <div class="page-container">
     <PageSectionShell
-      title="登录设备"
-      :icon="Monitor"
+      title="账号与安全"
+      :icon="User"
       title-tag="h2"
       :show-back="showBack"
       :to="backTo"
@@ -142,19 +149,13 @@ onMounted(async () => {
 
       <ElSkeleton :loading="loading" animated>
         <ElSpace direction="vertical" fill :size="16">
-          <ElAlert
-            type="info"
-            :closable="false"
-            :title="infoTitle"
-          />
-
-          <slot name="before-list" />
+          <AccountProfilePanel ref="profilePanel" :session-end-redirect="sessionEndRedirect" />
 
           <ElCard>
             <template #header>
               <div class="card-header">
                 <div class="card-header-title">
-                  <span>设备会话列表</span>
+                  <span>登录设备</span>
                   <ElText type="info">当前活跃 {{ activeSessions.length }} 台设备</ElText>
                 </div>
                 <ElPopconfirm
@@ -172,6 +173,13 @@ onMounted(async () => {
                 </ElPopconfirm>
               </div>
             </template>
+
+            <ElAlert
+              type="info"
+              :closable="false"
+              :title="infoTitle"
+              class="sessions-tip"
+            />
 
             <ElEmpty v-if="sessions.length === 0" description="暂无设备会话记录" />
 
@@ -269,6 +277,10 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.sessions-tip {
+  margin-bottom: 12px;
 }
 
 .sessions-table {

@@ -111,7 +111,6 @@ async def 获取小工具摘要(
     return WidgetSummaryRead(
         user_id=user.id,
         username=user.username,
-        nickname=user.nickname,
         pending_count=int(aggregate_row.pending_count or 0),
         pinned_count=int(aggregate_row.pinned_count or 0),
         overdue_count=int(aggregate_row.overdue_count or 0),

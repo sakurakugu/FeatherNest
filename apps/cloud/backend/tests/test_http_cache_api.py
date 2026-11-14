@@ -16,7 +16,7 @@ from app.modules.friend_links.api import 列出公开友链
 from app.modules.friend_links.schemas import 友链公开信息
 from app.modules.system.api import 获取公开设置
 from app.modules.system.schemas import 系统设置信息
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.integrations.holiday.api import 获取节假日日历年份
 
 
@@ -32,7 +32,6 @@ def build_user() -> 用户:
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=用户角色.user,
     )
 
 

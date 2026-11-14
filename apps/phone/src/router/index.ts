@@ -86,12 +86,6 @@ const router = createRouter({
       meta: { requiresAuth: true, hideTabBar: true, tabBarId: 'bills' },
     },
     {
-      path: '/device-sessions',
-      name: 'DeviceSessions',
-      component: () => import('@/modules/认证/pages/登录设备页面.vue'),
-      meta: { requiresAuth: true, hideTabBar: true },
-    },
-    {
       path: '/me',
       name: 'Profile',
       component: () => import('@/modules/个人/pages/个人页面.vue'),
@@ -130,10 +124,7 @@ const router = createRouter({
     {
       path: '/me/account',
       name: 'ProfileAccount',
-      component: () => import('@feathernest/module-profile').then((module) => module.ProfilePage),
-      props: {
-        sessionEndRedirect: { path: '/' },
-      },
+      component: () => import('@/modules/认证/pages/账号与安全页面.vue'),
       meta: { requiresAuth: true, hideTabBar: true },
     },
   ],

@@ -206,7 +206,7 @@ async def _校验WebSocket登录态(websocket: WebSocket) -> 用户 | None:
         return None
 
     async with async_session_factory() as db:
-        result = await db.execute(select(用户).where(用户.id == user_id, 用户.is_active.is_(True)))
+        result = await db.execute(select(用户).where(用户.id == user_id))
         return result.scalar_one_or_none()
 
 

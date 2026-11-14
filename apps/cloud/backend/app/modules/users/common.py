@@ -9,7 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import 用户
-from app.utils.email import 构建邮箱身份
 
 
 def 规范化用户名输入(value: str) -> str:
@@ -18,19 +17,6 @@ def 规范化用户名输入(value: str) -> str:
     if not normalized:
         raise HTTPException(status_code=400, detail="用户名不能为空")
     return normalized
-
-
-def 规范化昵称输入(value: str | None) -> str | None:
-    """规范化昵称输入。"""
-    if value is None:
-        return None
-    return value.strip() or None
-
-
-def 应用设置更新(user: 用户, settings_data: object) -> None:
-    """应用用户设置更新。"""
-    if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
-        user.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
 
 
 async def 获取用户或404(db: AsyncSession, user_id: UUID) -> 用户:
@@ -60,15 +46,10 @@ async def 确保邮箱可用(
     db: AsyncSession,
     email: object,
     *,
-    current_email_identity: str | None = None,
     exclude_user_id: UUID | None = None,
 ) -> None:
     """校验邮箱是否可用。"""
-    email_identity = 构建邮箱身份(str(email))
-    if current_email_identity is not None and email_identity == current_email_identity:
-        return
-
-    query = select(用户).where(用户.email_identity == email_identity)
+    query = select(用户).where(用户.email == str(email))
     if exclude_user_id is not None:
         query = query.where(用户.id != exclude_user_id)
     exists = await db.execute(query)
@@ -85,7 +66,7 @@ async def 确保用户名或邮箱可用于创建(
     """校验创建用户时用户名或邮箱是否冲突。"""
     exists = await db.execute(
         select(用户).where(
-            (用户.username == username) | (用户.email_identity == 构建邮箱身份(str(email)))
+            (用户.username == username) | (用户.email == str(email))
         )
     )
     if exists.scalar_one_or_none():

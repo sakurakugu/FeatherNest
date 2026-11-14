@@ -21,7 +21,7 @@ from app.modules.moments.service import (
     取消点赞动态,
     更新动态,
 )
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.utils.uuid import generate_uuid7
 
 
@@ -56,7 +56,6 @@ def build_user(user_id=None) -> 用户:
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=用户角色.user,
     )
 
 

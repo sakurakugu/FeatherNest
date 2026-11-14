@@ -43,7 +43,6 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
     avatar_url: '',
     bio: '',
     email: '',
-    nickname: '',
     username: '',
   })
   const passwordForm = ref({
@@ -67,7 +66,6 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
   function syncFormFromUser() {
     profileForm.value = {
       username: auth.user?.username || '',
-      nickname: auth.user?.nickname || '',
       email: auth.user?.email || '',
       avatar_url: auth.user?.avatar_url || '',
       bio: auth.user?.bio || '',
@@ -96,7 +94,6 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
     try {
       await auth.更新个人资料({
         username: profileForm.value.username.trim(),
-        nickname: profileForm.value.nickname.trim() || null,
         email: profileForm.value.email.trim(),
         avatar_url: profileForm.value.avatar_url.trim() || null,
         bio: profileForm.value.bio.trim() || null,

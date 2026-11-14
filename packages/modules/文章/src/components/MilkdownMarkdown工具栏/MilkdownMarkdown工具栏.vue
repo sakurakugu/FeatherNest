@@ -416,10 +416,10 @@ defineExpose({
 .milkdown-markdown-editor__toolbar {
   display: flex;
   align-items: center;
-  flex: 0 0 var(--milkdown-markdown-toolbar-height);
-  height: var(--milkdown-markdown-toolbar-height);
-  min-height: var(--milkdown-markdown-toolbar-height);
-  max-height: var(--milkdown-markdown-toolbar-height);
+  flex: 0 0 var(--milkdown-markdown-toolbar-height, 37px);
+  height: var(--milkdown-markdown-toolbar-height, 37px);
+  min-height: var(--milkdown-markdown-toolbar-height, 37px);
+  max-height: var(--milkdown-markdown-toolbar-height, 37px);
   padding: 4px 8px;
   box-sizing: border-box;
   border-bottom: 1px solid color-mix(in srgb, var(--el-border-color) 82%, transparent);

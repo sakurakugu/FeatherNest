@@ -24,7 +24,6 @@ class WidgetSummaryRead(BaseModel):
 
     user_id: UUID
     username: str
-    nickname: str | None = None
     pending_count: int
     pinned_count: int
     overdue_count: int

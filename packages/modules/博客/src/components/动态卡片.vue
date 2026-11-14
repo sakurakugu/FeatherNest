@@ -109,13 +109,13 @@ function handleOpenDetail() {
       <div class="moment-author">
         <UniversalAvatar
           :src="moment.user?.avatar_url"
-          :text="(moment.user?.nickname || moment.user?.username || '我').slice(0, 1)"
+          :text="(moment.user?.username || '我').slice(0, 1)"
           :size="42"
-          :alt="moment.user?.nickname || moment.user?.username || '动态作者头像'"
+          :alt="moment.user?.username || '动态作者头像'"
           class="moment-avatar"
         />
         <div class="moment-author-meta">
-          <strong>{{ moment.user?.nickname || moment.user?.username || '未知用户' }}</strong>
+          <strong>{{ moment.user?.username || '未知用户' }}</strong>
           <ElText type="info" :title="获取编辑提示(moment.published_at, moment.last_edited_at) || undefined">
             {{ 格式化动态时间(moment.published_at) }}
           </ElText>

@@ -57,6 +57,7 @@ interface 创建MilkdownMarkdown工具栏项选项 {
   previewLayoutMode: () => 'split' | 'full'
   previewType: () => 'preview' | 'html' | 'mindmap'
   showPreviewToggle: () => boolean
+  showPreviewLayoutToggle: () => boolean
   outlineVisible: () => boolean
   showOutlineToggle: () => boolean
   showAiTools: () => boolean
@@ -199,6 +200,15 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
       icon: Sparkles,
       hidden: () => !options.showAiTools(),
     },
+    { type: 'separator', label: '', title: '' },
+    {
+      label: '源码',
+      title: '源码和显示模式切换',
+      action: 'sourceMode',
+      dynamicIcon: () => (options.isSourceMode() ? FilePenLine : FileCode),
+      active: () => options.isSourceMode(),
+      disabled: () => options.previewEnabled() && options.previewLayoutMode() === 'full',
+    },
     {
       label: '类型',
       title: '预览类型切换',
@@ -221,30 +231,24 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
         }
         return Network
       },
-      hidden: () => !options.showPreviewToggle() || !options.previewEnabled(),
+      hidden: () => !options.showPreviewToggle(),
+      disabled: () => !options.previewEnabled(),
     },
     {
       label: '同步滚动',
       title: '同步滚动',
       dynamicTitle: () => (
-        options.previewLayoutMode() === 'split' && options.previewType() !== 'mindmap'
+        options.previewEnabled() && options.previewLayoutMode() === 'split' && options.previewType() !== 'mindmap'
           ? '同步滚动'
           : '仅半屏正文和 HTML 预览支持同步滚动'
       ),
       action: 'scrollSync',
       icon: ArrowDownUp,
       hidden: () => !options.showScrollSync(),
-      disabled: () => options.previewLayoutMode() !== 'split' || options.previewType() === 'mindmap',
-      active: () => options.previewLayoutMode() === 'split' && options.previewType() !== 'mindmap' && options.scrollSync(),
+      disabled: () => !options.previewEnabled() || options.previewLayoutMode() !== 'split' || options.previewType() === 'mindmap',
+      active: () => options.previewEnabled() && options.previewLayoutMode() === 'split' && options.previewType() !== 'mindmap' && options.scrollSync(),
     },
     { type: 'separator', label: '', title: '' },
-    {
-      label: '源码',
-      title: '源码和显示模式切换',
-      action: 'sourceMode',
-      dynamicIcon: () => (options.isSourceMode() ? FilePenLine : FileCode),
-      active: () => options.isSourceMode(),
-    },
     {
       label: '预览',
       title: '预览',
@@ -255,7 +259,7 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
           : '当前双屏，点击切换为书写',
       action: 'previewToggle',
       dynamicIcon: () => !options.previewEnabled() ? FilePenLine : options.previewLayoutMode() === 'full' ? Eye : Columns2,
-      hidden: () => !options.showPreviewToggle(),
+      hidden: () => !options.showPreviewToggle() || !options.showPreviewLayoutToggle(),
       active: () => options.previewEnabled(),
     },
     { type: 'separator', label: '', title: '' },

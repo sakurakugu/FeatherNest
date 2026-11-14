@@ -11,7 +11,7 @@ from app.modules.articles.publication import 发布博客, 修改博客发布状
 from app.mcp.context import MCP调用上下文
 from app.mcp.tools.articles import _提交博客MCP操作
 from app.modules.articles.schemas import 博客发布请求, 文章更新
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.modules.articles.models import 文章
 from app.modules.articles.content import utcnow
 from app.utils.uuid import generate_uuid7
@@ -48,7 +48,6 @@ class 博客发布测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         self.db = AsyncMock()
         for name in ("同步文章Feed条目", "清除Feed首页缓存", "清除博客统计缓存"):

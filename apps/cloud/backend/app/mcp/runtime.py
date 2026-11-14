@@ -35,7 +35,7 @@ async def 从声明构建MCP上下文(claims: dict[str, Any], *, source: str) ->
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="MCP 令牌缺少用户信息")
 
     async with async_session_factory() as db:
-        result = await db.execute(select(用户).where(用户.id == UUID(user_id), 用户.is_active.is_(True)))
+        result = await db.execute(select(用户).where(用户.id == UUID(user_id)))
         user = result.scalar_one_or_none()
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")

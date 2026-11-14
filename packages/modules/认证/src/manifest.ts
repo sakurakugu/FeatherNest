@@ -1,18 +1,19 @@
 import type { AppModule } from '@feathernest/app-core'
-import { Monitor } from '@element-plus/icons-vue'
+import { User } from '@element-plus/icons-vue'
 
 export default {
   id: '认证',
   routes: [
     {
-      path: 'device-sessions',
-      name: 'DashboardDeviceSessions',
+      path: 'account',
+      name: 'DashboardAccount',
       component: () =>
-        import('@feathernest/module-auth').then((module) => module.DeviceSessionsPage),
-      meta: { title: '登录设备' },
+        import('@feathernest/module-auth').then((module) => module.AccountSecurityPage),
+      meta: { title: '账号与安全' },
+      props: {
+        sessionEndRedirect: { name: 'Login' },
+      },
     },
   ],
-  navigation: [
-    { routeName: 'DashboardDeviceSessions', label: '登录设备', icon: Monitor, order: 14 },
-  ],
+  navigation: [{ routeName: 'DashboardAccount', label: '账号与安全', icon: User, order: 14 }],
 } satisfies AppModule

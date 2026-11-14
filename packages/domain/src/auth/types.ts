@@ -1,16 +1,9 @@
-export interface AuthUserSettings {
-  show_private_articles_on_home: boolean
-}
-
 export interface AuthUser {
   id: string
   username: string
-  nickname: string | null
   email: string
   avatar_url: string | null
   bio: string | null
-  settings: AuthUserSettings
-  is_active: boolean
   created_at: string
 }
 
@@ -65,9 +58,7 @@ export interface AuthSessionDriver {
 
 export interface ProfileUpdatePayload {
   username?: string
-  nickname?: string | null
   email?: string
   avatar_url?: string | null
   bio?: string | null
-  settings?: Partial<AuthUserSettings>
 }

@@ -48,7 +48,7 @@ import {
   ref,
   watch,
 } from 'vue'
-import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import {
   删除文章 as removeArticle,
   恢复文章 as requestRestoreArticle,
@@ -134,7 +134,19 @@ const importingArticles = ref(false)
 const importFileInput = ref<HTMLInputElement | null>(null)
 const transferBusy = computed(() => exportingArticles.value || importingArticles.value)
 type ArticleListMode = 'active-card' | 'active-table' | 'active-split' | 'deleted'
-const currentListMode = ref<ArticleListMode>('active-table')
+const currentListMode = computed<ArticleListMode>({
+  get: () => {
+    switch (route.query.view) {
+      case 'card': return 'active-card'
+      case 'split': return 'active-split'
+      case 'deleted': return 'deleted'
+      default: return 'active-table'
+    }
+  },
+  set: (mode) => {
+    void router.replace({ query: { ...route.query, view: mode.replace('active-', '') } })
+  },
+})
 const recycleReturnMode = ref<Exclude<ArticleListMode, 'deleted'>>('active-table')
 const selectedArticle = ref<ArticleRecord | null>(null)
 const selectedCategoryId = ref<string>(全部文章筛选值)
@@ -882,7 +894,22 @@ function selectCategory(value: ContentTabItem['value']) {
   selectedCategoryId.value = String(value)
 }
 
-function selectListMode(mode: Exclude<ArticleListMode, 'deleted'>) {
+async function selectListMode(mode: Exclude<ArticleListMode, 'deleted'>) {
+  if (writingOpen.value) {
+    if (!(await writingEditorRef.value?.prepareToLeave())) return
+    const query: LocationQueryRaw = { ...route.query, view: mode.replace('active-', '') }
+    delete query.edit
+    await router.replace({ query })
+    writingReturnFocus?.focus()
+    if (writingChanged) {
+      writingChanged = false
+      await Promise.all([
+        reloadArticles(Math.max(articles.value.length, ARTICLE_LIST_PAGE_SIZE), { silent: true }),
+        reloadCategories(),
+      ])
+    }
+    return
+  }
   if (isRecycleBinMode.value) {
     recycleReturnMode.value = mode
     return
@@ -1743,7 +1770,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
         <ArticleEditor
           ref="writingEditorRef"
           embedded
-          :split="writingInSplit && !isNarrowSplitViewport"
           :split-edit="writingInSplit"
           :article-id="writingArticleId"
           @close="closeWriting"

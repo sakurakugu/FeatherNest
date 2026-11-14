@@ -139,7 +139,7 @@ async def 获取设备会话用户(
 ) -> 用户:
     """根据设备会话读取当前用户。"""
     result = await db.execute(
-        select(用户).where(用户.id == session.user_id, 用户.is_active.is_(True))
+        select(用户).where(用户.id == session.user_id)
     )
     user = result.scalar_one_or_none()
     if user is None:

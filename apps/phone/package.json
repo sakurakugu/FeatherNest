@@ -33,7 +33,6 @@
     "@feathernest/module-blog": "*",
     "@feathernest/module-materials": "*",
     "@feathernest/module-moments": "*",
-    "@feathernest/module-profile": "*",
     "@feathernest/module-stats": "*",
     "@feathernest/theme": "*",
     "@feathernest/module-todos": "*",

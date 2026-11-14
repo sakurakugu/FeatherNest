@@ -71,6 +71,7 @@ const props = withDefaults(defineProps<{
   previewLayoutMode?: 'split' | 'full'
   previewType?: 'preview' | 'html' | 'mindmap'
   showPreviewToggle?: boolean
+  showPreviewLayoutToggle?: boolean
   outlineVisible?: boolean
   showOutlineToggle?: boolean
   showAiTools?: boolean
@@ -88,6 +89,7 @@ const props = withDefaults(defineProps<{
   previewLayoutMode: 'split',
   previewType: 'preview',
   showPreviewToggle: false,
+  showPreviewLayoutToggle: true,
   outlineVisible: false,
   showOutlineToggle: false,
   showAiTools: false,
@@ -280,6 +282,7 @@ const toolbarItems = 创建MilkdownMarkdown工具栏项({
   previewLayoutMode: () => props.previewLayoutMode,
   previewType: () => props.previewType,
   showPreviewToggle: () => props.showPreviewToggle,
+  showPreviewLayoutToggle: () => props.showPreviewLayoutToggle,
   outlineVisible: () => props.outlineVisible,
   showOutlineToggle: () => props.showOutlineToggle,
   showAiTools: () => props.showAiTools,
@@ -431,6 +434,7 @@ watch(
     props.showScrollSync,
     props.formatContent,
     props.showPreviewToggle,
+    props.showPreviewLayoutToggle,
     props.previewEnabled,
     props.previewLayoutMode,
     props.previewType,
@@ -755,7 +759,6 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 <style scoped>
 .milkdown-markdown-editor {
-  --milkdown-markdown-toolbar-height: 37px;
   --milkdown-markdown-primary: var(--primary, var(--el-color-primary));
   --milkdown-markdown-text-primary: var(--text-primary, var(--el-text-color-primary));
   --milkdown-markdown-text-secondary: var(--text-secondary, var(--el-text-color-secondary));

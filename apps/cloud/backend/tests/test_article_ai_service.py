@@ -17,7 +17,7 @@ from app.modules.articles.ai_service import (
     润色文章正文,
 )
 from app.modules.articles.schemas import 文章AI元信息建议请求, 文章AI正文润色请求
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.utils.uuid import generate_uuid7
 
 
@@ -57,7 +57,6 @@ class 文章AI服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
 
     async def test_元信息建议会校验结构化响应(self) -> None:

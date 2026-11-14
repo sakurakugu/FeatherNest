@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Delete, DocumentAdd, EditPen, MagicStick, Select } from '@element-plus/icons-vue'
+import { ArrowLeft, Delete, DocumentAdd, EditPen, MagicStick, Select } from '@element-plus/icons-vue'
 import api, { 获取API错误消息 } from '@feathernest/api'
 import { PageSectionShell } from '@feathernest/ui'
+import { Columns2, Eye, FilePenLine } from '@lucide/vue'
 import {
   ElButton,
   ElDrawer,
@@ -78,7 +79,6 @@ const props = withDefaults(
     showBack?: boolean
     backTo?: string
     embedded?: boolean
-    split?: boolean
     splitEdit?: boolean
     articleId?: string
   }>(),
@@ -86,7 +86,6 @@ const props = withDefaults(
     showBack: false,
     backTo: '/articles',
     embedded: false,
-    split: false,
     articleId: '',
   },
 )
@@ -1970,8 +1969,8 @@ async function 删除选中未使用文章图片() {
       'writing-sheet--no-outline': !outlineVisible,
     }"
   >
-    <header v-if="props.embedded && !props.split" class="writing-head">
-      <button class="writing-back" type="button" @click="closeWriting">← <span>列表</span></button>
+    <header v-if="props.embedded" class="writing-head">
+      <button class="writing-back" type="button" aria-label="返回列表" title="返回列表" @click="closeWriting"><ArrowLeft /></button>
       <span class="writing-divider" />
       <span class="writing-name">{{ form.title || '未命名草稿' }}</span>
       <button
@@ -1988,23 +1987,29 @@ async function 删除选中未使用文章图片() {
           <button
             type="button"
             :class="{ 'is-active': previewLayoutMode === 'hidden' }"
+            :aria-pressed="previewLayoutMode === 'hidden'"
             @click="showWritingPreview('hidden')"
           >
-            书写
+            <FilePenLine />
+            <span>书写</span>
           </button>
           <button
             type="button"
             :class="{ 'is-active': previewLayoutMode === 'full' }"
+            :aria-pressed="previewLayoutMode === 'full'"
             @click="showWritingPreview('full')"
           >
-            预览
+            <Eye />
+            <span>预览</span>
           </button>
           <button
             type="button"
             :class="{ 'is-active': previewLayoutMode === 'split' }"
+            :aria-pressed="previewLayoutMode === 'split'"
             @click="showWritingPreview('split')"
           >
-            双屏
+            <Columns2 />
+            <span>双屏</span>
           </button>
         </div>
         <button
@@ -2125,12 +2130,12 @@ async function 删除选中未使用文章图片() {
                   v-model:preview-type="previewType"
                   v-model:outline-visible="outlineVisible"
                   v-model:properties-visible="propertiesVisible"
-                  :show-properties-toggle="props.embedded"
-                  :show-scroll-sync="previewEnabled"
+                  show-scroll-sync
                   show-preview-toggle
-                  show-outline-toggle
+                  :show-preview-layout-toggle="!props.embedded"
+                  :show-outline-toggle="!props.embedded"
                   show-ai-tools
-                  fullscreen-root-selector=".editor-wrapper"
+                  fullscreen-root-selector=".page-container"
                   @ready="handleEditorReady"
                   @upload-error="handleEditorUploadError"
                   @mode-change="handleEditorModeChange"
@@ -2186,9 +2191,6 @@ async function 删除选中未使用文章图片() {
           >
             <template v-if="props.embedded">
               <div class="writing-props-title">文章属性</div>
-              <div class="writing-publication-state">
-                {{ visibility === 'public' ? '已公开发布，保存后同步更新' : visibility === 'login_required' ? '已发布为登录可见，保存后同步更新' : '私有文章，保存后仅自己可见' }}
-              </div>
             </template>
             <ElFormItem v-if="props.embedded" label="可见性">
               <div class="article-editor-chips" role="group" aria-label="可见性">
@@ -2284,23 +2286,6 @@ async function 删除选中未使用文章图片() {
               @selection-change="切换未使用文章图片选择"
             />
 
-            <div v-if="props.embedded && props.split" class="writing-props-actions">
-              <ElButton
-                size="small"
-                :disabled="loading || loadFailed || saving || isUploadingImages"
-                :loading="exporting"
-                @click="exportWriting"
-                >另存为</ElButton
-              >
-              <ElButton
-                size="small"
-                type="primary"
-                :disabled="loading || loadFailed || saving || isUploadingImages"
-                :loading="saving"
-                @click="saveWriting"
-                >保存</ElButton
-              >
-            </div>
             <ElButton
               v-if="props.embedded && isEdit"
               class="writing-delete"
@@ -2782,6 +2767,122 @@ async function 删除选中未使用文章图片() {
   background-color: var(--el-bg-color);
 }
 
+/* 全屏根节点是嵌入式编辑表单，这样大纲、正文和属性会一并进入全屏层。 */
+.writing-form.milkdown-markdown-editor--page-fullscreen,
+.writing-form:fullscreen {
+  --article-editor-panel-bg: var(--el-bg-color);
+  --article-editor-panel-bg-color: var(--el-bg-color);
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) 264px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  box-sizing: border-box;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--el-bg-color);
+}
+
+/* 页面全屏时保留写作顶栏，并让编辑区域从顶栏下方开始布局。 */
+.page-container.milkdown-markdown-editor--page-fullscreen,
+.page-container:fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  width: 100vw !important;
+  height: 100dvh !important;
+  overflow: hidden;
+  background: var(--el-bg-color);
+}
+
+.page-container.milkdown-markdown-editor--page-fullscreen .writing-head,
+.page-container:fullscreen .writing-head {
+  flex: 0 0 auto;
+}
+
+.page-container.milkdown-markdown-editor--page-fullscreen .article-editor-shell,
+.page-container:fullscreen .article-editor-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.page-container.milkdown-markdown-editor--page-fullscreen .writing-form,
+.page-container:fullscreen .writing-form {
+  grid-template-columns: 168px minmax(0, 1fr) 264px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.page-container.milkdown-markdown-editor--page-fullscreen .article-editor-outline,
+.page-container:fullscreen .article-editor-outline {
+  display: flex;
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+}
+
+.page-container.milkdown-markdown-editor--page-fullscreen .article-editor-properties,
+.page-container:fullscreen .article-editor-properties {
+  display: block;
+  grid-column: 3;
+  grid-row: 2;
+  min-height: 0;
+}
+
+.page-container.milkdown-markdown-editor--page-fullscreen .editor-wrapper,
+.page-container:fullscreen .editor-wrapper,
+.page-container.milkdown-markdown-editor--page-fullscreen .editor-wrapper :deep(.milkdown-markdown-editor),
+.page-container:fullscreen .editor-wrapper :deep(.milkdown-markdown-editor) {
+  display: contents;
+}
+
+.writing-form.milkdown-markdown-editor--page-fullscreen .article-editor-outline,
+.writing-form:fullscreen .article-editor-outline,
+.writing-form.milkdown-markdown-editor--page-fullscreen .article-editor-properties,
+.writing-form:fullscreen .article-editor-properties {
+  visibility: visible;
+  opacity: 1;
+}
+
+.writing-form.milkdown-markdown-editor--page-fullscreen .article-editor-outline,
+.writing-form:fullscreen .article-editor-outline {
+  display: flex;
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+}
+
+.writing-form.milkdown-markdown-editor--page-fullscreen .article-editor-properties,
+.writing-form:fullscreen .article-editor-properties {
+  display: block;
+  grid-column: 3;
+  grid-row: 2;
+  min-height: 0;
+}
+
+.writing-form.milkdown-markdown-editor--page-fullscreen .editor-wrapper,
+.writing-form:fullscreen .editor-wrapper {
+  position: relative;
+  display: contents;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.writing-form.milkdown-markdown-editor--page-fullscreen .editor-wrapper :deep(.milkdown-markdown-editor),
+.writing-form:fullscreen .editor-wrapper :deep(.milkdown-markdown-editor) {
+  display: contents;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0;
+}
+
 .editor-wrapper:fullscreen {
   position: fixed;
 }
@@ -3122,16 +3223,16 @@ async function 删除选中未使用文章图片() {
   align-items: center;
   flex: none;
   gap: 10px;
-  min-height: 54px;
-  padding: 8px 14px 8px 10px;
+  height: var(--milkdown-markdown-toolbar-height, 37px);
+  box-sizing: border-box;
+  padding: 4px 14px 4px 10px;
   border-bottom: 1px solid var(--writing-line);
 }
 .writing-head button {
   cursor: pointer;
   font: inherit;
 }
-.writing-back,
-.writing-panel-toggle {
+.writing-back {
   flex: none;
   padding: 5px 8px;
   border: 0;
@@ -3139,15 +3240,26 @@ async function 删除选中未使用文章图片() {
   background: transparent;
   color: var(--writing-muted);
 }
-.writing-back:hover,
-.writing-panel-toggle:hover,
-.writing-panel-toggle[aria-pressed='true'] {
+.writing-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+}
+.writing-back svg {
+  width: 16px;
+  height: 16px;
+}
+.writing-back:hover {
   background: var(--writing-soft);
   color: var(--writing-ink);
 }
 .writing-divider {
   width: 1px;
   height: 16px;
+  margin-left: -6px;
   background: var(--writing-line);
 }
 .writing-name {
@@ -3171,8 +3283,36 @@ async function 删除选中未使用文章图片() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   width: 28px;
   height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  line-height: 1;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+.writing-panel-toggle:hover {
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+}
+.writing-panel-toggle[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
+  color: var(--el-color-primary);
+}
+.writing-panel-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--el-color-primary) 40%, transparent);
+  outline-offset: 1px;
+}
+.writing-panel-toggle :deep(svg) {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
 }
 .writing-save-state.is-dirty {
   background: color-mix(in srgb, #e3769b 10%, var(--writing-bg));
@@ -3203,6 +3343,9 @@ async function 删除选中未使用文章图片() {
   border-radius: 6px;
 }
 .writing-pane-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 3px 9px;
   border: 0;
   border-radius: 4px;
@@ -3213,6 +3356,11 @@ async function 删除选中未使用文章图片() {
 .writing-pane-switch button.is-active {
   background: var(--writing-soft);
   color: var(--writing-ink);
+}
+.writing-pane-switch button svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
 }
 .writing-sheet .article-editor-shell {
   display: flex;
@@ -3373,6 +3521,15 @@ async function 删除选中未使用文章图片() {
   min-width: 0;
   min-height: 0;
 }
+/* 网格布局中，双屏预览与正文共用单元格，预览只占右半区。 */
+.writing-sheet .editor-wrapper--markdown-split .markdown-editor-overlay,
+.writing-sheet .editor-wrapper--html-split .html-editor-overlay,
+.writing-sheet .editor-wrapper--mindmap-split .mindmap-editor-overlay {
+  left: auto;
+  justify-self: end;
+  width: 50%;
+  box-sizing: border-box;
+}
 .writing-sheet :deep(.milkdown-markdown-editor__toolbar) {
   border-radius: 0;
 }
@@ -3469,20 +3626,6 @@ async function 删除选中未使用文章图片() {
   border-radius: 5px;
   font-size: 12px;
 }
-.writing-publication-state {
-  margin-bottom: 20px;
-  color: var(--writing-muted);
-  font-size: 12px;
-}
-.writing-props-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-}
-.writing-props-actions .el-button {
-  flex: 1;
-  margin: 0;
-}
 .writing-delete {
   margin-top: 18px;
   font-size: 12px;
@@ -3517,6 +3660,20 @@ async function 删除选中未使用文章图片() {
   .writing-sheet .markdown-editor-overlay,
   .writing-sheet .html-editor-overlay,
   .writing-sheet .mindmap-editor-overlay {
+    grid-column: 1;
+  }
+  .writing-form.milkdown-markdown-editor--page-fullscreen .editor-wrapper,
+  .writing-form:fullscreen .editor-wrapper {
+    display: contents;
+  }
+  .writing-form.milkdown-markdown-editor--page-fullscreen,
+  .writing-form:fullscreen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .writing-form.milkdown-markdown-editor--page-fullscreen .article-editor-outline,
+  .writing-form:fullscreen .article-editor-outline,
+  .writing-form.milkdown-markdown-editor--page-fullscreen .article-editor-properties,
+  .writing-form:fullscreen .article-editor-properties {
     grid-column: 1;
   }
   /* 大纲与属性在窄屏下改为浮层，需要自带底色，否则会透出下方正文 */
@@ -3575,8 +3732,7 @@ async function 删除选中未使用文章图片() {
   .writing-head {
     flex-wrap: nowrap;
     gap: 4px;
-    min-height: 46px;
-    padding: 5px 7px;
+    padding: 4px 7px;
   }
   .writing-head-actions {
     flex-wrap: nowrap;
@@ -3585,7 +3741,6 @@ async function 删除选中未使用文章图片() {
   }
   .writing-head-actions .el-button { padding: 5px 7px; }
   .writing-pane-switch button { padding-right: 6px; padding-left: 6px; }
-  .writing-panel-toggle { width: 25px; height: 26px; padding: 3px; }
   .writing-divider { display: none; }
   .writing-name {
     display: none;
@@ -3610,5 +3765,24 @@ async function 删除选中未使用文章图片() {
   .writing-save-state { display: none; }
   .writing-head-actions .el-button { padding: 4px 5px; font-size: 10px; }
   .writing-pane-switch button { padding-right: 4px; padding-left: 4px; font-size: 10px; }
+}
+
+/* 页面全屏规则必须放在写作稿纸基础样式之后，避免被基础 position 和圆角覆盖。 */
+.page-container.writing-sheet.milkdown-markdown-editor--page-fullscreen,
+.page-container.writing-sheet:fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.page-container.writing-sheet.milkdown-markdown-editor--page-fullscreen .article-editor-shell,
+.page-container.writing-sheet:fullscreen .article-editor-shell {
+  min-height: 0;
 }
 </style>

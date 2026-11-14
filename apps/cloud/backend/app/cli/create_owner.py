@@ -7,7 +7,7 @@ import asyncio
 from sqlalchemy import select
 
 from app.core.security import 哈希密码
-from app.modules.users.models import 用户, 构建默认用户设置
+from app.modules.users.models import 用户
 from app.shared.db.session import async_session_factory, engine
 from app.shared.kernel.config import settings
 
@@ -21,11 +21,8 @@ async def 创建首个Owner() -> bool:
 
         owner = 用户(
             username=settings.ADMIN_USERNAME,
-            nickname=settings.ADMIN_USERNAME,
             email=settings.ADMIN_EMAIL,
             password_hash=哈希密码(settings.ADMIN_PASSWORD),
-            is_active=True,
-            settings=构建默认用户设置(),
         )
         db.add(owner)
         await db.commit()

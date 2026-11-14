@@ -41,7 +41,7 @@ from app.modules.articles.workflow import (
     排序文章用于导航,
     刷新文章最后编辑时间,
 )
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.utils.uuid import generate_uuid7
 
 
@@ -105,7 +105,6 @@ class 文章服务测试(unittest.TestCase):
             username="user",
             email="user@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
 
         条件 = 构建文章搜索条件("关键字", user)
@@ -194,15 +193,15 @@ class 文章服务测试(unittest.TestCase):
 
     def test_文章仅作者可读(self) -> None:
         article = build_article()
-        author = 用户(id=article.author_id, username="author", email="author@example.com", password_hash="x", role=用户角色.user)
-        other = 用户(id=generate_uuid7(), username="other", email="other@example.com", password_hash="x", role=用户角色.user)
+        author = 用户(id=article.author_id, username="author", email="author@example.com", password_hash="x")
+        other = 用户(id=generate_uuid7(), username="other", email="other@example.com", password_hash="x")
         self.assertFalse(用户可否阅读文章(article, None))
         self.assertFalse(用户可否阅读文章(article, other))
         self.assertTrue(用户可否阅读文章(article, author))
 
     def test_博客仅显示已发布且符合可见性的快照(self) -> None:
         blog = build_blog()
-        user = 用户(id=blog.author_id, username="author", email="author@example.com", password_hash="x", role=用户角色.user)
+        user = 用户(id=blog.author_id, username="author", email="author@example.com", password_hash="x")
         self.assertTrue(用户可否在博客看到文章(blog, None))
         blog.status = "login_required"
         self.assertFalse(用户可否在博客看到文章(blog, None))
@@ -221,11 +220,8 @@ class 文章服务测试(unittest.TestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
-            is_active=True,
             created_at=utc_dt(2026, 3, 28, 12, 0),
         )
-        article.author.ensure_settings()
         article.tags = []
 
         response = 构建文章读取响应(article, sign_file_urls=True)
@@ -241,20 +237,15 @@ class 文章服务测试(unittest.TestCase):
         article.author = 用户(
             id=article.author_id,
             username="author",
-            nickname="作者昵称",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
-            is_active=True,
             created_at=utc_dt(2026, 3, 28, 12, 0),
         )
-        article.author.ensure_settings()
         article.tags = []
 
         response = 文章元数据信息.model_validate(article)
 
         self.assertEqual(response.author.username, "author")
-        self.assertEqual(response.author.nickname, "作者昵称")
 
 
 class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
@@ -266,7 +257,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
         db.execute.side_effect = [
@@ -293,7 +283,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         category_id = str(generate_uuid7())
         db = AsyncMock()
@@ -321,7 +310,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
         db.execute.side_effect = [
@@ -364,7 +352,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         category = 分类(
             id=generate_uuid7(),
@@ -465,7 +452,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
         edit_time = utc_dt(2026, 3, 28, 18, 0)
@@ -594,7 +580,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
         db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: None)
@@ -628,7 +613,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
         edit_time = utc_dt(2026, 3, 28, 19, 15)
@@ -719,7 +703,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
 
@@ -750,7 +733,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
 
@@ -779,7 +761,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
         db = AsyncMock()
 

@@ -36,7 +36,6 @@
     "@feathernest/module-media": "*",
     "@feathernest/module-moments": "*",
     "@feathernest/module-music": "*",
-    "@feathernest/module-profile": "*",
     "@feathernest/module-stats": "*",
     "@feathernest/module-todos": "*",
     "@feathernest/theme": "*",

@@ -10,7 +10,6 @@ from starlette.requests import Request
 
 字段中文名: dict[str, str] = {
     "username": "用户名",
-    "nickname": "昵称",
     "email": "邮箱",
     "password": "密码",
     "current_password": "当前密码",

@@ -83,7 +83,7 @@ const {
 
           <ArticleReaderFooterSection
             :title="articleStore.current.title"
-            :author="articleStore.current.author.nickname || articleStore.current.author.username"
+            :author="articleStore.current.author.username"
             :article-url="articleUrl"
             :pub-date="articleStore.current.published_at || articleStore.current.created_at"
             :prev-article="prevArticle"

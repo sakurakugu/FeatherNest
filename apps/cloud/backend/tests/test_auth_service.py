@@ -13,11 +13,9 @@ from app.modules.auth.cookies import (
 )
 from app.modules.auth.service import (
     构建开发账号配置,
-    构建用户昵称,
     是否启用开发登录,
 )
 from app.modules.auth.sessions import 会话数据, 构建会话TTL秒数
-from app.modules.users.models import 用户角色
 
 
 class 认证服务测试(unittest.TestCase):
@@ -36,11 +34,6 @@ class 认证服务测试(unittest.TestCase):
             cookie_header = "; ".join(f"{key}={value}" for key, value in cookies.items())
             raw_headers.append((b"cookie", cookie_header.encode("utf-8")))
         return Request({"type": "http", "headers": raw_headers})
-
-    def test_空昵称会回退到用户名(self) -> None:
-        self.assertEqual(构建用户昵称("alice", None), "alice")
-        self.assertEqual(构建用户昵称("alice", "   "), "alice")
-        self.assertEqual(构建用户昵称("alice", " 小爱 "), "小爱")
 
     def test_session_ttl_会按天转换为秒(self) -> None:
         self.assertEqual(构建会话TTL秒数(), 30 * 86400)
@@ -68,17 +61,12 @@ class 认证服务测试(unittest.TestCase):
     def test_开发账号配置映射(self) -> None:
         from app.modules.auth import service as auth_service
 
-        admin = 构建开发账号配置("admin")
-        user = 构建开发账号配置("user")
+        admin = 构建开发账号配置()
 
-        # 单用户模式：无论传入哪个历史角色，都映射到同一个 owner 账号
-        self.assertEqual(admin, user)
+        # 单用户模式：开发登录固定映射到同一个 owner 账号
         self.assertEqual(admin[0], auth_service.settings.ADMIN_USERNAME)
         self.assertEqual(admin[1], auth_service.settings.ADMIN_EMAIL)
         self.assertEqual(admin[2], auth_service.settings.ADMIN_PASSWORD)
-        # 超级管理员已合并进 admin 账号，开发快捷登录只使用 user 角色
-        self.assertEqual(admin[3], 用户角色.user)
-        self.assertNotEqual(admin[3], 用户角色.admin)
 
     def test_认证_cookie_可写入与清理(self) -> None:
         response = Response()

@@ -10,7 +10,6 @@ import { 使用登录门禁存储, 使用认证存储 } from '@feathernest/domai
 import { 获取待办列表 } from '@feathernest/domain/todos'
 import { 获取我的文章列表 } from '@feathernest/module-articles'
 import { 获取我的动态 } from '@feathernest/module-moments'
-import { 获取个人资料显示名称 } from '@feathernest/module-profile'
 import { UniversalAvatar } from '@feathernest/ui'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
@@ -23,7 +22,7 @@ const theme = 使用主题存储()
 const isAuthenticated = computed(() => auth.isAuthenticated)
 const displayName = computed(() => (
   auth.user
-    ? 获取个人资料显示名称(auth.user)
+    ? auth.user.username
     : '游客'
 ))
 const profileBio = computed(() => (

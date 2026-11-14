@@ -26,7 +26,6 @@ export interface FeedArticleRecord {
 export interface FeedMomentAuthor {
   id: string
   username: string
-  nickname: string | null
   avatar_url: string | null
 }
 

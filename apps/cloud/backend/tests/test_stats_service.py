@@ -18,7 +18,7 @@ from app.modules.stats.service import (
     待办完成聚合记录,
     近期访问聚合记录,
 )
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.utils.uuid import generate_uuid7
 
 
@@ -59,7 +59,6 @@ class 统计服务测试(unittest.TestCase):
             username="user",
             email="user@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
 
         condition = _构建博客统计可见文章条件(user)
@@ -77,7 +76,6 @@ class 统计服务测试(unittest.TestCase):
             username="user",
             email="user@example.com",
             password_hash="x",
-            role=用户角色.user,
         )
 
         self.assertEqual(_博客统计缓存键(None), "stats:blog:anonymous")

@@ -60,7 +60,7 @@ let lastSyncedWidgetHeight = 0
 
 const todoListButtonTitle = computed(() => (todoListExpanded.value ? '收起待办列表' : '展开待办列表'))
 const widgetSettingsButtonTitle = computed(() => (activeUtilityPanel.value === 'settings' ? '收起卡片设置' : '打开卡片设置'))
-const 账号昵称 = computed(() => auth.user?.nickname || auth.user?.username || '')
+const 账号昵称 = computed(() => auth.user?.username || '')
 const widgetSurfaceBackground = computed(() => {
   if (widgetSurfaceOpaque.value) {
     return theme.isDark ? 'rgb(15, 23, 42)' : 'rgb(255, 255, 255)'
