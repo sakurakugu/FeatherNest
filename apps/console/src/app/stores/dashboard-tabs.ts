@@ -29,7 +29,7 @@ interface 标签持久化数据 {
 const 标签存储键 = 'dashboard_tabs'
 
 /** 标签全部关闭后回到的默认页面。 */
-export const 控制台默认标签路径 = '/admin/stats/blog'
+export const 控制台默认标签路径 = '/admin/stats/other'
 
 /** KeepAlive 缓存上限，关闭标签后的缓存会在这个上限内自然淘汰。 */
 export const 控制台标签缓存上限 = 12
@@ -313,7 +313,7 @@ export const 使用控制台标签存储 = defineStore('dashboard-tabs', () => {
       const 解析结果 = 解析后台路由(控制台默认标签路径)
       被关闭标签.path = 控制台默认标签路径
       被关闭标签.fullPath = 控制台默认标签路径
-      被关闭标签.title = 解析结果 ? 读取路由标题(解析结果) : '博客统计'
+      被关闭标签.title = 解析结果 ? 读取路由标题(解析结果) : '数据统计'
       被关闭标签.页面标识 = 解析页面标识(控制台默认标签路径)
       tabs.value = [被关闭标签]
       activeTabId.value = 被关闭标签.id

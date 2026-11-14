@@ -108,6 +108,7 @@ const currentCoverPreviewUrl = ref('')
 const currentExternalCoverUrl = ref('')
 const currentExternalCoverProvider = ref('')
 const currentExternalCoverId = ref('')
+const emit = defineEmits<{ 'media-count-change': [count: number] }>()
 const creatorSuggestionLoading = ref(false)
 const creatorSuggestions = ref<MediaCreatorSuggestion[]>([])
 let creatorSuggestionRequestId = 0
@@ -462,6 +463,10 @@ async function 加载列表() {
     const response = await 获取文娱列表(query)
     records.value = response.items
     total.value = response.total
+    if (!showRecycleBin.value && !selectedStatus.value) {
+      const allItems = await 获取文娱列表({ page: 1, page_size: 1, is_deleted: false })
+      emit('media-count-change', allItems.total)
+    }
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '加载文娱列表失败'))
   } finally {

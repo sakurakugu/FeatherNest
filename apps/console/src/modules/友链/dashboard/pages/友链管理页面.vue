@@ -16,6 +16,8 @@ import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from 
 import { 获取API错误消息 } from '../../../../shared/api'
 import { BaseDialog, PageSectionShell } from '@feathernest/ui'
 
+const emit = defineEmits<{ 'friend-link-count-change': [count: number] }>()
+
 const initialLoading = ref(true)
 const refreshing = ref(false)
 const friendLinks = ref<FriendLinkRecord[]>([])
@@ -55,6 +57,7 @@ async function fetchFriendLinks(page = 1, options: { silent?: boolean } = {}) {
       total: data.total,
       pageCount: data.pages,
     }
+    if (!showRecycleBin.value) emit('friend-link-count-change', data.total)
   } finally {
     if (silent) {
       refreshing.value = false

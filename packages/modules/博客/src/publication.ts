@@ -41,6 +41,16 @@ export async function 获取博客管理列表(
   return data
 }
 
+export async function 获取已发布博客总数(): Promise<number> {
+  const 第一页 = await 获取博客管理列表(1, 'published', '')
+  let total = 第一页.items.filter((item) => item.publication?.is_published).length
+  for (let page = 2; page <= 第一页.pages; page += 1) {
+    const result = await 获取博客管理列表(page, 'published', '')
+    total += result.items.filter((item) => item.publication?.is_published).length
+  }
+  return total
+}
+
 export async function 获取博客发布快照(id: string): Promise<ArticleRecord> {
   const { data } = await api.get<ArticleRecord>(`/articles/blog/${id}/snapshot`)
   return data

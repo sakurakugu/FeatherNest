@@ -56,6 +56,7 @@ const props = withDefaults(defineProps<{
 })
 const route = useRoute()
 const openedTargetId = ref('')
+const emit = defineEmits<{ 'organized-material-count-change': [count: number] }>()
 
 interface CollectionFormState {
   type: MaterialType
@@ -630,6 +631,9 @@ async function reloadCollections(
   try {
     const data = await 获取指定可见数量的收藏(targetVisibleCount)
     collections.value = data.items
+    if (!showRecycleBin.value && filters.value.status === 'archived') {
+      emit('organized-material-count-change', data.total)
+    }
     pagination.value = {
       page: data.page,
       pageSize: data.pageSize,

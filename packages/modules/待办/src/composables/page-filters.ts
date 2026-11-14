@@ -2,7 +2,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { recurrenceOptions, 按状态和置顶创建排序待办, statusLabel } from '../helpers/todo-item'
 import type { Todo, TodoStatus, RecurrenceType } from '../store'
 
-export type TodoViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap' | 'gantt' | 'important'
+export type TodoViewMode = 'list' | 'cards' | 'quadrants' | 'gantt' | 'important'
 export type TodoPinFilter = 'all' | 'pinned' | 'unpinned'
 export type TodoRecurrenceFilter = 'all' | 'recurring' | RecurrenceType
 

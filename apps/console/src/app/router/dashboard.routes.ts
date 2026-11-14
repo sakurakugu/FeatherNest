@@ -8,7 +8,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
     name: 'Dashboard',
     component: () => import('../layouts/控制台布局.vue'),
     meta: { requiresAuth: true, consoleView: true },
-    redirect: '/admin/stats/blog',
+    redirect: '/admin/stats/other',
     children: 收集模块路由(consoleModules),
   },
 ]

@@ -8,7 +8,8 @@
   "dependencies": {
     "@feathernest/api": "*",
     "@feathernest/domain": "*",
-    "@feathernest/ui": "*"
+    "@feathernest/ui": "*",
+    "@feathernest/module-todos": "*"
   },
   "peerDependencies": {
     "@element-plus/icons-vue": "^2.0.0",

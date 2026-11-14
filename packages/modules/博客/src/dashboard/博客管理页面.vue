@@ -37,6 +37,7 @@ import { 根据ID获取我的文章, type ArticleRecord } from '@feathernest/mod
 import MarkdownRenderer from '@feathernest/module-articles/components/Markdown渲染器.vue'
 import {
   获取博客管理列表,
+  获取已发布博客总数,
   获取博客发布快照,
   发布博客文章,
   设置博客可见性,
@@ -70,6 +71,7 @@ const previewOptions = [
   { label: '文章', value: 'draft' },
   { label: '发布版本', value: 'snapshot' },
 ]
+const emit = defineEmits<{ 'published-blog-count-change': [count: number] }>()
 let requestSequence = 0
 let previewSequence = 0
 
@@ -82,6 +84,7 @@ async function load() {
     if (sequence !== requestSequence) return
     items.value = result.items
     total.value = result.total
+    emit('published-blog-count-change', await 获取已发布博客总数())
     if (page.value > Math.max(result.pages, 1)) {
       page.value = Math.max(result.pages, 1)
       return

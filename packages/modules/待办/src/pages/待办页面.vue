@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, clearTimeout, HTMLInputElement */
-import { ArrowLeft, Calendar, CircleCheckFilled, CloseBold, Delete, Download, Filter, Grid, List, Menu, RefreshRight, Search, Select, Star, Timer, Upload, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, CircleCheckFilled, CloseBold, Delete, Download, Filter, Grid, List, Menu, RefreshRight, Search, Select, Star, Timer, Upload, WarningFilled } from '@element-plus/icons-vue'
 import { BaseDialog, PageSectionShell, SegmentedSwitch, TagInlineInput, 使用路由搜索同步 } from '@feathernest/ui'
 import {
   ElButton,
@@ -28,7 +28,6 @@ import ImportantDayForm from '../components/重要日期表单.vue'
 import ImportantDays from '../components/重要日期.vue'
 import TodoCards from '../components/待办卡片.vue'
 import TodoGantt from '../components/待办甘特图.vue'
-import TodoHeatmap from '../components/待办热力图.vue'
 import TodoList from '../components/待办列表.vue'
 import TodoQuadrants from '../components/待办四象限.vue'
 import { 使用待办页面批量操作 } from '../composables/page-batch-actions'
@@ -83,14 +82,13 @@ let ignoreNextCreateClick = false
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
 
-// 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, heatmap-热力图, gantt-甘特图, important-重要日
+// 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, gantt-甘特图, important-重要日
 const viewMode = ref<TodoViewMode>('list')
 
 const 视图切换选项 = [
   { value: 'list', label: '', title: '列表视图', icon: List },
   { value: 'cards', label: '', title: '卡片视图', icon: Grid },
   { value: 'quadrants', label: '', title: '四象限视图', icon: Menu },
-  { value: 'heatmap', label: '', title: '热力图视图', icon: Calendar },
   { value: 'gantt', label: '', title: '时间条视图', icon: Timer },
   { value: 'important', label: '', title: '重要日', icon: Star },
 ] as const satisfies readonly { value: TodoViewMode, label: string, title: string, icon: typeof List }[]
@@ -119,7 +117,6 @@ const {
   pinFilter,
   recurrenceFilter,
   selectedTags,
-  filteredNormalTodos,
   filteredImportantTodos,
   filteredDeletedImportantTodos,
   isImportantRecycleBinView,
@@ -214,9 +211,6 @@ watch([viewMode, showRecycleBin], () => {
 const visibleTodosForMultiSelect = computed(() => {
   if (viewMode.value === 'important') {
     return showRecycleBin.value ? filteredDeletedImportantTodos.value : filteredImportantTodos.value
-  }
-  if (viewMode.value === 'heatmap') {
-    return filteredNormalTodos.value
   }
   return currentTodos.value
 })
@@ -788,19 +782,6 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
         @delete="(id, mode) => handleDeleteRequest(id, mode)"
         @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
-        @long-press="enterMultiSelect"
-        @toggle-select="toggleMultiSelect"
-      />
-    </div>
-
-    <!-- 热力图视图 -->
-    <div v-else-if="viewMode === 'heatmap' && !showRecycleBin" class="todo-view-container">
-      <TodoHeatmap
-        :todos="filteredNormalTodos"
-        :multi-select-mode="isMultiSelectMode"
-        :selected-ids="multiSelectedIds"
-        @toggle-complete="handleChangeStatusForComponent"
-        @edit="openEdit"
         @long-press="enterMultiSelect"
         @toggle-select="toggleMultiSelect"
       />

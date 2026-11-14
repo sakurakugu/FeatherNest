@@ -36,6 +36,8 @@ import {
 } from '../../api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../types'
 
+const emit = defineEmits<{ 'announcement-count-change': [count: number] }>()
+
 type 标签值 = 'all' | 'active' | 'inactive'
 type 正文筛选值 = 'all' | 'has' | 'empty'
 type 排序字段值 = 'created_at' | 'updated_at' | 'title' | 'deleted_at'
@@ -244,6 +246,7 @@ async function 拉取公告(追加 = false) {
     公告列表.value = 追加 ? [...公告列表.value, ...数据.items] : 数据.items
     当前页.value = 请求页
     总数.value = 数据.total
+    emit('announcement-count-change', 数据.active_total)
     页数.value = 服务端页数
     生效总数.value = 数据.active_total
     下架总数.value = 数据.inactive_total

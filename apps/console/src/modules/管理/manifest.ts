@@ -1,5 +1,5 @@
 import type { AppModule } from '@feathernest/app-core'
-import { Bell, ChatDotRound, DataAnalysis, Link, Message, Monitor, Setting } from '@element-plus/icons-vue'
+import { Bell, ChatDotRound, Link, Message, Monitor, Setting } from '@element-plus/icons-vue'
 
 export default {
   id: '管理',
@@ -7,8 +7,8 @@ export default {
     {
       path: 'stats/blog',
       name: 'DashboardBlogStats',
-      component: () => import('../系统/dashboard/pages/博客统计页面.vue'),
-      meta: { title: '博客统计' },
+      redirect: '/admin/stats/other',
+      meta: { title: '数据统计' },
     },
     {
       path: 'system',
@@ -54,7 +54,6 @@ export default {
     },
   ],
   navigation: [
-    { routeName: 'DashboardBlogStats', label: '博客统计', icon: DataAnalysis, order: 1 },
     { routeName: 'SystemStatus', label: '系统状态', icon: Monitor, order: 17 },
     { routeName: 'DashboardSettings', label: '系统设置', icon: Setting, order: 6 },
     { routeName: 'AnnouncementsManage', label: '公告管理', icon: Bell, order: 5 },

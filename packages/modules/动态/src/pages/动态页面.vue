@@ -10,6 +10,7 @@ import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '
 import {
   删除动态图片,
   获取动态图片,
+  获取已发布动态,
   重新排序动态图片,
   上传动态图片,
 } from '../api'
@@ -28,6 +29,7 @@ const props = withDefaults(defineProps<{
 })
 
 const store = 使用动态存储()
+const emit = defineEmits<{ 'moment-count-change': [count: number] }>()
 
 const draftForm = ref({
   title: '',
@@ -150,6 +152,10 @@ async function loadMoments(page = 1, options: { silent?: boolean } = {}) {
   }
   try {
     await store.获取我的动态(page, isRecycleBinMode.value)
+    if (!isRecycleBinMode.value) {
+      const publishedCount = await 获取已发布动态(1, 1)
+      emit('moment-count-change', publishedCount.total)
+    }
   } finally {
     if (silent) {
       momentsRefreshing.value = false

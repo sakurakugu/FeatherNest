@@ -15,7 +15,7 @@ export function 注册路由守卫(router: Router): void {
   })
   注册标准认证守卫(router, () => 使用认证存储(), {
     loginRouteName: 'Login',
-    authenticatedRouteName: 'DashboardBlogStats',
+    authenticatedRouteName: 'DashboardDataStats',
     loginQueryFactory: (to) => ({ redirect: to.fullPath }),
   })
 }

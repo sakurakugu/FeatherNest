@@ -55,6 +55,7 @@ const tokenChannelIds = ref<string[]>([])
 const tokenDefaultChannelIds = ref<string[]>([])
 const tokenSaving = ref(false)
 const createdToken = ref<PushTokenCreated | null>(null)
+const emit = defineEmits<{ 'push-count-change': [count: number] }>()
 const channelForm = reactive({ name: '', provider: 'bark' as PushProvider, configJson: '' })
 const wxpusherForm = reactive({ appToken: '', uids: '', topicIds: '' })
 
@@ -103,6 +104,7 @@ async function reload() {
     const [channelData, tokenData] = await Promise.all([获取推送渠道(), 获取推送令牌()])
     channels.value = channelData
     tokens.value = tokenData
+    emit('push-count-change', tokenData.length)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '推送配置加载失败'))
   } finally {

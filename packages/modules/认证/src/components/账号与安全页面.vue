@@ -54,6 +54,7 @@ const revokingAll = ref(false)
 const sessions = ref<DeviceSessionTableItem[]>([])
 
 const activeSessions = computed(() => sessions.value.filter((item) => !item.revoked_at))
+const emit = defineEmits<{ 'active-device-count-change': [count: number] }>()
 
 function formatDateTime(value: string | null): string {
   if (!value) {
@@ -86,6 +87,7 @@ async function loadSessions(options: { silent?: boolean } = {}) {
       ...item,
       is_current: Boolean(item.is_current),
     }))
+    emit('active-device-count-change', data.filter((item) => !item.revoked_at).length)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '加载设备会话失败'))
   } finally {

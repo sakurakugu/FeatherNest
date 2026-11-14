@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { 获取我的文章列表 } from '@feathernest/module-articles'
-import { 获取仪表盘统计 } from '@feathernest/domain/system'
+import { 获取待办列表 } from '@feathernest/domain/todos'
+import { 获取文娱列表 } from '@feathernest/module-media'
+import { 获取已发布动态 } from '@feathernest/module-moments'
+import { 获取资料列表 } from '@feathernest/module-materials'
+import { 获取设备会话列表 } from '@feathernest/domain/auth'
+import { 获取公告列表, 获取推送令牌 } from '../../modules/管理/api'
+import { 获取已发布博客总数 } from '@feathernest/module-blog'
+import { 获取友链列表 } from '../../modules/友链/api'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import AppConsoleLayout from '../components/layout/应用控制台布局.vue'
 import ConsoleTabBar from '../components/layout/控制台标签栏.vue'
@@ -16,31 +23,60 @@ const tabsStore = 使用控制台标签存储()
 
 const articleCount = ref<number>()
 const todoCount = ref<number>()
+const announcementCount = ref<number>()
+const friendLinkCount = ref<number>()
+const pushCount = ref<number>()
+const mediaCount = ref<number>()
+const publishedBlogCount = ref<number>()
+const momentCount = ref<number>()
+const organizedMaterialCount = ref<number>()
+const activeDeviceCount = ref<number>()
 const menuOptions = computed<控制台菜单项[]>(() =>
   过滤仪表盘菜单项().map((item) => ({
     ...item,
-    count:
-      item.key === '/admin/articles'
-        ? articleCount.value
-        : item.key === '/admin/todos'
-          ? todoCount.value
-          : undefined,
+    count: ({
+      '/admin/articles': articleCount.value,
+      '/admin/todos': todoCount.value,
+      '/admin/announcements': announcementCount.value,
+      '/admin/friend-links': friendLinkCount.value,
+      '/admin/push': pushCount.value,
+      '/admin/media': mediaCount.value,
+      '/admin/blog': publishedBlogCount.value,
+      '/admin/moments': momentCount.value,
+      '/admin/materials': organizedMaterialCount.value,
+      '/admin/account': activeDeviceCount.value,
+    } as Record<string, number | undefined>)[item.key],
   })),
 )
 
-watch(
-  () => route.path,
-  async () => {
-    try {
-      const [articles, stats] = await Promise.all([获取我的文章列表(1, 1), 获取仪表盘统计()])
-      articleCount.value = articles.total
-      todoCount.value = stats.total_todos
-    } catch (error) {
-      console.error('读取侧栏数量失败', error)
-    }
-  },
-  { immediate: true },
-)
+async function 更新菜单数量<T>(读取: () => Promise<T>, 更新: (数据: T) => void) {
+  try {
+    更新(await 读取())
+  } catch (error) {
+    console.error('读取侧栏数量失败', error)
+  }
+}
+
+void 更新菜单数量(() => 获取我的文章列表(1, 1), (data) => { articleCount.value = data.total })
+void 更新菜单数量(async () => (await 获取待办列表()).length, (count) => { todoCount.value = count })
+void 更新菜单数量(() => 获取公告列表({ page: 1, pageSize: 1 }), (data) => {
+  announcementCount.value = data.active_total
+})
+void 更新菜单数量(() => 获取友链列表(1, 1), (data) => { friendLinkCount.value = data.total })
+void 更新菜单数量(async () => (await 获取推送令牌()).length, (count) => { pushCount.value = count })
+void 更新菜单数量(async () => (await 获取文娱列表({ page: 1, page_size: 1 })).total, (count) => {
+  mediaCount.value = count
+})
+void 更新菜单数量(获取已发布博客总数, (count) => {
+  publishedBlogCount.value = count
+})
+void 更新菜单数量(async () => (await 获取已发布动态(1, 1)).total, (count) => { momentCount.value = count })
+void 更新菜单数量(async () => (await 获取资料列表({ page: 1, page_size: 1, status: 'archived' })).total, (count) => {
+  organizedMaterialCount.value = count
+})
+void 更新菜单数量(async () => (await 获取设备会话列表()).filter((session) => !session.revoked_at).length, (count) => {
+  activeDeviceCount.value = count
+})
 
 tabsStore.init(router, route)
 
@@ -78,6 +114,14 @@ const 标签缓存键 = computed(() => {
               :is="Component"
               :key="标签缓存键"
               @article-count-change="articleCount = $event"
+              @announcement-count-change="announcementCount = $event"
+              @friend-link-count-change="friendLinkCount = $event"
+              @push-count-change="pushCount = $event"
+              @media-count-change="mediaCount = $event"
+              @published-blog-count-change="publishedBlogCount = $event"
+              @moment-count-change="momentCount = $event"
+              @organized-material-count-change="organizedMaterialCount = $event"
+              @active-device-count-change="activeDeviceCount = $event"
             />
           </KeepAlive>
         </RouterView>
