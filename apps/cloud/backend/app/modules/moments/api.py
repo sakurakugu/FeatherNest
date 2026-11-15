@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,6 +55,20 @@ from app.shared.db.session import get_db
 from fastapi import File, UploadFile
 
 router = APIRouter(prefix="/moments", tags=["moments"])
+
+动态排序字段 = Literal[
+    "published_at",
+    "created_at",
+    "last_edited_at",
+    "updated_at",
+    "deleted_at",
+    "view_count",
+    "like_count",
+    "title",
+    "content",
+    "word_count",
+    "image_count",
+]
 
 @router.get("", response_model=PaginatedResponse)
 async def 列出动态(
@@ -292,6 +308,13 @@ async def 列出我的动态(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站动态"),
+    keyword: str | None = Query(default=None, max_length=200, description="按标题或正文搜索"),
+    has_images: bool | None = Query(default=None, description="是否只看带图 / 纯文字动态"),
+    sort_by: 动态排序字段 | None = Query(
+        default=None,
+        description="排序字段，留空按发布时间倒序",
+    ),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
@@ -301,6 +324,11 @@ async def 列出我的动态(
     Args:
         page: 页码，从 1 开始
         page_size: 每页数量，范围 1-50
+        is_deleted: 是否查询回收站
+        keyword: 标题 / 正文关键词
+        has_images: True 只看带图动态，False 只看纯文字动态，留空不限
+        sort_by: 排序字段，留空使用默认顺序
+        sort_order: 排序方向
         user: 当前登录用户（依赖注入）
         db: 数据库会话
 
@@ -313,6 +341,10 @@ async def 列出我的动态(
         page_size=page_size,
         user=user,
         is_deleted=is_deleted,
+        keyword=keyword,
+        has_images=has_images,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
 

@@ -38,6 +38,8 @@ class 友链更新(BaseModel):
     logo_url: str | None = Field(default=None, max_length=500)
     category: str | None = Field(default=None, max_length=50)
     status: str | None = None
+    contact_email: str | None = Field(default=None, max_length=255)
+    contact_name: str | None = Field(default=None, max_length=100)
 
 
 class 友链信息(BaseModel):

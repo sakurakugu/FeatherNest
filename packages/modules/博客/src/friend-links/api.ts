@@ -1,6 +1,8 @@
 import api from '@feathernest/api'
 import type {
   FriendLinkAdminPayload,
+  FriendLinkExchangePayload,
+  FriendLinkExchangeResult,
   FriendLinkListResponse,
   FriendLinkListQuery,
   FriendLinkRecord,
@@ -60,4 +62,10 @@ export async function 批准友链(id: string): Promise<void> {
 
 export async function 拒绝友链(id: string): Promise<void> {
   await api.post(`/friend-links/${id}/reject`)
+}
+
+/** 站点访客主动申请友链，无需登录 */
+export async function 交换友链(payload: FriendLinkExchangePayload): Promise<FriendLinkExchangeResult> {
+  const { data } = await api.post<FriendLinkExchangeResult>('/friend-links/exchange', payload)
+  return data
 }

@@ -61,16 +61,19 @@ def 包含回链(content: str, my_site_url: str) -> bool:
 async def 检查回链(my_site_url: str, target_url: str) -> bool:
     """请求对方站点并检查是否已挂本站链接。"""
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+        # 超时不宜太长，否则访客点提交要干等
+        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True) as client:
             response = await client.get(
                 target_url,
                 headers={
-                    "用户-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0"
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                 },
             )
             response.raise_for_status()
             return 包含回链(response.text, my_site_url)
-    except Exception:
+    except Exception as exc:
+        logger.info("友链回链检测失败：%s（%s）", target_url, exc)
         return False
 
 
@@ -278,7 +281,7 @@ async def 交换友链(db: AsyncSession, body: 友链交换请求) -> dict:
     return {
         "message": "友链交换成功！已自动添加。"
         if has_backlink
-        else "已提交友链申请，等待查看中。检测到您的网站尚未添加本站链接，添加后可自动显示（大概，还没测试）。",
+        else "已提交友链申请，等待查看中。",
         "auto_approved": has_backlink,
         "link": 友链信息.model_validate(friend_link),
     }

@@ -6,6 +6,7 @@ import type {
   MomentListResponse,
   MomentPayload,
   MomentViewResult,
+  MyMomentQuery,
   PublishedMoment,
   UserMoment,
 } from './types'
@@ -26,12 +27,17 @@ export async function 获取我的动态(
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
   isDeleted = false,
+  query: MyMomentQuery = {},
 ): Promise<MomentListResponse<UserMoment>> {
   const { data } = await api.get<MomentListResponse<UserMoment>>('/moments/my/list', {
     params: {
       page,
       page_size: pageSize,
       is_deleted: String(isDeleted),
+      keyword: query.keyword || undefined,
+      has_images: query.hasImages === undefined ? undefined : String(query.hasImages),
+      sort_by: query.sortBy || undefined,
+      sort_order: query.sortOrder || undefined,
     },
   })
   return data

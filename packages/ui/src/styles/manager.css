@@ -471,6 +471,13 @@
   content: '';
 }
 
+/* 页签行里直接挂载的独立页签（如「回收站」）不受 .manager-tabs 滚动容器的裁切，
+   这里显式对齐裁切后的可见高度，保证与滚动容器内的页签是同一条横线 */
+.manager-page .manager-tabs-row > .manager-tab.is-active::after {
+  bottom: 0;
+  height: 1px;
+}
+
 .manager-page .manager-tab small {
   margin: 0;
   color: var(--manager-placeholder);
@@ -479,49 +486,6 @@
   font-weight: 400;
   line-height: inherit;
   vertical-align: baseline;
-}
-
-.manager-page .manager-tabs-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 16px;
-  padding-left: 16px;
-}
-
-.manager-page .manager-recycle-tab {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  height: 34px;
-  border: 0;
-  background: transparent;
-  color: var(--manager-muted);
-  font: inherit;
-  font-size: 12.5px;
-  line-height: 34px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.manager-page .manager-recycle-tab:hover {
-  color: var(--manager-ink);
-}
-
-.manager-page .manager-recycle-tab.is-active {
-  color: var(--el-color-primary);
-}
-
-.manager-page .manager-recycle-tab small {
-  color: var(--manager-placeholder);
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 10.5px;
-  line-height: inherit;
-  vertical-align: baseline;
-}
-
-.manager-page .manager-recycle-tab.is-active small {
-  color: var(--el-color-primary);
 }
 
 /* ==========================================================================

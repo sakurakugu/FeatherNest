@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, Request, Response
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -276,19 +277,64 @@ async def 列出我的动态(
     page_size: int,
     user: 用户,
     is_deleted: bool,
+    keyword: str | None = None,
+    has_images: bool | None = None,
+    sort_by: str | None = None,
+    sort_order: str = "desc",
 ) -> PaginatedResponse:
-    """获取当前用户已发布动态列表。"""
+    """获取当前用户动态列表。"""
     query = 动态查询().where(
         动态.user_id == user.id,
         动态.is_deleted.is_(is_deleted),
     )
     if not is_deleted:
-        query = query.where(动态.is_published.is_(True)).order_by(动态.published_at.desc())
+        query = query.where(动态.is_published.is_(True))
+
+    normalized_keyword = (keyword or "").strip()
+    if normalized_keyword:
+        like_keyword = f"%{normalized_keyword}%"
+        query = query.where(
+            or_(动态.title.ilike(like_keyword), 动态.content.ilike(like_keyword))
+        )
+    if has_images is not None:
+        query = query.where(动态.images.any() if has_images else ~动态.images.any())
+
+    # 默认：列表按发布时间倒序，回收站按删除时间倒序；显式指定排序时以用户选择为准
+    可排序列 = {
+        "published_at": 动态.published_at,
+        "created_at": 动态.created_at,
+        "last_edited_at": 动态.last_edited_at,
+        "updated_at": 动态.updated_at,
+        "deleted_at": 动态.deleted_at,
+        "view_count": 动态.view_count,
+        "like_count": 动态.like_count,
+        "title": 动态.title,
+        # 内容与字数按长度排序，图片按数量排序，便于管理页按“长文 / 多图”筛选查看
+        "content": func.length(动态.content),
+        "word_count": func.length(func.regexp_replace(动态.content, r"\s", "", "g")),
+        "image_count": (
+            select(func.count(动态图片.id))
+            .where(动态图片.moment_id == 动态.id)
+            .correlate(动态)
+            .scalar_subquery()
+        ),
+    }
+    if sort_by in 可排序列:
+        排序列 = 可排序列[sort_by]
+        排序表达式 = 排序列.asc() if sort_order == "asc" else 排序列.desc()
+        if sort_by in {"published_at", "deleted_at", "title"}:
+            排序表达式 = 排序表达式.nullslast()
+        排序条件: tuple[Any, ...] = (排序表达式, 动态.id.asc())
+    elif is_deleted:
+        排序条件 = (动态.deleted_at.desc(), 动态.created_at.desc())
     else:
-        query = query.order_by(动态.deleted_at.desc(), 动态.created_at.desc())
+        排序条件 = (动态.published_at.desc(),)
+
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
-    result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
-    items = result.scalars().unique().all()
+    result = await db.execute(
+        query.order_by(*排序条件).offset((page - 1) * page_size).limit(page_size)
+    )
+    items: list[动态] = list(result.scalars().unique().all())
     return PaginatedResponse(
         items=[构建动态读取响应(item) for item in items],
         total=total,

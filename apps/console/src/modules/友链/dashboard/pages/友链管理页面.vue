@@ -157,8 +157,8 @@ const linkColumns = computed(
         value: 'contact_name',
         label: '联系人',
         sort: 'contact_name',
-        width: '160px',
-        minWidth: 160,
+        width: '200px',
+        minWidth: 200,
       },
       {
         value: 'date',
@@ -284,6 +284,8 @@ const form = ref<FriendLinkAdminPayload>({
   logo_url: '',
   category: '',
   status: 'approved',
+  contact_name: '',
+  contact_email: '',
 })
 // 编辑弹窗的分类选项：未分类 + 现有分类，兼容记录里的自定义分类
 const dialogCategoryOptions = computed(() => {
@@ -355,6 +357,8 @@ function openCreate() {
     logo_url: '',
     category: '',
     status: 'approved',
+    contact_name: '',
+    contact_email: '',
   }
   showDialog.value = true
 }
@@ -375,6 +379,8 @@ function openEdit(friendLink: FriendLinkRecord) {
     logo_url: friendLink.logo_url || '',
     category: friendLink.category || '',
     status: friendLink.status,
+    contact_name: friendLink.contact_name || '',
+    contact_email: friendLink.contact_email || '',
   }
   showDialog.value = true
 }
@@ -387,7 +393,12 @@ async function save() {
   }
 
   dialogLoading.value = true
-  const payload = { ...form.value, logo_url: dialogIconUrl.value }
+  const payload = {
+    ...form.value,
+    logo_url: dialogIconUrl.value,
+    contact_name: form.value.contact_name?.trim() || null,
+    contact_email: form.value.contact_email?.trim() || null,
+  }
   try {
     if (isEdit.value) {
       await 更新友链(currentId.value, payload)
@@ -692,8 +703,7 @@ onMounted(() => {
         :aria-pressed="showRecycleBin"
         @click="toggleRecycleBin"
       >
-        {{ showRecycleBin ? '返回列表' : '回收站' }}
-        <small>{{ showRecycleBin ? counts.active_total : counts.recycle_bin }}</small>
+        回收站 <small>{{ counts.recycle_bin }}</small>
       </button>
     </div>
 
@@ -818,11 +828,16 @@ onMounted(() => {
               <span v-else-if="column.value === 'is_auto_exchange'" class="manager-muted">{{
                 friendLink.is_auto_exchange ? '自动交换' : '手动添加'
               }}</span>
-              <div v-else-if="column.value === 'contact_name'" class="manager-contact">
-                <span>{{ friendLink.contact_name || '未填写' }}</span>
-                <span v-if="friendLink.contact_email" :title="friendLink.contact_email">{{
-                  friendLink.contact_email
-                }}</span>
+              <div
+                v-else-if="column.value === 'contact_name'"
+                class="manager-contact"
+                :title="friendLink.contact_email || undefined"
+              >
+                <span class="manager-contact__name">{{ friendLink.contact_name || '未填写' }}</span>
+                <template v-if="friendLink.contact_email">
+                  <span class="manager-contact__sep" aria-hidden="true">·</span>
+                  <span class="manager-contact__mail">{{ friendLink.contact_email }}</span>
+                </template>
               </div>
               <ElTooltip
                 v-else
@@ -1022,6 +1037,22 @@ onMounted(() => {
             <span v-else class="link-icon-editor__hint">{{ iconHint }}</span>
           </div>
         </ElFormItem>
+        <ElFormItem label="联系人">
+          <ElInput
+            v-model="form.contact_name"
+            placeholder="对方站长的称呼，选填"
+            maxlength="100"
+            clearable
+          />
+        </ElFormItem>
+        <ElFormItem label="联系邮箱">
+          <ElInput
+            v-model="form.contact_email"
+            placeholder="方便日后联系，选填"
+            maxlength="255"
+            clearable
+          />
+        </ElFormItem>
         <div class="link-dialog-meta">
           <ElFormItem label="分类">
             <div
@@ -1139,23 +1170,44 @@ onMounted(() => {
   cursor: default;
 }
 
-.manager-url,
-.manager-contact span {
+.manager-url {
   display: block;
   overflow: hidden;
   color: var(--manager-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.manager-url {
   font-size: 11.5px;
   text-decoration: none;
 }
 
 .manager-contact {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
   color: var(--manager-muted);
   font-size: 11.5px;
+}
+
+.manager-contact > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-contact__name {
+  flex-shrink: 0;
+  max-width: 45%;
+}
+
+.manager-contact__sep {
+  flex-shrink: 0;
+  opacity: 0.45;
+}
+
+.manager-contact__mail {
+  min-width: 0;
+  opacity: 0.85;
 }
 
 .manager-status .manager-dot--approved {

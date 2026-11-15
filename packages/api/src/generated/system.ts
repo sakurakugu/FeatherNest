@@ -3165,6 +3165,8 @@ export interface components {
       logo_url?: string | null
       category?: string | null
       status?: string | null
+      contact_email?: string | null
+      contact_name?: string | null
     }
     app__modules__friend_links__schemas__________2: {
       category: string
@@ -8671,6 +8673,21 @@ export interface operations {
         page?: number
         page_size?: number
         is_deleted?: boolean
+        keyword?: string | null
+        has_images?: boolean | null
+        sort_by?:
+          | (
+              | 'published_at'
+              | 'created_at'
+              | 'last_edited_at'
+              | 'updated_at'
+              | 'deleted_at'
+              | 'view_count'
+              | 'like_count'
+              | 'title'
+            )
+          | null
+        sort_order?: string
       }
       header?: never
       path?: never

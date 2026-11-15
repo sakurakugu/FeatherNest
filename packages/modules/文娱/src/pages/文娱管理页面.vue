@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  ArrowLeft,
   Delete,
   Filter,
   Hide,
@@ -1314,7 +1313,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="manager-tabs-row">
-      <nav v-if="!回收站模式" class="manager-tabs" aria-label="作品主分类">
+      <nav class="manager-tabs" aria-label="作品主分类">
         <button
           type="button"
           class="manager-tab"
@@ -1338,24 +1337,15 @@ onBeforeUnmount(() => {
           <small>{{ 页签.数量 }}</small>
         </button>
       </nav>
-      <nav v-else class="manager-tabs" aria-label="回收站">
-        <button type="button" class="manager-tab" @click="切换回收站">
-          <ElIcon><ArrowLeft /></ElIcon>
-          <span>返回作品列表</span>
-        </button>
-      </nav>
-      <div class="manager-tabs-actions">
-        <button
-          type="button"
-          class="manager-recycle-tab"
-          :class="{ 'is-active': 回收站模式 }"
-          :aria-pressed="回收站模式"
-          @click="切换回收站"
-        >
-          <span>回收站</span>
-          <small>{{ 回收站总数 }}</small>
-        </button>
-      </div>
+      <button
+        type="button"
+        class="manager-tab"
+        :class="{ 'is-active': 回收站模式 }"
+        :aria-pressed="回收站模式"
+        @click="切换回收站"
+      >
+        回收站 <small>{{ 回收站总数 }}</small>
+      </button>
     </div>
 
     <ElSkeleton :loading="初次加载 && !列表.length" animated class="media-skeleton">

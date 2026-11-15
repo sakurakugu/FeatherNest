@@ -66,6 +66,24 @@ export interface MomentPayload {
   content: string
 }
 
+/** 动态管理页支持的排序字段。 */
+export type MomentSortField =
+  | 'published_at'
+  | 'last_edited_at'
+  | 'created_at'
+  | 'view_count'
+  | 'like_count'
+  | 'title'
+  | 'deleted_at'
+
+/** 我的动态列表查询参数（管理页使用）。 */
+export interface MyMomentQuery {
+  keyword?: string
+  hasImages?: boolean
+  sortBy?: MomentSortField
+  sortOrder?: 'asc' | 'desc'
+}
+
 export interface MomentLikeResult {
   like_count: number
   changed: boolean

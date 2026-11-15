@@ -2,7 +2,6 @@
 import '@feathernest/ui/styles/manager.css'
 /* global HTMLInputElement, KeyboardEvent, MouseEvent */
 import {
-  ArrowLeft,
   BellFilled,
   Close,
   Delete,
@@ -854,50 +853,40 @@ onBeforeUnmount(() => {
 
     <div class="manager-tabs-row">
       <nav class="manager-tabs" aria-label="公告状态">
-        <template v-if="回收站模式">
-          <button class="manager-tab tab--back" type="button" @click="切换回收站">
-            <ElIcon><ArrowLeft /></ElIcon>
-            <span>返回公告列表</span>
-          </button>
-        </template>
-        <template v-else>
-          <button
-            class="manager-tab"
-            :class="{ 'is-active': 当前标签 === 'all' }"
-            type="button"
-            @click="切换标签('all')"
-          >
-            全部<small>{{ 未删除总数 }}</small>
-          </button>
-          <button
-            class="manager-tab"
-            :class="{ 'is-active': 当前标签 === 'active' }"
-            type="button"
-            @click="切换标签('active')"
-          >
-            生效中<small>{{ 生效总数 }}</small>
-          </button>
-          <button
-            class="manager-tab"
-            :class="{ 'is-active': 当前标签 === 'inactive' }"
-            type="button"
-            @click="切换标签('inactive')"
-          >
-            已下架<small>{{ 下架总数 }}</small>
-          </button>
-        </template>
-      </nav>
-      <div class="manager-tabs-actions">
         <button
-          class="manager-recycle-tab"
-          :class="{ 'is-active': 回收站模式 }"
+          class="manager-tab"
+          :class="{ 'is-active': 当前标签 === 'all' }"
           type="button"
-          @click="切换回收站"
+          @click="切换标签('all')"
         >
-          <span>回收站</span>
-          <small>{{ 回收站总数 }}</small>
+          全部<small>{{ 未删除总数 }}</small>
         </button>
-      </div>
+        <button
+          class="manager-tab"
+          :class="{ 'is-active': 当前标签 === 'active' }"
+          type="button"
+          @click="切换标签('active')"
+        >
+          生效中<small>{{ 生效总数 }}</small>
+        </button>
+        <button
+          class="manager-tab"
+          :class="{ 'is-active': 当前标签 === 'inactive' }"
+          type="button"
+          @click="切换标签('inactive')"
+        >
+          已下架<small>{{ 下架总数 }}</small>
+        </button>
+      </nav>
+      <button
+        class="manager-tab"
+        :class="{ 'is-active': 回收站模式 }"
+        type="button"
+        :aria-pressed="回收站模式"
+        @click="切换回收站"
+      >
+        回收站<small>{{ 回收站总数 }}</small>
+      </button>
     </div>
 
     <div ref="列表容器" v-loading="加载中" class="manager-list-body" @scroll.passive="关闭删除气泡">
@@ -1435,21 +1424,6 @@ onBeforeUnmount(() => {
 
 .announcement-manager .text-btn:hover {
   color: var(--el-color-primary, #e3769b);
-}
-
-/* ==========================================================================
-   状态标签
-   ========================================================================== */
-
-.announcement-manager .tab--back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--manager-ink-2);
-}
-
-.announcement-manager .tab--back:hover {
-  color: var(--manager-ink);
 }
 
 /* ==========================================================================
