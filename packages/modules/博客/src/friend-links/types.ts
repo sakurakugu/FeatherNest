@@ -78,13 +78,12 @@ export interface FriendLinkExchangePayload {
   category?: string | null
   contact_email?: string | null
   contact_name?: string | null
-  /** 申请人的友链页面，后端会去这个页面检查有没有挂本站链接 */
-  my_site_url: string
+  backlink_url: string
 }
 
 export interface FriendLinkExchangeResult {
   message: string
-  /** 检测到回链时为 true，申请直接通过；否则进待审核 */
+  /** 当前申请均需人工审核 */
   auto_approved: boolean
   link: FriendLinkRecord
 }

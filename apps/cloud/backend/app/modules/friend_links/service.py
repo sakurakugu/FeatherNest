@@ -4,16 +4,13 @@ from __future__ import annotations
 
 import math
 import logging
-import re
 from datetime import datetime, timezone
 from typing import Literal
 
-import httpx
 from fastapi import HTTPException
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.modules.friend_links.models import 友链, 友链状态
 from app.modules.friend_links.schemas import (
     友链创建,
@@ -27,6 +24,7 @@ from app.modules.friend_links.schemas import (
     友链排序字段,
 )
 from app.shared.kernel.soft_delete import 可软删除对象
+from app.modules.friend_links.backlink import 同站点
 
 logger = logging.getLogger(__name__)
 
@@ -37,44 +35,6 @@ def 解析友链状态(value: str) -> 友链状态:
         return 友链状态(value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="无效的友链状态") from exc
-
-
-def 规范化域名(url: str) -> str:
-    """提取用于匹配的规范域名片段。"""
-    normalized = url.lower().replace("https://", "").replace("http://", "").strip("/")
-    if normalized.startswith("www."):
-        return normalized.removeprefix("www.")
-    return normalized
-
-
-def 包含回链(content: str, my_site_url: str) -> bool:
-    """检查页面内容中是否包含本站链接。"""
-    normalized_content = content.lower()
-    my_domain = 规范化域名(my_site_url)
-    patterns = [
-        rf'href=["\']https?://[^"\']*{re.escape(my_domain)}[^"\']*["\']',
-        rf'href=["\'][^"\']*{re.escape(my_domain)}[^"\']*["\']',
-    ]
-    return any(re.search(pattern, normalized_content) for pattern in patterns)
-
-
-async def 检查回链(my_site_url: str, target_url: str) -> bool:
-    """请求对方站点并检查是否已挂本站链接。"""
-    try:
-        # 超时不宜太长，否则访客点提交要干等
-        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True) as client:
-            response = await client.get(
-                target_url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                },
-            )
-            response.raise_for_status()
-            return 包含回链(response.text, my_site_url)
-    except Exception as exc:
-        logger.info("友链回链检测失败：%s（%s）", target_url, exc)
-        return False
 
 
 async def 获取友链或404(db: AsyncSession, friend_link_id: str) -> 友链:
@@ -257,32 +217,33 @@ async def 删除友链(db: AsyncSession, friend_link_id: str, *, permanent: bool
 
 
 async def 交换友链(db: AsyncSession, body: 友链交换请求) -> dict:
-    """自动交换友链。"""
+    """提交友链申请，等待人工审核。"""
     existing = await db.execute(select(友链.id).where(友链.url == body.url, 友链.is_deleted.is_(False)))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status_code=400, detail="该网站已申请过友链")
 
-    site_url = settings.SITE_URL or body.my_site_url
-    has_backlink = await 检查回链(site_url, body.my_site_url)
+    if not 同站点(body.url, body.backlink_url):
+        raise HTTPException(status_code=422, detail="友链页面必须与申请网站使用同一域名")
+
     friend_link = 友链(
         name=body.name,
         url=body.url,
         description=body.description,
         logo_url=body.logo_url,
         category=body.category,
-        status=友链状态.approved if has_backlink else 友链状态.pending,
-        is_auto_exchange=True,
+        backlink_url=body.backlink_url,
+        status=友链状态.pending,
+        is_auto_exchange=False,
         contact_email=body.contact_email,
         contact_name=body.contact_name,
     )
     db.add(friend_link)
     await db.flush()
 
+    logger.info("友链申请已提交，等待审核：%s", body.url)
     return {
-        "message": "友链交换成功！已自动添加。"
-        if has_backlink
-        else "已提交友链申请，等待查看中。",
-        "auto_approved": has_backlink,
+        "message": "已提交友链申请，将每日检测回链，连续通过 30 次后自动通过。",
+        "auto_approved": False,
         "link": 友链信息.model_validate(friend_link),
     }
 

@@ -6,7 +6,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field
+
+from app.modules.notifications.models import 推送渠道
 
 from app.modules.notifications.schemas import (
     推送渠道创建,
@@ -38,6 +42,33 @@ from app.shared.auth.deps import 要求当前用户
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+
+class 友链推送渠道配置(BaseModel):
+    """友链汇总使用的渠道。"""
+    channel_ids: list[UUID] = Field(default_factory=list, max_length=100)
+    default_channel_ids: list[UUID] = Field(default_factory=list, max_length=100)
+
+
+@router.get("/friend-link-channels", response_model=友链推送渠道配置)
+async def 获取友链推送渠道(_: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(text("SELECT channel_id, is_default FROM friend_link_notification_channels ORDER BY channel_id"))).all()
+    return {"channel_ids": [row.channel_id for row in rows], "default_channel_ids": [row.channel_id for row in rows if row.is_default]}
+
+
+@router.put("/friend-link-channels", response_model=友链推送渠道配置)
+async def 保存友链推送渠道(body: 友链推送渠道配置, _: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
+    ids = list(dict.fromkeys(body.channel_ids))
+    default_ids = list(dict.fromkeys(body.default_channel_ids))
+    if not set(default_ids).issubset(ids):
+        raise HTTPException(status_code=400, detail="默认渠道必须属于允许渠道")
+    channels = (await db.execute(select(推送渠道).where(推送渠道.id.in_(ids)))).scalars().all()
+    if len(channels) != len(ids):
+        raise HTTPException(status_code=400, detail="推送渠道不存在")
+    await db.execute(text("DELETE FROM friend_link_notification_channels"))
+    for channel_id in ids:
+        await db.execute(text("INSERT INTO friend_link_notification_channels (channel_id, is_default) VALUES (:id, :is_default)"), {"id": channel_id, "is_default": channel_id in default_ids})
+    return {"channel_ids": ids, "default_channel_ids": default_ids}
 
 
 @router.get("/channels", response_model=list[推送渠道信息])

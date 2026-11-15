@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from app.core.redis import close_redis
 from app.mcp.server import 启动MCP会话管理器, 停止MCP会话管理器
+from app.modules.friend_links.daily import 启动友链每日任务, 停止友链每日任务
 from app.modules.files.trash import 启动文件回收站自动清理, 停止文件回收站自动清理
 from app.modules.system.service import 启动系统状态采样, 停止系统状态采样
 from app.modules.users.seed import 首次创建用户
@@ -29,9 +30,11 @@ async def lifespan(_app):
     await 启动系统状态采样()
     await 启动文件回收站自动清理()
     await 启动MCP会话管理器()
+    启动友链每日任务()
 
     yield
 
+    await 停止友链每日任务()
     await 停止MCP会话管理器()
     await 停止文件回收站自动清理()
     await 停止系统状态采样()

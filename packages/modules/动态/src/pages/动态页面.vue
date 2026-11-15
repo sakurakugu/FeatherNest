@@ -20,30 +20,26 @@ import {
   BaseDialog,
   PencilEditIcon,
   SortDirectionIcon,
-  SortOrderControl,
   格式化完整时间,
   格式化相对时间,
 } from '@feathernest/ui'
-import {
-  上传动态图片,
-  删除动态图片,
-  获取动态图片,
-  获取我的动态,
-  重新排序动态图片,
-} from '../api'
+import { 上传动态图片, 删除动态图片, 获取动态图片, 获取我的动态, 重新排序动态图片 } from '../api'
 import { 解析管理文件URL地址 } from '../managedFile'
 import { 使用动态存储 } from '../store'
 import type { MomentImageRecord, MomentSortField, UserMoment } from '../types'
 import { 使用保存快捷键 } from '../使用保存快捷键'
 import MomentImageComposer from '../components/动态图片编辑器.vue'
 
-const props = withDefaults(defineProps<{
-  showBack?: boolean
-  backTo?: string
-}>(), {
-  showBack: false,
-  backTo: '/',
-})
+const props = withDefaults(
+  defineProps<{
+    showBack?: boolean
+    backTo?: string
+  }>(),
+  {
+    showBack: false,
+    backTo: '/',
+  },
+)
 
 const emit = defineEmits<{ 'moment-count-change': [count: number] }>()
 const router = useRouter()
@@ -85,23 +81,27 @@ type 内容筛选值 = (typeof 内容选项)[number]['value']
 const 当前内容 = ref<内容筛选值>('all')
 const 排序字段 = ref<MomentSortField | ''>('')
 const 排序方向 = ref<'asc' | 'desc'>('desc')
-const 排序选项 = computed<Array<{ value: MomentSortField; label: string }>>(() =>
-  回收站模式.value
+const 排序选项 = computed<Array<{ value: MomentSortField; label: string }>>(() => {
+  const 公共选项: Array<{ value: MomentSortField; label: string }> = [
+    { value: 'content', label: '内容长度' },
+    { value: 'image_count', label: '图片数量' },
+    { value: 'word_count', label: '字数' },
+    { value: 'view_count', label: '浏览量' },
+    { value: 'like_count', label: '点赞数' },
+    { value: 'title', label: '标题' },
+  ]
+  return 回收站模式.value
     ? [
         { value: 'deleted_at', label: '删除时间' },
         { value: 'published_at', label: '发布时间' },
-        { value: 'view_count', label: '浏览量' },
-        { value: 'like_count', label: '点赞数' },
-        { value: 'title', label: '标题' },
+        ...公共选项,
       ]
     : [
         { value: 'published_at', label: '发布时间' },
         { value: 'last_edited_at', label: '最近编辑' },
-        { value: 'view_count', label: '浏览量' },
-        { value: 'like_count', label: '点赞数' },
-        { value: 'title', label: '标题' },
-      ],
-)
+        ...公共选项,
+      ]
+})
 const 是否筛选 = computed(() => Boolean(已应用搜索.value) || 当前内容.value !== 'all')
 const 内容页签 = computed<Array<{ value: 内容筛选值; label: string; count: number }>>(() => [
   { value: 'all', label: '全部', count: 已发布总数.value },
@@ -113,18 +113,20 @@ const 内容页签 = computed<Array<{ value: 内容筛选值; label: string; cou
    列配置
    ========================================================================== */
 const 动态列 = [
-  { value: 'title', label: '动态', width: 'minmax(220px, 1.6fr)', minWidth: 220 },
+  { value: 'title', label: '动态', width: 'minmax(180px, 1.4fr)', minWidth: 180 },
   { value: 'content', label: '内容', width: 'minmax(200px, 2fr)', minWidth: 200 },
-  { value: 'images', label: '图片', width: '84px', minWidth: 84 },
+  { value: 'images', label: '图片', width: '128px', minWidth: 128 },
+  { value: 'words', label: '字数', width: '76px', minWidth: 76 },
   { value: 'stats', label: '浏览 / 点赞', width: '112px', minWidth: 112 },
   { value: 'date', label: '发布时间', width: '140px', minWidth: 140 },
   { value: 'updated_at', label: '最近编辑', width: '140px', minWidth: 140 },
 ] as const
 type 动态列值 = (typeof 动态列)[number]['value']
-const 可见列 = useStorage<动态列值[]>('feathernest.moment-manager.columns', [
+const 可见列 = useStorage<动态列值[]>('feathernest.moment-manager.columns.v2', [
   'title',
   'content',
   'images',
+  'words',
   'date',
 ])
 const 展示列 = computed(() => 动态列.filter((列) => 可见列.value.includes(列.value)))
@@ -147,9 +149,12 @@ function 列标题(列: (typeof 动态列)[number]) {
 
 function 列排序字段(列值: 动态列值): MomentSortField | null {
   if (列值 === 'title') return 'title'
+  if (列值 === 'content') return 'content'
+  if (列值 === 'images') return 'image_count'
+  if (列值 === 'words') return 'word_count'
+  if (列值 === 'stats') return 'view_count'
   if (列值 === 'date') return 回收站模式.value ? 'deleted_at' : 'published_at'
-  if (列值 === 'updated_at') return 'last_edited_at'
-  return null
+  return 'last_edited_at'
 }
 
 function 表头排序(列值: 动态列值) {
@@ -260,22 +265,13 @@ function 排序图标方向(字段: MomentSortField | '' | null): 'asc' | 'desc'
   return 排序方向.value
 }
 
-function 设置排序方向(方向: 'asc' | 'desc') {
-  排序字段.value ||= 回收站模式.value ? 'deleted_at' : 'published_at'
-  排序方向.value = 方向
-  console.info('[动态管理] 排序已更新', { 字段: 排序字段.value, 方向 })
-}
-
 function 当前排序列标签() {
   return 排序选项.value.find((项) => 项.value === 排序字段.value)?.label || '发布时间'
 }
 
-function 清除筛选() {
-  当前内容.value = 'all'
+function 清除排序() {
   排序字段.value = ''
   排序方向.value = 'desc'
-  搜索词.value = ''
-  已应用搜索.value = ''
 }
 
 function 切换回收站() {
@@ -620,16 +616,6 @@ function 预览地址(图片: MomentImageRecord) {
   return 解析管理文件URL地址(图片.preview_url || 图片.url)
 }
 
-function 缩略图地址(动态: UserMoment) {
-  const 首图 = 动态.images[0]
-  return 首图 ? 图片地址(首图) : ''
-}
-
-function 打开图片预览(动态: UserMoment) {
-  const 首图 = 动态.images[0]
-  if (首图) 预览图片地址.value = 预览地址(首图)
-}
-
 function 摘要(内容: string) {
   const 单行 = 内容.replace(/\s+/g, ' ').trim()
   return 单行.length > 80 ? `${单行.slice(0, 80)}…` : 单行
@@ -667,12 +653,7 @@ onBeforeUnmount(() => {
         <p>{{ 页头统计 }}</p>
       </div>
       <div class="manager-head-actions">
-        <ElButton
-          v-if="!回收站模式"
-          type="primary"
-          class="manager-create"
-          @click="打开撰写"
-        >
+        <ElButton v-if="!回收站模式" type="primary" class="manager-create" @click="打开撰写">
           <ElIcon><Plus /></ElIcon>
           <span>写动态</span>
         </ElButton>
@@ -748,7 +729,7 @@ onBeforeUnmount(() => {
           </template>
           <div class="manager-filter-panel">
             <div class="manager-filter-group">
-              <label>排序方式</label>
+              <label>排序</label>
               <div class="manager-sort-options">
                 <button
                   v-for="选项 in 排序选项"
@@ -766,14 +747,14 @@ onBeforeUnmount(() => {
                   <ElIcon><SortDirectionIcon :direction="排序图标方向(选项.value)" /></ElIcon>
                 </button>
               </div>
-              <SortOrderControl
-                :model-value="排序字段 ? 排序方向 : ''"
-                @update:model-value="设置排序方向"
-              />
             </div>
             <div class="manager-filter-footer">
-              <span>{{ 排序字段 ? `按${当前排序列标签()}排序` : '默认按发布时间倒序' }}</span>
-              <ElButton text size="small" @click="清除筛选">重置</ElButton>
+              <span>{{
+                排序字段
+                  ? `按${当前排序列标签()}${排序方向 === 'asc' ? '升序' : '降序'}`
+                  : '未设置排序条件'
+              }}</span>
+              <ElButton text size="small" @click="清除排序">清除排序</ElButton>
             </div>
           </div>
         </ElPopover>
@@ -892,39 +873,41 @@ onBeforeUnmount(() => {
             <div v-for="列 in 展示列" :key="列.value" role="cell" class="manager-cell">
               <div v-if="列.value === 'title'" class="moment-title-cell">
                 <button
-                  v-if="缩略图地址(动态)"
                   type="button"
-                  class="moment-thumb"
-                  :title="`查看${动态.title || '这条动态'}的图片`"
-                  :aria-label="`查看${动态.title || '这条动态'}的图片`"
-                  @click="打开图片预览(动态)"
+                  class="moment-title"
+                  :disabled="回收站模式"
+                  @click="打开编辑(动态)"
                 >
-                  <img :src="缩略图地址(动态)" :alt="动态.title || '动态图片'" loading="lazy" />
+                  {{ 动态.title || '无标题' }}
                 </button>
-                <span v-else class="moment-thumb moment-thumb--empty" aria-hidden="true" />
-                <div class="moment-title-meta">
-                  <button
-                    type="button"
-                    class="moment-title"
-                    :disabled="回收站模式"
-                    @click="打开编辑(动态)"
-                  >
-                    {{ 动态.title || '无标题' }}
-                  </button>
-                  <span class="moment-title-meta-sub">{{ 内容字数(动态.content) }} 字</span>
-                </div>
               </div>
 
-              <span
-                v-else-if="列.value === 'content'"
-                class="moment-excerpt"
-                :title="动态.content"
-              >
+              <span v-else-if="列.value === 'content'" class="moment-excerpt" :title="动态.content">
                 {{ 摘要(动态.content) || '（空内容）' }}
               </span>
 
-              <span v-else-if="列.value === 'images'" class="moment-count">
-                {{ 动态.images.length ? `${动态.images.length} 张` : '—' }}
+              <div v-else-if="列.value === 'images'" class="moment-image-cell">
+                <template v-if="动态.images.length">
+                  <button
+                    v-for="图片 in 动态.images.slice(0, 3)"
+                    :key="图片.id"
+                    type="button"
+                    class="moment-image-thumb"
+                    :title="图片.original_name"
+                    :aria-label="`查看图片：${图片.original_name}`"
+                    @click="预览图片地址 = 预览地址(图片)"
+                  >
+                    <img :src="图片地址(图片)" :alt="图片.original_name" loading="lazy" />
+                  </button>
+                  <span v-if="动态.images.length > 3" class="moment-image-more">
+                    +{{ 动态.images.length - 3 }}
+                  </span>
+                </template>
+                <span v-else class="moment-count">—</span>
+              </div>
+
+              <span v-else-if="列.value === 'words'" class="moment-count">
+                {{ 内容字数(动态.content) }} 字
               </span>
 
               <span v-else-if="列.value === 'stats'" class="moment-stats">
@@ -1028,6 +1011,8 @@ onBeforeUnmount(() => {
                 {{ 动态.images.length ? `图文 · ${动态.images.length} 张` : '纯文字' }}
               </span>
               <span>·</span>
+              <span>{{ 内容字数(动态.content) }} 字</span>
+              <span>·</span>
               <ElTooltip
                 :content="格式化完整时间(回收站模式 ? 动态.deleted_at : 动态.published_at)"
                 placement="top"
@@ -1045,21 +1030,24 @@ onBeforeUnmount(() => {
               </button>
             </h3>
             <p>{{ 摘要(动态.content) || '（空内容）' }}</p>
-            <div v-if="动态.images.length" class="moment-card-media">
-              <button
-                v-for="图片 in 动态.images.slice(0, 3)"
-                :key="图片.id"
-                type="button"
-                class="moment-card-thumb"
-                :title="图片.original_name"
-                :aria-label="`查看图片 ${图片.original_name}`"
-                @click="预览图片地址 = 预览地址(图片)"
-              >
-                <img :src="图片地址(图片)" :alt="图片.original_name" loading="lazy" />
-              </button>
+            <div class="moment-card-media" :class="{ 'is-empty': !动态.images.length }">
+              <template v-if="动态.images.length">
+                <button
+                  v-for="图片 in 动态.images.slice(0, 3)"
+                  :key="图片.id"
+                  type="button"
+                  class="moment-card-thumb"
+                  :title="图片.original_name"
+                  :aria-label="`查看图片 ${图片.original_name}`"
+                  @click="预览图片地址 = 预览地址(图片)"
+                >
+                  <img :src="图片地址(图片)" :alt="图片.original_name" loading="lazy" />
+                </button>
+              </template>
+              <span v-else class="moment-card-media-empty">纯文字动态</span>
             </div>
             <footer>
-              <span>浏览 {{ 动态.view_count }} · 赞 {{ 动态.like_count }} · {{ 内容字数(动态.content) }} 字</span>
+              <span>浏览 {{ 动态.view_count }} · 赞 {{ 动态.like_count }}</span>
               <div class="manager-ops">
                 <template v-if="回收站模式">
                   <ElTooltip content="恢复动态" placement="top">
@@ -1172,7 +1160,6 @@ onBeforeUnmount(() => {
       </template>
 
       <div class="manager-dialog-form moment-form">
-        <div class="manager-form-section">正文</div>
         <div class="moment-field">
           <label class="moment-field-label" for="moment-title-input">
             <span>标题（可选）</span>
@@ -1272,43 +1259,12 @@ onBeforeUnmount(() => {
    列表
    ========================================================================== */
 .moment-manager .moment-title-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.moment-manager .moment-thumb {
-  flex: none;
-  width: 38px;
-  height: 38px;
-  overflow: hidden;
-  border-radius: 6px;
-  background: var(--el-fill-color-light);
-  cursor: zoom-in;
-}
-
-.moment-manager .moment-thumb img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.moment-manager .moment-thumb--empty {
-  border: 1px dashed var(--manager-line);
-  background: transparent;
-  cursor: default;
-}
-
-.moment-manager .moment-title-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
 .moment-manager .moment-title {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   color: var(--manager-ink);
   font-size: 13px;
@@ -1326,11 +1282,6 @@ onBeforeUnmount(() => {
 
 .moment-manager .moment-title:disabled {
   cursor: default;
-}
-
-.moment-manager .moment-title-meta-sub {
-  color: var(--manager-placeholder);
-  font-size: 11px;
 }
 
 .moment-manager .moment-excerpt {
@@ -1351,12 +1302,44 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.moment-manager .moment-image-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.moment-manager .moment-image-thumb {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--el-fill-color-light);
+  cursor: zoom-in;
+}
+
+.moment-manager .moment-image-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.moment-manager .moment-image-more {
+  color: var(--manager-placeholder);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    卡片视图
    ========================================================================== */
 .moment-manager .moment-card {
   display: flex;
   flex-direction: column;
+  /* 卡片统一高度，避免有无图片时同排高度参差 */
+  min-height: 255px;
 }
 
 /* 卡片高度随栅格拉伸，页脚统一贴底（提高权重压过 manager.css 的 12px） */
@@ -1403,6 +1386,17 @@ onBeforeUnmount(() => {
   gap: 6px;
   margin-top: 10px;
   margin-bottom: 12px;
+}
+
+/* 纯文字动态保留同样的图片区高度，避免同排卡片出现大块空白 */
+.moment-manager .moment-card-media.is-empty {
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  border: 1px dashed var(--manager-line);
+  border-radius: 6px;
+  color: var(--manager-placeholder);
+  font-size: 11px;
 }
 
 .moment-manager .moment-card-thumb {

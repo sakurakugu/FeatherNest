@@ -6,7 +6,10 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from ipaddress import ip_address
+from urllib.parse import urlsplit
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.shared.kernel.pagination import PaginatedResponse
 
@@ -111,4 +114,48 @@ class 友链交换请求(BaseModel):
     category: str | None = Field(default=None, max_length=50)
     contact_email: str | None = Field(default=None, max_length=255)
     contact_name: str | None = Field(default=None, max_length=100)
-    my_site_url: str = Field(max_length=500)
+    backlink_url: str = Field(max_length=500)
+
+    @field_validator("name")
+    @classmethod
+    def 校验名称(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("网站名称不能为空")
+        return value
+
+    @field_validator("url", "logo_url", "backlink_url")
+    @classmethod
+    def 校验网址(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        try:
+            parts = urlsplit(value)
+            host = parts.hostname
+            port = parts.port
+            if parts.scheme.lower() not in {"http", "https"} or not host or parts.username is not None or parts.password is not None:
+                raise ValueError
+            if any(c.isspace() or ord(c) < 32 for c in value) or "\\" in value:
+                raise ValueError
+            try:
+                address = ip_address(host)
+            except ValueError:
+                if "." not in host or host.lower().rstrip(".").endswith((".localhost", ".local", ".internal")):
+                    raise ValueError
+            else:
+                if not address.is_global:
+                    raise ValueError
+            if port is not None and not 1 <= port <= 65535:
+                raise ValueError
+        except ValueError as exc:
+            raise ValueError("请输入有效的公网 HTTP 或 HTTPS 网址") from exc
+        return value
+
+    @field_validator("contact_email")
+    @classmethod
+    def 校验邮箱(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        from pydantic import TypeAdapter
+        return str(TypeAdapter(EmailStr).validate_python(value.strip()))

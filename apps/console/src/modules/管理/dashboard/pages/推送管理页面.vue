@@ -28,6 +28,8 @@ import {
   删除推送渠道,
   删除推送令牌,
   获取推送渠道,
+  获取友链推送渠道,
+  保存友链推送渠道,
   获取推送令牌,
   重置推送令牌,
   测试推送渠道,
@@ -38,6 +40,13 @@ import type { PushChannel, PushContentType, PushProvider, PushToken, PushTokenCr
 
 const channels = ref<PushChannel[]>([])
 const tokens = ref<PushToken[]>([])
+const friendLinkChannels = ref<string[]>([])
+const friendLinkDefaultChannels = ref<string[]>([])
+const friendLinkSaving = ref(false)
+const friendLinkDialog = ref(false)
+const friendLinkDraft = ref<string[]>([])
+const friendLinkDefaultDraft = ref<string[]>([])
+const tokenRows = computed(() => [{ id: "internal-friend-links", name: "友链每日汇总", channel_ids: friendLinkChannels.value, default_channel_ids: friendLinkDefaultChannels.value, default_content_type: "text", last_used_at: null, enabled: true, internal: true }, ...tokens.value.map((token) => ({ ...token, internal: false }))])
 const loading = ref(true)
 const saving = ref(false)
 const channelDialog = ref(false)
@@ -101,14 +110,31 @@ function formatDate(value: string | null): string {
 async function reload() {
   loading.value = true
   try {
-    const [channelData, tokenData] = await Promise.all([获取推送渠道(), 获取推送令牌()])
+    const [channelData, tokenData, friendLinkData] = await Promise.all([获取推送渠道(), 获取推送令牌(), 获取友链推送渠道()])
     channels.value = channelData
     tokens.value = tokenData
+    friendLinkChannels.value = friendLinkData.channel_ids
+    friendLinkDefaultChannels.value = friendLinkData.default_channel_ids
     emit('push-count-change', tokenData.length)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '推送配置加载失败'))
   } finally {
     loading.value = false
+  }
+}
+
+async function saveFriendLinkChannels() {
+  friendLinkSaving.value = true
+  try {
+    await 保存友链推送渠道({ channel_ids: friendLinkDraft.value, default_channel_ids: friendLinkDefaultDraft.value })
+    friendLinkChannels.value = [...friendLinkDraft.value]
+    friendLinkDefaultChannels.value = [...friendLinkDefaultDraft.value]
+    friendLinkDialog.value = false
+    ElMessage.success('友链推送渠道已保存')
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '友链推送渠道保存失败'))
+  } finally {
+    friendLinkSaving.value = false
   }
 }
 
@@ -376,8 +402,8 @@ onMounted(reload)
         >
           <div class="token-value"><code>{{ createdToken.token }}</code><ElButton size="small" @click="copy(createdToken.token)">复制令牌</ElButton></div>
         </ElAlert>
-        <ElTable v-loading="loading" :data="tokens" row-key="id">
-          <ElTableColumn prop="name" label="名称" min-width="150" />
+        <ElTable v-loading="loading" :data="tokenRows" row-key="id">
+          <ElTableColumn label="名称" min-width="150"><template #default="scope">{{ scope.row.name }} <ElTag v-if="scope.row.internal" size="small" type="info">内部</ElTag></template></ElTableColumn>
           <ElTableColumn label="允许渠道" min-width="200">
             <template #default="scope">
               <ElTag v-for="id in scope.row.channel_ids" :key="id" class="channel-tag">{{ channels.find((item) => item.id === id)?.name || '已删除渠道' }}</ElTag>
@@ -392,16 +418,17 @@ onMounted(reload)
             <template #default="scope">{{ contentTypeOptions.find((item) => item.value === scope.row.default_content_type)?.label }}</template>
           </ElTableColumn>
           <ElTableColumn label="最近调用" min-width="160">
-            <template #default="scope">{{ formatDate(scope.row.last_used_at) }}</template>
+            <template #default="scope">{{ scope.row.internal ? '—' : formatDate(scope.row.last_used_at) }}</template>
           </ElTableColumn>
           <ElTableColumn label="状态" width="100">
-            <template #default="scope"><ElSwitch :model-value="scope.row.enabled" @change="(value) => toggleToken(scope.row as PushToken, Boolean(value))" /></template>
+            <template #default="scope"><span v-if="scope.row.internal">{{ friendLinkDefaultChannels.length ? '已配置' : '未配置' }}</span><ElSwitch v-else :model-value="scope.row.enabled" @change="(value) => toggleToken(scope.row as PushToken, Boolean(value))" /></template>
           </ElTableColumn>
           <ElTableColumn label="操作" width="190" fixed="right">
             <template #default="scope">
-              <ElButton link type="primary" @click="openTokenDialog(scope.row as PushToken)">编辑</ElButton>
-              <ElButton link type="primary" @click="resetToken(scope.row as PushToken)">重置</ElButton>
-              <ElButton link type="danger" @click="removeToken(scope.row as PushToken)">撤销</ElButton>
+              <ElButton v-if="scope.row.internal" link type="primary" @click="friendLinkDraft = [...friendLinkChannels]; friendLinkDefaultDraft = [...friendLinkDefaultChannels]; friendLinkDialog = true">编辑</ElButton>
+              <ElButton v-else link type="primary" @click="openTokenDialog(scope.row as PushToken)">编辑</ElButton>
+              <ElButton v-if="!scope.row.internal" link type="primary" @click="resetToken(scope.row as PushToken)">重置</ElButton>
+              <ElButton v-if="!scope.row.internal" link type="danger" @click="removeToken(scope.row as PushToken)">撤销</ElButton>
             </template>
           </ElTableColumn>
           <template #empty><ElEmpty description="还没有调用令牌" /></template>
@@ -416,6 +443,25 @@ onMounted(reload)
         <pre class="code-sample">{{ curlExample }}</pre>
         <ElButton size="small" @click="copy(curlExample)">复制 cURL 示例</ElButton>
       </ElCard>
+
+      <ElDialog v-model="friendLinkDialog" title="编辑友链每日汇总" width="min(560px, 94vw)" destroy-on-close>
+        <ElForm label-position="top">
+          <ElFormItem label="令牌名称"><ElInput model-value="友链每日汇总" disabled /></ElFormItem>
+          <ElFormItem label="允许渠道">
+            <ElSelect v-model="friendLinkDraft" multiple placeholder="选择允许渠道" style="width: 100%" @change="friendLinkDefaultDraft = friendLinkDefaultDraft.filter((id) => friendLinkDraft.includes(id))">
+              <ElOption v-for="channel in channels" :key="channel.id" :label="channel.name" :value="channel.id" :disabled="!channel.enabled" />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="默认渠道">
+            <ElSelect v-model="friendLinkDefaultDraft" multiple placeholder="从允许渠道中选择默认渠道" style="width: 100%">
+              <ElOption v-for="channel in channels.filter((item) => friendLinkDraft.includes(item.id))" :key="channel.id" :label="channel.name" :value="channel.id" :disabled="!channel.enabled" />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="默认文本类型"><ElInput model-value="纯文本" disabled /></ElFormItem>
+          <p class="form-hint">每天 21 点发送到已启用的默认渠道；未选择默认渠道时不发送。取消默认渠道后，该渠道待补发的消息暂不发送。</p>
+        </ElForm>
+        <template #footer><ElButton @click="friendLinkDialog = false">取消</ElButton><ElButton type="primary" :loading="friendLinkSaving" @click="saveFriendLinkChannels">保存</ElButton></template>
+      </ElDialog>
 
       <ElDialog v-model="tokenDialog" :title="editingToken ? '编辑脚本调用令牌' : '创建脚本调用令牌'" width="min(560px, 94vw)" destroy-on-close>
         <ElForm label-position="top">

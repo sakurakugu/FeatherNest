@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, Index, String, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -54,6 +54,11 @@ class 友链(Base):
     is_auto_exchange: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    backlink_url: Mapped[str | None] = mapped_column(String(500))
+    backlink_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    backlink_missing_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    backlink_checked_on: Mapped[date | None] = mapped_column(Date)
+    auto_approved_on: Mapped[date | None] = mapped_column(Date)
     contact_email: Mapped[str | None] = mapped_column(String(255))
     contact_name: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

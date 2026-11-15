@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, Query, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+from app.core.config import settings
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +41,7 @@ from app.shared.auth.deps import 要求当前用户
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/friend-links", tags=["friend-links"])
+申请限流器 = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
 
 
 @router.get("", response_model=友链列表响应)
@@ -144,11 +149,13 @@ async def 恢复友链(
 
 
 @router.post("/exchange", response_model=dict)
+@申请限流器.limit("2/minute; 5/hour")
 async def 交换友链(
+    request: Request,
     body: 友链交换请求,
     db: AsyncSession = Depends(get_db),
 ):
-    """自动交换友链。"""
+    """提交友链申请。"""
     return await 交换友链_service(db, body)
 
 

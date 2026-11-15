@@ -86,7 +86,7 @@ const 申请 = ref({
   友链页: '',
 })
 
-const 步骤 = ref(1)
+const 步骤 = ref<number | null>(1)
 const 错误 = ref<{ 名称?: boolean; 链接?: boolean; 邮箱?: boolean }>({})
 
 type 结果类型 = 'success' | 'pending' | 'error'
@@ -151,9 +151,9 @@ function 清除错误(字段: keyof typeof 错误.value) {
 }
 
 function 回到步骤(序号: number) {
-  // 提交之后就不让再回来改了，想改就点「再申请一个」
-  if (结果.value) return
-  步骤.value = 序号
+  // 提交后只允许折叠结果，修改信息需点击「再申请一个」。
+  if (结果.value && 序号 !== 3) return
+  步骤.value = 步骤.value === 序号 ? null : 序号
   错误.value = {}
 }
 
@@ -192,8 +192,7 @@ async function 提交申请() {
       logo_url: 申请.value.头像.trim() || null,
       contact_name: 申请.value.联系人.trim() || null,
       contact_email: 申请.value.邮箱.trim() || null,
-      // 没填友链页就用站点链接兜底，后端会去抓这个页面找本站链接
-      my_site_url: 申请.value.友链页.trim() || 申请.value.链接.trim(),
+      backlink_url: 申请.value.友链页.trim() || 申请.value.链接.trim(),
     })
 
     if (响应.auto_approved) {
@@ -445,7 +444,7 @@ onUnmounted(() => {
                   <span class="tline" />
                 </div>
                 <div class="tstep-body">
-                  <button class="tstep-head" type="button" @click="回到步骤(1)">
+                  <button class="tstep-head" type="button" :aria-expanded="步骤 === 1" @click="回到步骤(1)">
                     填写信息
                     <Icon icon="material-symbols:chevron-right-rounded" class="chev" />
                   </button>
@@ -515,7 +514,7 @@ onUnmounted(() => {
                   <span class="tline" />
                 </div>
                 <div class="tstep-body">
-                  <button class="tstep-head" type="button" @click="回到步骤(2)">
+                  <button class="tstep-head" type="button" :aria-expanded="步骤 === 2" @click="回到步骤(2)">
                     联系方式
                     <Icon icon="material-symbols:chevron-right-rounded" class="chev" />
                   </button>
@@ -556,7 +555,7 @@ onUnmounted(() => {
                   <span class="tnum">3</span>
                 </div>
                 <div class="tstep-body">
-                  <button class="tstep-head" type="button" @click="回到步骤(3)">
+                  <button class="tstep-head" type="button" :aria-expanded="步骤 === 3" @click="回到步骤(3)">
                     提交申请
                     <Icon icon="material-symbols:chevron-right-rounded" class="chev" />
                   </button>
@@ -564,15 +563,9 @@ onUnmounted(() => {
                     <template v-if="!结果">
                       <div class="field">
                         <label>你的友链页面 <span class="opt">选填</span></label>
-                        <input
-                          v-model="申请.友链页"
-                          placeholder="https://example.com/friends"
-                          autocomplete="off"
-                        >
+                        <input v-model="申请.友链页" placeholder="https://example.com/friends" autocomplete="off">
                       </div>
-                      <p class="tstep-text">
-                        用于自动通过友链，否则要等一会。
-                      </p>
+                      <p class="tstep-text">用于检测并自动通过友链，否则要等一会让人工挂上去。</p>
                       <button class="apply-btn" type="button" :disabled="提交中" @click="提交申请">
                         <span v-if="提交中" class="spinner" />
                         {{ 提交中 ? '提交中…' : '提交申请' }}
@@ -1087,8 +1080,8 @@ onUnmounted(() => {
   padding-bottom: 0;
 }
 
-.tstep:not(.is-open) .tstep-body {
-  padding-bottom: 0.5rem;
+.tstep:not(.is-open):not(:last-child) .tstep-body {
+  padding-bottom: 1.5rem;
 }
 
 .tstep-head {

@@ -74,6 +74,9 @@ export type MomentSortField =
   | 'view_count'
   | 'like_count'
   | 'title'
+  | 'content'
+  | 'word_count'
+  | 'image_count'
   | 'deleted_at'
 
 /** 我的动态列表查询参数（管理页使用）。 */

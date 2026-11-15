@@ -3146,7 +3146,6 @@ export interface components {
       category?: string | null
       contact_email?: string | null
       contact_name?: string | null
-      my_site_url: string
     }
     app__modules__friend_links__schemas________1: {
       name: string
@@ -8685,6 +8684,9 @@ export interface operations {
               | 'view_count'
               | 'like_count'
               | 'title'
+              | 'content'
+              | 'word_count'
+              | 'image_count'
             )
           | null
         sort_order?: string

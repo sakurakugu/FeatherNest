@@ -169,3 +169,14 @@ export async function 删除推送令牌(id: string): Promise<void> {
   await api.delete(`/notifications/tokens/${id}`)
 }
 
+
+export interface 友链推送渠道配置 { channel_ids: string[]; default_channel_ids: string[] }
+
+export async function 获取友链推送渠道(): Promise<友链推送渠道配置> {
+  const { data } = await api.get<友链推送渠道配置>('/notifications/friend-link-channels')
+  return data
+}
+
+export async function 保存友链推送渠道(config: 友链推送渠道配置): Promise<void> {
+  await api.put('/notifications/friend-link-channels', config)
+}

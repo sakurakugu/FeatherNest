@@ -13,7 +13,10 @@ import type {
 
 const DEFAULT_PAGE_SIZE = 10
 
-export async function 获取已发布动态(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<MomentListResponse<PublishedMoment>> {
+export async function 获取已发布动态(
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+): Promise<MomentListResponse<PublishedMoment>> {
   const { data } = await api.get<MomentListResponse<PublishedMoment>>('/moments', {
     params: {
       page,
@@ -69,7 +72,10 @@ export async function 上传动态图片(momentId: string, file: File): Promise<
   return data
 }
 
-export async function 重新排序动态图片(momentId: string, imageIds: string[]): Promise<MomentImageRecord[]> {
+export async function 重新排序动态图片(
+  momentId: string,
+  imageIds: string[],
+): Promise<MomentImageRecord[]> {
   const { data } = await api.patch<MomentImageRecord[]>(`/moments/${momentId}/images/order`, {
     image_ids: imageIds,
   })
