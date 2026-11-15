@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timezone
 from logging import Logger
 from time import perf_counter
@@ -10,18 +11,18 @@ from typing import Awaitable, Callable, cast
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from starlette.requests import Request
 from starlette.responses import Response
 
 from app.modules.auth.cookies import 从请求获取会话ID
+from app.modules.auth.sessions import get_session
+from app.modules.auth.rate_limit import 登录限流器 as limiter
 from app.modules.system.monitoring import SLOW_REQUEST_THRESHOLD_MS, 记录请求事件
 from app.shared.kernel.config import settings
 from app.shared.kernel.validation import 请求校验异常处理器
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 监控排除路径 = frozenset({
     "/api/health",
     "/api/v1/health",
@@ -60,12 +61,21 @@ def 注册中间件(app: FastAPI, *, app_logger: Logger) -> None:
         if request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}:
             return await call_next(request)
 
-        if 从请求获取会话ID(request) is None:
+        session_id = 从请求获取会话ID(request)
+        if session_id is None:
             return await call_next(request)
 
         csrf_cookie = request.cookies.get(settings.AUTH_CSRF_COOKIE_NAME)
         csrf_header = request.headers.get(settings.AUTH_CSRF_HEADER_NAME)
-        if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+        session = await get_session(session_id)
+        if session is None:
+            return Response(status_code=401, content='{"detail":"登录已失效"}', media_type="application/json")
+        if (
+            not csrf_cookie or not csrf_header
+            or not secrets.compare_digest(csrf_header.encode(), session.csrf_token.encode())
+            or not secrets.compare_digest(csrf_cookie.encode(), session.csrf_token.encode())
+        ):
+            app_logger.warning("CSRF 校验失败：%s %s", request.method, request.url.path)
             return Response(
                 status_code=403,
                 content='{"detail":"CSRF 校验失败"}',

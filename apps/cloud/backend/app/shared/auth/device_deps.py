@@ -67,6 +67,8 @@ async def 从设备令牌获取当前用户(
 ) -> 用户:
     """从设备令牌中提取当前用户。"""
     session = await 获取当前设备会话(request, db)
+    if session.scope != 设备会话范围.full_client:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="MCP 令牌仅允许访问 MCP 接口")
     return await 获取设备会话用户(db, session)
 
 
@@ -78,6 +80,8 @@ async def 从设备令牌可选获取当前用户(
     session = await 解析设备会话可选(request, db)
     if session is None:
         return None
+    if session.scope != 设备会话范围.full_client:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="MCP 令牌仅允许访问 MCP 接口")
     return await 获取设备会话用户(db, session)
 
 

@@ -14,6 +14,7 @@ from app.modules.users.common import (
 from app.modules.users.models import 用户
 from app.modules.users.schemas import 用户修改密码, 用户更新
 from app.modules.auth.sessions import 撤销用户会话
+from app.modules.auth.device_service import 吊销全部用户设备会话
 
 
 async def 更新当前用户(
@@ -52,5 +53,6 @@ async def 修改当前用户密码(
     if body.current_password == body.new_password:
         raise HTTPException(status_code=400, detail="新密码不能与旧密码相同")
     user.password_hash = 哈希密码(body.new_password)
+    await 吊销全部用户设备会话(db, current_user=user)
     await 撤销用户会话(str(user.id))
     await db.flush()

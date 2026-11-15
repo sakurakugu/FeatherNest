@@ -35,5 +35,9 @@ def 验证密码(plain: str, hashed: str) -> bool:
     Returns:
         bool: 是否匹配
     """
-    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except ValueError:
+        # 超过 bcrypt 字节上限的密码或损坏的散列按认证失败处理。
+        return False
 

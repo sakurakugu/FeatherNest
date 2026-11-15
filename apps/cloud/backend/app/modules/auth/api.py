@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth.cookies import 清除认证Cookie, 从请求获取会话ID, 写入认证Cookie
 from app.modules.auth.schemas import 登录请求
 from app.modules.auth.service import login_user
+from app.modules.auth.rate_limit import 登录限流器
 from app.modules.auth.sessions import 创建用户会话, delete_session
 from app.shared.db.session import get_db
 
@@ -15,8 +16,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", status_code=status.HTTP_204_NO_CONTENT)
+@登录限流器.limit("5/minute;30/hour")
 async def login(
     body: 登录请求,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):

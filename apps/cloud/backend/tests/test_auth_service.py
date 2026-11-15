@@ -53,7 +53,7 @@ class 认证服务测试(unittest.TestCase):
 
             auth_service.settings.APP_ENV = "production"
             auth_service.settings.APP_DEBUG = True
-            self.assertTrue(是否启用开发登录())
+            self.assertFalse(是否启用开发登录())
         finally:
             auth_service.settings.APP_DEBUG = original_debug
             auth_service.settings.APP_ENV = original_env

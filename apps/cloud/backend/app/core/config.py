@@ -16,6 +16,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
     "http://localhost",
     "https://localhost",
     "capacitor://localhost",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
 ]
 
 生产环境默认跨源来源 = [
@@ -23,9 +29,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
     "https://sakurakugu.com",
     "https://www.sakurakugu.top",
     "https://sakurakugu.top",
-    "http://localhost",
-    "https://localhost",
-    "http://localhost:5175",
     "capacitor://localhost",
 ]
 
@@ -77,6 +80,30 @@ class Settings(BaseSettings):
     # @property
     # def cors_allow_origin_regex(self) -> str | None:
         # return self.CORS_ALLOW_ORIGIN_REGEX or None
+
+    def 校验生产安全配置(self) -> None:
+        """生产环境禁止调试登录和不安全的认证配置。"""
+        if self.APP_ENV == "development":
+            return
+        if self.APP_ENV != "production":
+            raise ValueError("APP_ENV 必须为 development 或 production")
+        if self.APP_DEBUG:
+            raise ValueError("生产环境禁止开启 APP_DEBUG")
+        if len(self.AUTH_SECRET_KEY) < 32 or self.AUTH_SECRET_KEY == "replace-with-a-very-long-random-string":
+            raise ValueError("生产环境必须配置至少 32 位的随机 AUTH_SECRET_KEY")
+        if not self.AUTH_COOKIE_SECURE:
+            raise ValueError("生产环境必须开启 AUTH_COOKIE_SECURE")
+        if self.AUTH_COOKIE_SAMESITE not in {"lax", "strict", "none"}:
+            raise ValueError("AUTH_COOKIE_SAMESITE 配置无效")
+        if "*" in self.cors_origins_list:
+            raise ValueError("带凭证的 CORS 禁止使用通配来源")
+
+    def 校验初始管理员密码(self) -> None:
+        """仅在创建账号时检查初始密码，不影响已有账号。"""
+        if self.APP_ENV != "development" and (
+            self.ADMIN_PASSWORD == "change_me_admin" or len(self.ADMIN_PASSWORD) < 12
+        ):
+            raise ValueError("首次创建生产账号必须设置至少 12 位的 ADMIN_PASSWORD，禁止使用默认密码")
 
     # ── PostgreSQL ───────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://bloguser:change_me_in_production@127.0.0.1:5432/blogdb"

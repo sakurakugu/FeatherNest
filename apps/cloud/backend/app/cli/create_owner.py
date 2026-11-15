@@ -19,6 +19,7 @@ async def 创建首个Owner() -> bool:
         if result.scalar_one_or_none() is not None:
             return False
 
+        settings.校验初始管理员密码()
         owner = 用户(
             username=settings.ADMIN_USERNAME,
             email=settings.ADMIN_EMAIL,

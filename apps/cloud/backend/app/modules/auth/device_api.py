@@ -28,6 +28,7 @@ from app.modules.auth.device_service import (
 )
 from app.modules.auth.schemas import 登录请求
 from app.modules.auth.service import login_user
+from app.modules.auth.rate_limit import 登录限流器
 from app.modules.users.models import 用户
 from app.modules.users.schemas import 用户信息
 from app.shared.auth.deps import 获取当前用户
@@ -40,6 +41,7 @@ router = APIRouter(prefix="/auth/device", tags=["auth"])
 
 
 @router.post("/login", response_model=设备登录响应, status_code=status.HTTP_201_CREATED)
+@登录限流器.limit("5/minute;30/hour")
 async def login_device(
     body: 设备登录请求,
     request: Request,

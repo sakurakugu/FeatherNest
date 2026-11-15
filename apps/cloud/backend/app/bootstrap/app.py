@@ -33,7 +33,7 @@ def 创建应用() -> FastAPI:
     注册中间件(app, app_logger=app_logger)
     注册应用路由(
         app,
-        include_dev_auth=settings.APP_DEBUG or settings.APP_ENV == "development",
+        include_dev_auth=settings.APP_ENV == "development",
     )
     注册MCP服务(app)
     return app

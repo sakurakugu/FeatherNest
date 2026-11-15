@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +14,11 @@ from app.modules.auth.schemas import 登录请求
 from app.shared.kernel.config import settings
 
 
+logger = logging.getLogger(__name__)
+
 def 是否启用开发登录() -> bool:
     """判断是否启用开发环境一键登录。"""
-    return settings.APP_DEBUG or settings.APP_ENV == "development"
+    return settings.APP_ENV == "development"
 
 
 def 构建开发账号配置() -> tuple[str, str, str]:
@@ -36,6 +40,7 @@ async def login_user(db: AsyncSession, body: 登录请求) -> 用户:
     """用户登录。"""
     user = await _按用户名获取用户(db, body.username)
     if user is None or not 验证密码(body.password, user.password_hash):
+        logger.warning("登录失败：用户名或密码错误")
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     return user
 

@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy import text
 
 from app.core.redis import close_redis
+from app.shared.kernel.config import settings
 from app.mcp.server import 启动MCP会话管理器, 停止MCP会话管理器
 from app.modules.friend_links.daily import 启动友链每日任务, 停止友链每日任务
 from app.modules.files.trash import 启动文件回收站自动清理, 停止文件回收站自动清理
@@ -19,6 +20,7 @@ from app.shared.storage.client import 确保存储桶存在
 @asynccontextmanager
 async def lifespan(_app):
     """处理应用启动和关闭时的资源初始化与清理。"""
+    settings.校验生产安全配置()
     async with engine.begin() as conn:
         await conn.execute(text("SELECT 1"))
 

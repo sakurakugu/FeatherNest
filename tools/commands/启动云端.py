@@ -12,6 +12,7 @@ db-upgrade:  更新数据库到最新迁移
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -363,6 +364,14 @@ def 启动开发版(use_venv: bool) -> None:
     backend_env_patch = {
         "APP_ENV": "development",
         "APP_DEBUG": "true",
+        # 开发进程覆盖生产 .env 中的 Cookie 和来源，支持本地网页及原生壳。
+        "CORS_ORIGINS": json.dumps([
+            "http://localhost", "https://localhost", "capacitor://localhost",
+            *[f"http://{host}:{port}" for host in ("localhost", "127.0.0.1") for port in (5173, 5174, 5175)],
+        ]),
+        "AUTH_COOKIE_DOMAIN": "",
+        "AUTH_COOKIE_SAMESITE": "lax",
+        "AUTH_COOKIE_SECURE": "false",
         # Windows 文件事件偶尔会漏掉编辑器保存动作，开发模式改用轮询保证热更新稳定触发。
         # "WATCHFILES_FORCE_POLLING": "true",
         # "WATCHFILES_POLL_DELAY_MS": "300",

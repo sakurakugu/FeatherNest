@@ -16,6 +16,7 @@ async def 首次创建用户(db: AsyncSession) -> None:
     if result.scalar_one_or_none():
         return
 
+    settings.校验初始管理员密码()
     owner = 用户(
         username=settings.ADMIN_USERNAME,
         email=settings.ADMIN_EMAIL,
