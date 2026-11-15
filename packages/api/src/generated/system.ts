@@ -3524,6 +3524,7 @@ export interface components {
         | 'feishu'
         | 'dingtalk'
         | 'webhook'
+        | 'resend'
       config: {
         [key: string]: string
       }
@@ -3561,6 +3562,7 @@ export interface components {
         | 'feishu'
         | 'dingtalk'
         | 'webhook'
+        | 'resend'
       enabled: boolean
       has_config?: boolean
       created_at: string

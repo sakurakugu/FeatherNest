@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-推送平台 = Literal["bark", "serverchan", "pushplus", "wxpusher", "wecom", "feishu", "dingtalk", "webhook"]
+推送平台 = Literal["bark", "serverchan", "pushplus", "wxpusher", "wecom", "feishu", "dingtalk", "webhook", "resend"]
 推送文本类型 = Literal["text", "markdown", "html"]
 
 

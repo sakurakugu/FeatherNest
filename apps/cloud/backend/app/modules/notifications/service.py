@@ -12,13 +12,16 @@ import socket
 import time
 from ipaddress import ip_address
 from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 import markdown
 from bs4 import BeautifulSoup
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
+from pydantic import ValidationError
+from app.integrations.email.schemas import 邮件渠道配置, 邮件发送请求
+from app.integrations.email.service import 发送邮件, 邮件发送错误
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,6 +50,7 @@ logger = get_logger(__name__)
     "feishu": {"webhook_url"},
     "dingtalk": {"webhook_url"},
     "webhook": {"url"},
+    "resend": {"api_key", "from_address", "to"},
 }
 
 
@@ -71,6 +75,12 @@ async def _校验渠道配置(provider: str, config: dict[str, str]) -> None:
     missing = 渠道必填配置[provider] - {key for key, value in config.items() if value.strip()}
     if missing:
         raise HTTPException(status_code=400, detail=f"渠道配置缺少必填项：{', '.join(sorted(missing))}")
+    if provider == "resend":
+        try:
+            邮件渠道配置.从渠道配置(config)
+        except ValidationError as exc:
+            # 不返回校验器原始错误，避免密钥或邮箱通过错误响应泄露。
+            raise HTTPException(status_code=400, detail="邮件配置无效，请检查密钥、发件地址、收件地址及回复地址；收件人最多 50 个，使用英文逗号分隔") from exc
     if provider in {"feishu", "dingtalk", "webhook"}:
         await _校验公开HTTPS地址(config["webhook_url"] if provider != "webhook" else config["url"])
     if provider == "webhook":
@@ -156,7 +166,7 @@ async def 更新渠道(db: AsyncSession, channel_id: UUID, body: 推送渠道更
         channel.name = body.name
     if body.config is not None:
         config = body.config
-        if channel.provider == "wxpusher":
+        if channel.provider in {"wxpusher", "resend"}:
             config = {**_解密配置(channel.config_ciphertext), **config}
         await _校验渠道配置(channel.provider, config)
         channel.config_ciphertext = _加密配置(config)
@@ -339,6 +349,15 @@ async def 发送消息(db: AsyncSession, token: 推送令牌, body: 推送消息
 async def _发送单渠道(channel: 推送渠道, title: str, content: str, content_type: 推送文本类型 = "text") -> 推送结果项:
     config = _解密配置(channel.config_ciphertext)
     try:
+        if channel.provider == "resend":
+            mail_config = 邮件渠道配置.从渠道配置(config)
+            html = markdown.markdown(content) if content_type == "markdown" else content if content_type == "html" else None
+            text = BeautifulSoup(html, "html.parser").get_text(separator="\n") if html else content
+            # 纯图片或其他无可见文本的 HTML 仍提供可读的纯文本版本。
+            body = 邮件发送请求(to=mail_config.to, subject=title, text=text.strip() or title, html=html)
+            await 发送邮件(body, config=mail_config, idempotency_key=f"push/{channel.id}/{uuid4()}")
+            logger.info("邮件推送已受理 channel_id=%s", channel.id)
+            return 推送结果项(channel_id=channel.id, name=channel.name, success=True)
         async with httpx.AsyncClient(timeout=10, follow_redirects=False, trust_env=False) as client:
             response = await _构建请求(client, channel.provider, config, title, content, content_type)
         response.raise_for_status()
@@ -367,6 +386,9 @@ async def _发送单渠道(channel: 推送渠道, title: str, content: str, cont
                 logger.warning("WXPusher 推送失败 channel_id=%s code=%s", channel.id, code)
                 return 推送结果项(channel_id=channel.id, name=channel.name, success=False, error=error)
             raise ValueError("推送平台返回失败状态")
+    except 邮件发送错误 as exc:
+        logger.warning("邮件推送失败 channel_id=%s status_code=%s", channel.id, exc.status_code)
+        return 推送结果项(channel_id=channel.id, name=channel.name, success=False, error=str(exc))
     except httpx.ConnectError as exc:
         logger.warning("推送渠道连接失败 channel_id=%s provider=%s error_type=%s", channel.id, channel.provider, type(exc).__name__)
         return 推送结果项(channel_id=channel.id, name=channel.name, success=False, error="无法连接推送平台，请检查服务器网络或 DNS")

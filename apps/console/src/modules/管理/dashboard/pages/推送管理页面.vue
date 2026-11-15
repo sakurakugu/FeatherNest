@@ -67,12 +67,14 @@ const createdToken = ref<PushTokenCreated | null>(null)
 const emit = defineEmits<{ 'push-count-change': [count: number] }>()
 const channelForm = reactive({ name: '', provider: 'bark' as PushProvider, configJson: '' })
 const wxpusherForm = reactive({ appToken: '', uids: '', topicIds: '' })
+const resendForm = reactive({ apiKey: '', fromAddress: '', to: '', replyTo: '' })
 
 const providerOptions: Array<{ label: string; value: PushProvider }> = [
   { label: 'Bark', value: 'bark' },
   { label: 'Server 酱', value: 'serverchan' },
   { label: 'PushPlus', value: 'pushplus' },
   { label: 'WXPusher', value: 'wxpusher' },
+  { label: '邮件（Resend）', value: 'resend' },
   { label: '企业微信机器人', value: 'wecom' },
   { label: '飞书机器人', value: 'feishu' },
   { label: '钉钉机器人', value: 'dingtalk' },
@@ -84,6 +86,7 @@ const configExamples: Record<PushProvider, string> = {
   serverchan: '{\n  "send_key": "你的 SendKey"\n}',
   pushplus: '{\n  "token": "你的 Token"\n}',
   wxpusher: '{\n  "app_token": "你的 AppToken",\n  "uids": "UID_xxx,UID_yyy",\n  "topic_ids": "123,456"\n}',
+  resend: '{\n  "api_key": "re_你的发送密钥",\n  "from_address": "FeatherNest <noreply@sakurakugu.com>",\n  "to": "你的收件邮箱",\n  "reply_to": "可选的回复邮箱"\n}',
   wecom: '{\n  "key": "企业微信机器人 Webhook 中的 key"\n}',
   feishu: '{\n  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/..."\n}',
   dingtalk: '{\n  "webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=...",\n  "secret": "可选的加签密钥"\n}',
@@ -143,7 +146,7 @@ function openCreateChannel() {
   channelForm.name = ''
   channelForm.provider = 'bark'
   channelForm.configJson = configExamples.bark
-  resetWxpusherForm()
+  resetChannelForms()
   channelDialog.value = true
 }
 
@@ -152,16 +155,20 @@ function openEditChannel(channel: PushChannel) {
   channelForm.name = channel.name
   channelForm.provider = channel.provider
   channelForm.configJson = ''
-  resetWxpusherForm()
+  resetChannelForms()
   channelDialog.value = true
 }
 
 function changeProvider(provider: PushProvider) {
   channelForm.configJson = configExamples[provider]
-  resetWxpusherForm()
+  resetChannelForms()
 }
 
-function resetWxpusherForm() {
+function resetChannelForms() {
+  resendForm.apiKey = ''
+  resendForm.fromAddress = ''
+  resendForm.to = ''
+  resendForm.replyTo = ''
   wxpusherForm.appToken = ''
   wxpusherForm.uids = ''
   wxpusherForm.topicIds = ''
@@ -173,7 +180,18 @@ async function saveChannel() {
     return
   }
   let config: Record<string, string> | undefined
-  if (channelForm.provider === 'wxpusher') {
+  if (channelForm.provider === 'resend') {
+    const mailConfig: Record<string, string> = {}
+    if (resendForm.apiKey.trim()) mailConfig.api_key = resendForm.apiKey.trim()
+    if (resendForm.fromAddress.trim()) mailConfig.from_address = resendForm.fromAddress.trim()
+    if (resendForm.to.trim()) mailConfig.to = resendForm.to.trim()
+    if (resendForm.replyTo.trim()) mailConfig.reply_to = resendForm.replyTo.trim()
+    if (Object.keys(mailConfig).length) config = mailConfig
+    if (!editingChannel.value && (!mailConfig.api_key || !mailConfig.from_address || !mailConfig.to)) {
+      ElMessage.warning('请填写 Resend 密钥、发件地址和收件地址')
+      return
+    }
+  } else if (channelForm.provider === 'wxpusher') {
     const wxpusherConfig: Record<string, string> = {}
     if (wxpusherForm.appToken.trim()) wxpusherConfig.app_token = wxpusherForm.appToken.trim()
     if (wxpusherForm.uids.trim()) wxpusherConfig.uids = wxpusherForm.uids.trim()
@@ -219,7 +237,7 @@ async function saveChannel() {
 async function testChannel(channel: PushChannel) {
   try {
     const result = await 测试推送渠道(channel.id)
-    if (result.success) ElMessage.success(`测试消息已发送到「${channel.name}」`)
+    if (result.success) ElMessage.success(channel.provider === 'resend' ? 'Resend 已受理测试邮件，请检查收件箱及 Resend 日志' : `测试消息已发送到「${channel.name}」`)
     else ElMessage.error(result.error || '推送测试失败')
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '推送测试失败'))
@@ -497,7 +515,22 @@ onMounted(reload)
               <ElOption v-for="item in providerOptions" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
           </ElFormItem>
-          <template v-if="channelForm.provider === 'wxpusher'">
+          <template v-if="channelForm.provider === 'resend'">
+            <ElFormItem label="Resend API Key" :required="!editingChannel">
+              <ElInput v-model="resendForm.apiKey" type="password" show-password autocomplete="new-password" :placeholder="editingChannel ? '留空保留现有密钥' : 're_开头的发送密钥'" />
+            </ElFormItem>
+            <ElFormItem label="发件地址" :required="!editingChannel">
+              <ElInput v-model="resendForm.fromAddress" :placeholder="editingChannel ? '留空保留现有发件地址' : 'FeatherNest <noreply@sakurakugu.com>'" />
+            </ElFormItem>
+            <ElFormItem label="收件地址" :required="!editingChannel">
+              <ElInput v-model="resendForm.to" :placeholder="editingChannel ? '留空保留现有收件地址' : '多个邮箱用英文逗号分隔，最多 50 个'" />
+            </ElFormItem>
+            <ElFormItem label="回复地址">
+              <ElInput v-model="resendForm.replyTo" :placeholder="editingChannel ? '留空保留现有回复地址' : '可选，填写已通过 Cloudflare 转发的收信地址'" />
+            </ElFormItem>
+            <p class="form-hint">发件域名须在 Resend 验证。配置加密保存且不回显，编辑时仅更新填写的项目。收信继续使用 Cloudflare 转发。多个收件人可能互相看到地址，需要隔离时请分别创建渠道。</p>
+          </template>
+          <template v-else-if="channelForm.provider === 'wxpusher'">
             <ElFormItem label="AppToken" :required="!editingChannel">
               <ElInput v-model="wxpusherForm.appToken" type="password" show-password autocomplete="new-password" placeholder="WXPusher 应用令牌" />
             </ElFormItem>

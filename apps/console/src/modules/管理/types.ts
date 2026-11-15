@@ -172,7 +172,7 @@ export interface MCPTokenCreateResponse {
   session: MCPDeviceSession
 }
 
-export type PushProvider = 'bark' | 'serverchan' | 'pushplus' | 'wxpusher' | 'wecom' | 'feishu' | 'dingtalk' | 'webhook'
+export type PushProvider = 'bark' | 'serverchan' | 'pushplus' | 'wxpusher' | 'wecom' | 'feishu' | 'dingtalk' | 'webhook' | 'resend'
 
 export interface PushChannel {
   id: string
