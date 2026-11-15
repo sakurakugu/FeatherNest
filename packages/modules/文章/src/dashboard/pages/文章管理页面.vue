@@ -3341,12 +3341,23 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .article-filter-button.is-active,
 .article-filter-button:hover {
   color: var(--manager-ink);
-  border-color: var(--el-color-primary);
+  border-color: var(--el-border-color-dark, #d4d7de);
+}
+.article-filter-button.is-active .el-icon {
+  color: var(--el-color-primary);
 }
 .article-filter-button small {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
   padding: 0 4px;
   border-radius: 3px;
-  background: var(--manager-hover);
+  background: var(--el-color-primary);
+  color: #fff;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 9.5px;
+  line-height: 1;
 }
 .article-sort-options {
   display: grid;

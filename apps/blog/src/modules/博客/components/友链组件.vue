@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { BlogTwikooPanel } from '@feathernest/module-blog/widgets'
+import { BlogTwikooPanel, FriendLinkIcon } from '@feathernest/module-blog/widgets'
 import { ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -70,13 +70,6 @@ const site = {
   avatar: 'https://www.sakurakugu.com/头像.avif',
   email: 'sakurakugu@qq.com',
 }
-
-const notes = [
-  { title: '互换原则', content: '希望能互相添加对方的友链即可，如果没这功能就算了' },
-  { title: '链接维护', content: '如果网站长期无法访问，可能会被移除（自动的）' }, // TODO: 后端添加自动检测功能
-  { title: '站点要求', content: '能够正常访问，别搞反动/暴力等违法违规内容即可' },
-  { title: '其他注释', content: '这四个还有上面的都是占位的好看的内容，不用管' },
-]
 
 const 可以通过评论区申请 = computed(() => settings.commentVisibility !== 'hidden')
 const 申请方式标题 = computed(() => {
@@ -150,16 +143,12 @@ const 友链申请模板 = `站点名称：您的站点名称
               >
                 <div class="friend-card-bg" aria-hidden="true" />
                 <div class="friend-avatar">
-                  <img
-                    v-if="friendLink.logo_url"
-                    :src="friendLink.logo_url"
-                    :alt="friendLink.name"
-                    loading="lazy"
-                    decoding="async"
-                  >
-                  <div v-else class="avatar-placeholder">
-                    {{ friendLink.name.charAt(0) }}
-                  </div>
+                  <FriendLinkIcon
+                    :name="friendLink.name"
+                    :url="friendLink.url"
+                    :logo-url="friendLink.logo_url"
+                    style="width: 100%; height: 100%; font-size: inherit; border-radius: inherit"
+                  />
                 </div>
                 <div class="friend-info">
                   <div class="friend-title-row">
@@ -290,25 +279,6 @@ const 友链申请模板 = `站点名称：您的站点名称
         </div>
       </div>
 
-      <!-- 底部：注意事项 -->
-      <div class="info-panel" style="margin-top: 1rem;">
-        <div class="panel-inner">
-          <h3 class="panel-title">
-            <svg class="notes-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            注意事项
-          </h3>
-          <div class="notes-list">
-            <div v-for="note in notes" :key="note.title" class="note-item">
-              <span class="note-dot" />
-              <p>
-                <strong class="note-strong">{{ note.title }}</strong>：{{ note.content }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <BlogTwikooPanel
@@ -480,24 +450,6 @@ const 友链申请模板 = `站点名称：您的站点名称
 
 .friend-card:hover .friend-avatar {
   transform: scale(1.05);
-}
-
-.friend-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .friend-info {
@@ -865,40 +817,6 @@ const 友链申请模板 = `站点名称：您的站点名称
   font-family: inherit;
   white-space: pre;
   color: var(--text-secondary);
-}
-
-.notes-icon {
-  width: 1.125rem;
-  height: 1.125rem;
-  color: var(--primary);
-}
-
-.notes-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.note-item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.625rem;
-}
-
-.note-dot {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 9999px;
-  background: var(--primary);
-  flex-shrink: 0;
-  transform: translateY(-2px);
-}
-
-.note-strong {
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .min-w-0 {

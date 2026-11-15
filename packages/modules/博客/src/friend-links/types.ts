@@ -1,4 +1,36 @@
 export type FriendLinkStatus = 'pending' | 'approved' | 'rejected'
+export type FriendLinkSortField =
+  | 'name'
+  | 'url'
+  | 'description'
+  | 'status'
+  | 'category'
+  | 'contact_name'
+  | 'is_auto_exchange'
+  | 'created_at'
+  | 'updated_at'
+  | 'deleted_at'
+
+export interface FriendLinkListQuery {
+  status?: FriendLinkStatus | ''
+  is_deleted?: boolean
+  search?: string
+  category?: string
+  uncategorized?: boolean
+  is_auto_exchange?: boolean
+  sort_by?: FriendLinkSortField
+  sort_order?: 'asc' | 'desc'
+}
+
+export interface FriendLinkCounts {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+  active_total: number
+  recycle_bin: number
+  categories: { category: string; count: number }[]
+}
 
 export interface FriendLinkRecord {
   id: string
@@ -23,6 +55,7 @@ export interface FriendLinkListResponse {
   page: number
   page_size: number
   pages: number
+  counts: FriendLinkCounts
 }
 
 export interface FriendLinkAdminPayload {

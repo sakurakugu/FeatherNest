@@ -13,7 +13,7 @@ import {
   View,
 } from '@element-plus/icons-vue'
 import { PencilEditIcon, SortDirectionIcon } from '@feathernest/ui'
-import { ElIcon, ElPopover, ElTooltip } from 'element-plus'
+import { ElButton, ElIcon, ElPopover, ElTooltip } from 'element-plus'
 import {
   computed,
   nextTick,
@@ -714,20 +714,21 @@ onBeforeUnmount(() => {
         <p>{{ 页头统计 }}</p>
       </div>
       <div class="head-actions">
-        <button v-if="!回收站模式" class="btn btn--primary" type="button" @click="打开新建">
+        <ElButton v-if="!回收站模式" class="ann-create" type="primary" @click="打开新建">
           <ElIcon><Plus /></ElIcon>
           <span>新建公告</span>
-        </button>
-        <button
+        </ElButton>
+        <ElButton
           v-else
-          class="btn btn--danger"
-          type="button"
+          class="ann-clear"
+          type="danger"
+          plain
           :disabled="回收站总数 === 0"
           @click="请求清空"
         >
           <ElIcon><Delete /></ElIcon>
           <span>清空回收站</span>
-        </button>
+        </ElButton>
       </div>
     </header>
 
@@ -1211,7 +1212,7 @@ onBeforeUnmount(() => {
         <div class="form-body">
           <div class="field">
             <label class="field-label" for="announcement-title-input">
-              <span>标题<em>*</em></span>
+              <span>标题 <em>*</em></span>
               <span class="counter">{{ 表单.title.length }} / 200</span>
             </label>
             <input
@@ -1260,10 +1261,10 @@ onBeforeUnmount(() => {
         </div>
         <footer class="panel-foot">
           <span class="foot-hint">保存后立即同步到公告中心</span>
-          <button class="btn btn--ghost" type="button" @click="关闭弹窗">取消</button>
-          <button class="btn btn--primary" type="button" :disabled="保存中" @click="保存公告">
+          <ElButton text :disabled="保存中" @click="关闭弹窗">取消</ElButton>
+          <ElButton type="primary" :loading="保存中" @click="保存公告">
             {{ 保存中 ? '保存中…' : 编辑中 ? '保存修改' : '创建公告' }}
-          </button>
+          </ElButton>
         </footer>
       </section>
     </div>
@@ -1328,7 +1329,7 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
 }
 
-.announcement-manager button {
+.announcement-manager button:where(:not(.el-button)) {
   padding: 0;
   border: 0;
   background: none;
@@ -1388,6 +1389,22 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+}
+
+/* 页头按钮与友链 / 文章管理保持一致，使用 Element 按钮 */
+.announcement-manager .head-actions .el-button {
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.announcement-manager .head-actions :deep(.el-button > span) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.announcement-manager .head-actions :deep(.el-button .el-icon) {
+  font-size: 13px;
 }
 
 .announcement-manager .btn {
@@ -1479,7 +1496,7 @@ onBeforeUnmount(() => {
 .announcement-manager .toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
   flex: none;
   margin-top: 18px;
@@ -1498,7 +1515,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 5px;
   height: 26px;
-  padding: 0 10px;
+  padding: 0 9px;
   border-radius: 4px;
   color: var(--announcement-muted);
   font-size: 12px;
@@ -1520,7 +1537,7 @@ onBeforeUnmount(() => {
 .announcement-manager .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-left: auto;
 }
 
@@ -1532,7 +1549,7 @@ onBeforeUnmount(() => {
 .announcement-manager .filter-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   height: 30px;
   padding: 0 9px;
   border: 1px solid var(--announcement-line);
@@ -1708,7 +1725,7 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .toolbar-search input {
-  width: 230px;
+  width: 250px;
   border: 0;
   outline: 0;
   background: transparent;
@@ -1728,7 +1745,7 @@ onBeforeUnmount(() => {
   align-items: stretch;
   flex: none;
   gap: 16px;
-  margin-top: 20px;
+  margin-top: 8px;
   border-bottom: 1px solid var(--announcement-line);
 }
 
@@ -2281,7 +2298,7 @@ onBeforeUnmount(() => {
   gap: 18px;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 20px 12px;
 }
 
 .announcement-manager .field {
@@ -2352,7 +2369,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 0;
+  padding: 14px 0 0;
   border-top: 1px dashed var(--announcement-line-soft);
 }
 
@@ -2419,6 +2436,13 @@ onBeforeUnmount(() => {
   margin-right: auto;
   color: var(--announcement-placeholder);
   font-size: 11px;
+}
+
+/* 底部按钮与添加友链弹窗保持一致 */
+.announcement-manager .panel-foot .el-button {
+  margin-left: 0;
+  border-radius: 5px;
+  font-size: 12px;
 }
 
 /* ==========================================================================
@@ -2785,7 +2809,7 @@ onBeforeUnmount(() => {
     flex: 0 0 auto;
   }
 
-  .announcement-manager .head-actions .btn {
+  .announcement-manager .head-actions .el-button {
     flex: 0 0 auto;
     height: 28px;
   }

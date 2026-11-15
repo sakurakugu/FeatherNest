@@ -1824,6 +1824,22 @@ export interface paths {
     patch: operations['\u66F4\u65B0\u516C\u544A_api_v1_announcements__announcement_id__patch']
     trace?: never
   }
+  '/announcements/trash': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations['\u6E05\u7A7A\u516C\u544A\u56DE\u6536\u7AD9_api_v1_announcements_trash_delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/announcements/{announcement_id}/restore': {
     parameters: {
       query?: never
@@ -2328,6 +2344,16 @@ export interface components {
       title: string
       content?: string
       is_active?: boolean
+    }
+    AnnouncementListRead: {
+      items: components['schemas']['AnnouncementRead'][]
+      total: number
+      page: number
+      page_size: number
+      pages: number
+      active_total: number
+      inactive_total: number
+      trash_total: number
     }
     AnnouncementPublicRead: {
       id: string
@@ -3122,14 +3148,6 @@ export interface components {
       contact_name?: string | null
       my_site_url: string
     }
-    'app__modules__friend_links__schemas________-Output': {
-      id: string
-      name: string
-      url: string
-      description?: string | null
-      logo_url?: string | null
-      category?: string | null
-    }
     app__modules__friend_links__schemas________1: {
       name: string
       url: string
@@ -3138,6 +3156,7 @@ export interface components {
       category?: string | null
       contact_email?: string | null
       contact_name?: string | null
+      status?: 'pending' | 'approved' | 'rejected'
     }
     app__modules__friend_links__schemas________2: {
       name?: string | null
@@ -3146,6 +3165,35 @@ export interface components {
       logo_url?: string | null
       category?: string | null
       status?: string | null
+    }
+    app__modules__friend_links__schemas__________2: {
+      category: string
+      count: number
+    }
+    app__modules__friend_links__schemas__________3: {
+      total?: number
+      pending?: number
+      approved?: number
+      rejected?: number
+      active_total?: number
+      recycle_bin?: number
+      categories?: components['schemas']['app__modules__friend_links__schemas__________2'][]
+    }
+    app__modules__friend_links__schemas__________4: {
+      items: components['schemas']['app__modules__friend_links__schemas______-Output'][]
+      total: number
+      page: number
+      page_size: number
+      pages: number
+      counts: components['schemas']['app__modules__friend_links__schemas__________3']
+    }
+    app__modules__friend_links__schemas__________5: {
+      id: string
+      name: string
+      url: string
+      description?: string | null
+      logo_url?: string | null
+      category?: string | null
     }
     app__modules__materials__models________1: 'link' | 'text' | 'image' | 'file'
     app__modules__materials__models________2: 'active' | 'archived'
@@ -7592,6 +7640,11 @@ export interface operations {
         page?: number
         page_size?: number
         is_deleted?: boolean
+        is_active?: boolean | null
+        search?: string | null
+        content_state?: string
+        sort_by?: string
+        sort_order?: string
       }
       header?: never
       path?: never
@@ -7604,7 +7657,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': unknown
+          'application/json': components['schemas']['AnnouncementListRead']
         }
       }
       422: {
@@ -7739,6 +7792,23 @@ export interface operations {
       }
     }
   }
+  '\u6E05\u7A7A\u516C\u544A\u56DE\u6536\u7AD9_api_v1_announcements_trash_delete': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   '\u6062\u590D\u516C\u544A_api_v1_announcements__announcement_id__restore_post': {
     parameters: {
       query?: never
@@ -7775,6 +7845,25 @@ export interface operations {
         page_size?: number
         status?: string | null
         is_deleted?: boolean
+        search?: string | null
+        category?: string | null
+        uncategorized?: boolean
+        is_auto_exchange?: boolean | null
+        sort_by?:
+          | (
+              | 'name'
+              | 'url'
+              | 'description'
+              | 'status'
+              | 'category'
+              | 'contact_name'
+              | 'is_auto_exchange'
+              | 'created_at'
+              | 'updated_at'
+              | 'deleted_at'
+            )
+          | null
+        sort_order?: 'asc' | 'desc'
       }
       header?: never
       path?: never
@@ -7787,7 +7876,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['PaginatedResponse']
+          'application/json': components['schemas']['app__modules__friend_links__schemas__________4']
         }
       }
       422: {
@@ -7867,7 +7956,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['app__modules__friend_links__schemas________-Output'][]
+          'application/json': components['schemas']['app__modules__friend_links__schemas__________5'][]
         }
       }
       422: {

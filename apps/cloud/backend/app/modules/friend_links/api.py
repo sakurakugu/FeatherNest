@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy import func, select
@@ -17,6 +17,8 @@ from app.modules.friend_links.schemas import (
     友链公开信息,
     友链信息,
     友链更新,
+    友链列表响应,
+    友链排序字段,
 )
 from app.modules.friend_links.service import (
     批准友链 as 批准友链_service,
@@ -31,24 +33,33 @@ from app.modules.friend_links.service import (
     拒绝友链 as 拒绝友链_service,
     更新友链 as 更新友链_service,
 )
-from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import 要求当前用户
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/friend-links", tags=["friend-links"])
 
 
-@router.get("", response_model=PaginatedResponse)
+@router.get("", response_model=友链列表响应)
 async def 列出友链(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     status: str | None = None,
     is_deleted: bool = Query(False, description="是否显示回收站友链"),
+    search: str | None = Query(None, max_length=200, description="搜索网站名称、链接、描述或联系人"),
+    category: str | None = Query(None, max_length=50, description="按友链分类筛选"),
+    uncategorized: bool = Query(False, description="只显示未分类友链"),
+    is_auto_exchange: bool | None = Query(None, description="是否为自动交换友链"),
+    sort_by: 友链排序字段 | None = Query(None, description="排序字段"),
+    sort_order: Literal["asc", "desc"] = Query("desc", description="排序方向"),
     current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取管理端友链列表。"""
-    return await 列出友链_service(db, page=page, page_size=page_size, status=status, is_deleted=is_deleted)
+    return await 列出友链_service(
+        db, page=page, page_size=page_size, status=status, is_deleted=is_deleted,
+        search=search, category=category, uncategorized=uncategorized, is_auto_exchange=is_auto_exchange,
+        sort_by=sort_by, sort_order=sort_order,
+    )
 
 
 @router.get("/categories", response_model=list[str])

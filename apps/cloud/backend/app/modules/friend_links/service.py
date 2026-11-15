@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import math
+import logging
 import re
 from datetime import datetime, timezone
+from typing import Literal
 
 import httpx
 from fastapi import HTTPException
-from sqlalchemy import case, func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -19,9 +21,14 @@ from app.modules.friend_links.schemas import (
     友链公开信息,
     友链信息,
     友链更新,
+    友链列表响应,
+    友链列表统计,
+    友链分类统计,
+    友链排序字段,
 )
-from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.kernel.soft_delete import 可软删除对象
+
+logger = logging.getLogger(__name__)
 
 
 def 解析友链状态(value: str) -> 友链状态:
@@ -104,25 +111,75 @@ async def 列出友链(
     page_size: int,
     status: str | None,
     is_deleted: bool = False,
-) -> PaginatedResponse:
+    search: str | None = None,
+    category: str | None = None,
+    uncategorized: bool = False,
+    is_auto_exchange: bool | None = None,
+    sort_by: 友链排序字段 | None = None,
+    sort_order: Literal["asc", "desc"] = "desc",
+) -> 友链列表响应:
     """获取管理端友链列表。"""
     query = select(友链).where(友链.is_deleted.is_(is_deleted))
     if status is not None:
         query = query.where(友链.status == 解析友链状态(status))
+    if search and (keyword := search.strip()):
+        query = query.where(or_(
+            *(column.icontains(keyword, autoescape=True) for column in (
+                友链.name, 友链.url, 友链.description, 友链.contact_name, 友链.contact_email,
+            ))
+        ))
+    if uncategorized:
+        query = query.where(or_(友链.category.is_(None), 友链.category == ""))
+    elif category is not None:
+        query = query.where(友链.category == category)
+    if is_auto_exchange is not None:
+        query = query.where(友链.is_auto_exchange.is_(is_auto_exchange))
 
-    pending_first = case((友链.status == 友链状态.pending, 0), else_=1)
-    primary_order_column = 友链.deleted_at.desc() if is_deleted else 友链.created_at.desc()
+    sort_column = getattr(友链, sort_by or ("deleted_at" if is_deleted else "created_at"))
+    order = sort_column.asc() if sort_order == "asc" else sort_column.desc()
+    id_order = 友链.id.asc() if sort_order == "asc" else 友链.id.desc()
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(pending_first.asc(), primary_order_column).offset((page - 1) * page_size).limit(page_size)
+        query.order_by(order.nulls_last(), id_order).offset((page - 1) * page_size).limit(page_size)
     )
     items = result.scalars().all()
-    return PaginatedResponse(
+
+    counts = 友链列表统计()
+    groups = await db.execute(
+        select(友链.is_deleted, 友链.status, func.count()).group_by(友链.is_deleted, 友链.status)
+    )
+    for deleted, item_status, count in groups.all():
+        if deleted:
+            counts.recycle_bin += count
+        else:
+            counts.active_total += count
+        if deleted == is_deleted:
+            counts.total += count
+            setattr(counts, item_status.value, count)
+
+    category_column = func.coalesce(func.nullif(友链.category, ""), "")
+    category_groups = await db.execute(
+        select(category_column, func.count())
+        .where(友链.is_deleted.is_(is_deleted))
+        .group_by(category_column)
+        .order_by(category_column)
+    )
+    counts.categories = [
+        友链分类统计(category=category_name, count=count)
+        for category_name, count in category_groups.all()
+    ]
+
+    logger.debug(
+        "友链列表查询：回收站=%s，页码=%s，状态=%s，分类=%s，未分类=%s，自动交换=%s，排序=%s/%s，匹配=%s",
+        is_deleted, page, status, category, uncategorized, is_auto_exchange, sort_by, sort_order, total,
+    )
+    return 友链列表响应(
         items=[友链信息.model_validate(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
         pages=math.ceil(total / page_size) if total else 0,
+        counts=counts,
     )
 
 
@@ -158,7 +215,7 @@ async def 创建友链(db: AsyncSession, body: 友链创建) -> 友链:
         description=body.description,
         logo_url=body.logo_url,
         category=body.category,
-        status=友链状态.approved,
+        status=解析友链状态(body.status),
         is_auto_exchange=False,
         contact_email=body.contact_email,
         contact_name=body.contact_name,

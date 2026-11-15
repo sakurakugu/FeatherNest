@@ -2,8 +2,8 @@ import api from '@feathernest/api'
 import type {
   FriendLinkAdminPayload,
   FriendLinkListResponse,
+  FriendLinkListQuery,
   FriendLinkRecord,
-  FriendLinkStatus,
 } from './types'
 
 export async function 获取公开友链(): Promise<FriendLinkRecord[]> {
@@ -19,16 +19,14 @@ export async function 获取友链分类(): Promise<string[]> {
 export async function 获取友链列表(
   page: number,
   pageSize: number,
-  status?: FriendLinkStatus | '',
-  isDeleted = false,
+  query: FriendLinkListQuery = {},
 ): Promise<FriendLinkListResponse> {
-  const params: Record<string, string | number | boolean> = {
+  const params = {
     page,
     page_size: pageSize,
-    is_deleted: String(isDeleted),
-  }
-  if (status) {
-    params.status = status
+    ...query,
+    status: query.status || undefined,
+    search: query.search?.trim() || undefined,
   }
   const { data } = await api.get<FriendLinkListResponse>('/friend-links', { params })
   return data
@@ -39,7 +37,10 @@ export async function 创建友链(payload: FriendLinkAdminPayload): Promise<Fri
   return data
 }
 
-export async function 更新友链(id: string, payload: FriendLinkAdminPayload): Promise<FriendLinkRecord> {
+export async function 更新友链(
+  id: string,
+  payload: FriendLinkAdminPayload,
+): Promise<FriendLinkRecord> {
   const { data } = await api.patch<FriendLinkRecord>(`/friend-links/${id}`, payload)
   return data
 }
@@ -60,4 +61,3 @@ export async function 批准友链(id: string): Promise<void> {
 export async function 拒绝友链(id: string): Promise<void> {
   await api.post(`/friend-links/${id}/reject`)
 }
-
