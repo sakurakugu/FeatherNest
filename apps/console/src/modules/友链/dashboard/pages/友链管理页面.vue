@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@feathernest/ui/styles/manager.css'
 import {
   ElButton,
   ElForm,
@@ -44,7 +45,11 @@ import type {
 import { 获取API错误消息 } from '../../../../shared/api'
 import { BaseDialog, PencilEditIcon, SortDirectionIcon, SortOrderControl } from '@feathernest/ui'
 import { FriendLinkIcon } from '@feathernest/module-blog/widgets'
-import { 创建字符图标, 读取字符图标, 获取名称缩写 } from '@feathernest/module-blog/friend-links/icon'
+import {
+  创建字符图标,
+  读取字符图标,
+  获取名称缩写,
+} from '@feathernest/module-blog/friend-links/icon'
 
 const emit = defineEmits<{ 'friend-link-count-change': [count: number] }>()
 
@@ -269,9 +274,7 @@ const dialogIconUrl = computed(() =>
 )
 const iconIncomplete = computed(() => iconMode.value === 'image' && !iconImageUrl.value.trim())
 const iconHint = computed(() =>
-  iconMode.value === 'character'
-    ? '用名称首字生成图标'
-    : '自动读取网站图标，失败用名称首字',
+  iconMode.value === 'character' ? '用名称首字生成图标' : '自动读取网站图标，失败用名称首字',
 )
 
 const form = ref<FriendLinkAdminPayload>({
@@ -500,7 +503,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="friend-link-manager">
+  <div class="manager-page friend-link-manager">
     <header class="manager-head">
       <div>
         <h1>{{ showRecycleBin ? '回收站' : '友链管理' }}</h1>
@@ -548,7 +551,12 @@ onMounted(() => {
         </button>
       </div>
       <div class="manager-filters">
-        <ElPopover placement="bottom-end" :width="330" trigger="click">
+        <ElPopover
+          popper-class="manager-popover"
+          placement="bottom-end"
+          :width="330"
+          trigger="click"
+        >
           <template #reference>
             <button
               type="button"
@@ -560,15 +568,15 @@ onMounted(() => {
               ><small v-if="filterCount">{{ filterCount }}</small>
             </button>
           </template>
-          <div class="link-filter-panel">
-            <div class="link-filter-group">
+          <div class="manager-filter-panel">
+            <div class="manager-filter-group">
               <label>状态</label>
-              <div class="link-filter-chips">
+              <div class="manager-filter-chips">
                 <button
                   v-for="option in statusOptions"
                   :key="option.value"
                   type="button"
-                  class="link-filter-chip"
+                  class="manager-filter-chip"
                   :class="{ 'is-active': statusFilter === option.value }"
                   :aria-pressed="statusFilter === option.value"
                   @click="selectStatus(option.value)"
@@ -577,14 +585,14 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <div class="link-filter-group">
+            <div class="manager-filter-group">
               <label>分类</label>
-              <div class="link-filter-chips link-filter-chips--categories">
+              <div class="manager-filter-chips link-filter-chips--categories">
                 <button
                   v-for="option in categoryOptions"
                   :key="option.value === null ? 'uncategorized' : `category-${option.value}`"
                   type="button"
-                  class="link-filter-chip"
+                  class="manager-filter-chip"
                   :class="{ 'is-active': categoryFilter === option.value }"
                   :aria-pressed="categoryFilter === option.value"
                   @click="selectCategory(categoryFilter === option.value ? '' : option.value)"
@@ -593,14 +601,14 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <div class="link-filter-group">
+            <div class="manager-filter-group">
               <label>来源</label>
-              <div class="link-filter-chips">
+              <div class="manager-filter-chips">
                 <button
                   v-for="option in exchangeOptions"
                   :key="option.value"
                   type="button"
-                  class="link-filter-chip"
+                  class="manager-filter-chip"
                   :class="{ 'is-active': exchangeFilter === option.value }"
                   @click="exchangeFilter = option.value"
                 >
@@ -608,14 +616,14 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <div class="link-filter-group">
+            <div class="manager-filter-group">
               <label>排序</label>
-              <div class="link-sort-options">
+              <div class="manager-sort-options">
                 <button
                   v-for="column in linkColumns"
                   :key="column.value"
                   type="button"
-                  class="link-filter-chip link-sort-option"
+                  class="manager-filter-chip manager-sort-option"
                   :class="{ 'is-active': sortBy === column.sort }"
                   :aria-pressed="sortBy === column.sort"
                   @click="changeSort(column.sort)"
@@ -631,7 +639,7 @@ onMounted(() => {
                 @update:model-value="设置排序方向"
               />
             </div>
-            <div class="link-filter-footer">
+            <div class="manager-filter-footer">
               <span>{{ filterCount ? `已选 ${filterCount} 个条件` : '未设置筛选条件' }}</span>
               <ElButton text @click="clearFilters">清除筛选</ElButton>
             </div>
@@ -726,12 +734,17 @@ onMounted(() => {
             </div>
             <div class="manager-column-actions manager-fixed-actions" role="columnheader">
               <span>操作</span>
-              <ElPopover placement="bottom-end" :width="190" trigger="click">
+              <ElPopover
+                popper-class="manager-popover"
+                placement="bottom-end"
+                :width="190"
+                trigger="click"
+              >
                 <template #reference
                   ><button type="button" title="设置显示列" aria-label="设置显示列">
                     <ElIcon class="manager-column-more"><MoreFilled /></ElIcon></button
                 ></template>
-                <div class="link-column-settings">
+                <div class="manager-column-settings">
                   <label v-for="column in linkColumns" :key="column.value"
                     ><input
                       type="checkbox"
@@ -823,7 +836,7 @@ onMounted(() => {
                   )
                 "
                 placement="top"
-                popper-class="friend-link-date-tooltip"
+                popper-class="manager-date-tooltip"
               >
                 <span class="manager-date">{{
                   formatRelativeDate(
@@ -930,7 +943,7 @@ onMounted(() => {
 
     <BaseDialog
       v-model="showDialog"
-      class="friend-link-dialog"
+      class="manager-dialog friend-link-dialog"
       modal-class="friend-link-dialog-overlay"
       width="600px"
       style="max-width: 94vw"
@@ -939,13 +952,13 @@ onMounted(() => {
       :show-close="!dialogLoading"
     >
       <template #header>
-        <div class="link-dialog-header">
+        <div class="manager-dialog-header">
           <i /><strong>{{ isEdit ? '编辑友链' : '添加友链' }}</strong>
           <span>{{ isEdit ? '更新网站信息与展示状态' : '添加一个新的友情链接' }}</span>
         </div>
       </template>
       <ElForm
-        class="link-dialog-form"
+        class="manager-dialog-form"
         label-position="top"
         require-asterisk-position="right"
         :disabled="dialogLoading"
@@ -1012,7 +1025,7 @@ onMounted(() => {
         <div class="link-dialog-meta">
           <ElFormItem label="分类">
             <div
-              class="link-filter-chips link-dialog-chips link-dialog-chips--scroll"
+              class="manager-filter-chips link-dialog-chips link-dialog-chips--scroll"
               role="group"
               aria-label="选择分类"
             >
@@ -1020,7 +1033,7 @@ onMounted(() => {
                 v-for="option in dialogCategoryOptions"
                 :key="option.value || 'uncategorized'"
                 type="button"
-                class="link-filter-chip"
+                class="manager-filter-chip"
                 :class="{ 'is-active': form.category === option.value }"
                 :disabled="dialogLoading"
                 :aria-pressed="form.category === option.value"
@@ -1031,12 +1044,12 @@ onMounted(() => {
             </div>
           </ElFormItem>
           <ElFormItem label="状态">
-            <div class="link-filter-chips link-dialog-chips" role="group" aria-label="选择状态">
+            <div class="manager-filter-chips link-dialog-chips" role="group" aria-label="选择状态">
               <button
                 v-for="option in dialogStatusOptions"
                 :key="option.value"
                 type="button"
-                class="link-filter-chip"
+                class="manager-filter-chip"
                 :class="{ 'is-active': form.status === option.value }"
                 :disabled="dialogLoading"
                 :aria-pressed="form.status === option.value"
@@ -1049,7 +1062,7 @@ onMounted(() => {
         </div>
       </ElForm>
       <template #footer>
-        <div class="link-dialog-footer">
+        <div class="manager-dialog-footer">
           <span>名称和链接为必填项</span>
           <ElButton text :disabled="dialogLoading" @click="showDialog = false">取消</ElButton>
           <ElButton
@@ -1067,209 +1080,14 @@ onMounted(() => {
 </template>
 
 <style scoped>
-:global(.friend-link-date-tooltip.el-popper) {
-  width: max-content;
-  min-width: 0;
-  max-width: calc(100vw - 24px);
-  white-space: nowrap;
+.friend-link-manager .manager-column-more {
+  transform: rotate(90deg);
 }
-
-.friend-link-manager {
-  --manager-bg: var(--el-bg-color, #fff);
-  --manager-ink: var(--el-text-color-primary, #171717);
-  --manager-muted: var(--el-text-color-secondary, #8a8a8a);
-  --manager-line: var(--el-border-color-lighter, #e8e8e8);
-  --manager-hover: var(--el-fill-color-light, #fafafa);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  padding: 26px 24px 0;
-  box-sizing: border-box;
-  background: var(--manager-bg);
-  color: var(--manager-ink);
-  font:
-    13px/1.5 'PingFang SC',
-    'HarmonyOS Sans SC',
-    'Microsoft YaHei',
-    'Noto Sans SC',
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-.friend-link-manager *,
-.friend-link-manager *::before,
-.friend-link-manager *::after {
-  box-sizing: border-box;
-}
-
-.manager-head {
-  display: flex;
-  flex: none;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.manager-head h1 {
-  margin: 0;
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.manager-head p {
-  margin: 6px 0 0;
-  color: var(--manager-muted);
-  font-size: 12px;
-}
-
-.manager-create {
-  border-radius: 5px;
-  font-size: 12px;
-}
-
-.manager-create :deep(> span) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.manager-date {
-  display: inline-block;
-  max-width: 100%;
-  color: var(--manager-muted);
-  font-size: 12.5px;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
-.manager-tabs-row {
-  display: flex;
-  flex: none;
-  align-items: stretch;
-  gap: 16px;
-  margin-top: 8px;
-  border-bottom: 1px solid var(--manager-line);
-}
-
-.manager-tabs {
-  display: flex;
-  flex: 1;
-  gap: 22px;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-.manager-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  flex: none;
-  height: 34px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--manager-muted);
-  font: inherit;
-  font-size: 12.5px;
-  line-height: 34px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.manager-tab.is-active {
-  color: var(--manager-ink);
-  font-weight: 500;
-}
-
-.manager-tab.is-active::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: var(--el-color-primary);
-  content: '';
-}
-
-.manager-tab small {
-  margin: 0;
-  color: var(--el-text-color-placeholder, #a3a3a3);
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 10.5px;
-  font-weight: 400;
-  line-height: inherit;
-  vertical-align: baseline;
-}
-
 .friend-link-manager :deep(.el-skeleton) {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
-}
-
-.manager-list-body {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-
-.manager-table {
-  width: 100%;
-  text-align: left;
-}
-
-.manager-row {
-  --manager-row-bg: var(--manager-bg);
-  display: grid;
-  grid-template-columns: var(--manager-grid-columns);
-  align-items: center;
-  gap: 16px;
-  min-height: 50px;
-  border-bottom: 1px solid var(--manager-line);
-}
-
-.manager-row-head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  min-height: 34px;
-  background: var(--manager-bg);
-  color: var(--manager-muted);
-  font-size: 11px;
-  font-weight: 400;
-}
-
-.manager-row:not(.manager-row-head):hover {
-  --manager-row-bg: var(--manager-hover);
-  background: var(--manager-hover);
-}
-
-.manager-fixed-actions {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  justify-content: flex-end;
-  background: var(--manager-row-bg);
-  box-shadow: -12px 0 0 var(--manager-row-bg);
-}
-
-.manager-cell {
-  min-width: 0;
-  padding: 8px 0;
 }
 
 .manager-site {
@@ -1322,7 +1140,6 @@ onMounted(() => {
 }
 
 .manager-url,
-.manager-truncate,
 .manager-contact span {
   display: block;
   overflow: hidden;
@@ -1336,26 +1153,9 @@ onMounted(() => {
   text-decoration: none;
 }
 
-.manager-muted,
 .manager-contact {
   color: var(--manager-muted);
   font-size: 11.5px;
-}
-
-.manager-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.manager-status i {
-  flex: none;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--manager-muted);
 }
 
 .manager-status .manager-dot--approved {
@@ -1370,134 +1170,9 @@ onMounted(() => {
   background: var(--el-color-danger);
 }
 
-.manager-column-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-}
-
-.manager-ops {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1px;
-}
-
-.manager-ops button,
-.manager-column-actions button {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--manager-muted);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.manager-ops button:hover,
-.manager-column-actions button:hover {
-  background: var(--manager-hover);
-  color: var(--el-color-primary);
-}
-
-.manager-ops .manager-delete {
-  color: var(--el-color-danger);
-}
-
-.manager-ops .manager-delete:hover {
-  background: var(--el-color-danger-light-9);
-  color: var(--el-color-danger);
-}
-
-/* 列设置按钮：把水平排列的三个点旋转成竖排 */
-.manager-column-more {
-  transform: rotate(90deg);
-}
-
-.manager-empty {
-  padding: 56px 16px;
-  color: var(--manager-muted);
-  text-align: center;
-}
-
-.manager-list-status {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0 12px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-  text-align: center;
-}
-
-.manager-list-status--end {
-  color: var(--el-text-color-placeholder);
-}
-
-.manager-list-status button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--el-color-primary);
-  font: inherit;
-  cursor: pointer;
-}
-
-.manager-toolbar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.manager-mode-nav {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--manager-line);
-  border-radius: 6px;
-  background: var(--manager-bg);
-}
-
-.manager-mode-nav__item {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-width: 58px;
-  height: 26px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--manager-muted);
-  font: inherit;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
 .manager-mode-nav__item .el-icon {
   flex: none;
   font-size: 15px;
-}
-
-.manager-mode-nav__item:hover {
-  color: var(--manager-ink);
-}
-
-.manager-mode-nav__item.is-active {
-  color: var(--manager-ink);
-  background: var(--manager-hover);
 }
 
 .link-filter-chips--categories {
@@ -1573,275 +1248,12 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-.manager-filters {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.manager-filter-button,
-.manager-sort-heading {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  background: transparent;
-  color: var(--manager-muted);
-  font: inherit;
-  cursor: pointer;
-}
-
-.manager-sort-heading {
-  padding: 0;
-  font-size: 11px;
-}
-
-.manager-sort-heading.is-active {
-  color: var(--manager-ink);
-}
-
-.manager-sort-heading.is-active .el-icon {
-  color: var(--el-color-primary);
-}
-
-.manager-filter-button {
-  flex: none;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--manager-line);
-  border-radius: 5px;
-  font-size: 12px;
-}
-
-.manager-filter-button:hover,
-.manager-filter-button.is-active {
-  border-color: var(--el-border-color-dark, #d4d7de);
-  color: var(--manager-ink);
-}
-
-.manager-filter-button.is-active .el-icon {
-  color: var(--el-color-primary);
-}
-
-.manager-filter-button small {
-  display: inline-grid;
-  place-items: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: var(--el-color-primary);
-  color: #fff;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 9.5px;
-  line-height: 1;
-}
-
-.manager-search {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 250px;
-  height: 30px;
-  box-sizing: border-box;
-  padding: 0 9px;
-  border: 1px solid var(--manager-line);
-  border-radius: 5px;
-  color: var(--manager-muted);
-}
-
-/* 聚焦只用浅灰加深描边，不引入主题色，保持与管理页其他输入框一致 */
-.manager-search:focus-within {
-  border-color: var(--el-border-color-dark, #d4d7de);
-}
-
-.manager-search input {
+.manager-filter-group .el-select {
   width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--manager-ink);
-  font: inherit;
-  font-size: 12px;
-}
-
-.link-filter-panel {
-  padding: 2px;
-}
-
-.link-filter-group + .link-filter-group {
-  margin-top: 15px;
-}
-
-.link-filter-group > label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-}
-
-.link-filter-group .el-select {
-  width: 100%;
-}
-
-.link-filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.link-filter-chip {
-  min-height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-secondary);
-  font: inherit;
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.link-filter-chip:hover,
-.link-filter-chip.is-active {
-  border-color: var(--el-color-primary);
-}
-
-.link-filter-chip.is-active {
-  background: var(--el-color-primary);
-  color: #fff;
-}
-
-.link-sort-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.link-sort-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.link-sort-option.is-active {
-  background: var(--el-bg-color);
-  color: var(--el-text-color-secondary);
-}
-
-.link-sort-option.is-active .el-icon {
-  color: var(--el-color-primary);
-}
-
-.link-filter-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-}
-
-.link-filter-footer :deep(.el-button) {
-  font-size: 11px;
-}
-
-.link-column-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  color: var(--el-text-color-primary);
-  font-size: 12px;
-}
-
-.link-column-settings label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
 }
 
 :global(.friend-link-dialog-overlay.el-overlay) {
   background: rgba(23, 23, 23, 0.16);
-}
-
-:global(.friend-link-dialog.el-dialog) {
-  padding: 0;
-  overflow: hidden;
-  border-radius: 10px;
-}
-
-:global(.friend-link-dialog.el-dialog .el-dialog__header) {
-  height: 52px;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0 40px 0 20px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-:global(.friend-link-dialog.el-dialog .el-dialog__body) {
-  padding: 0;
-}
-
-:global(.friend-link-dialog.el-dialog .el-dialog__footer) {
-  padding: 12px 20px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.link-dialog-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 52px;
-}
-
-.link-dialog-header i {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--el-color-primary);
-}
-
-.link-dialog-header strong {
-  color: var(--el-text-color-primary);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.link-dialog-header span {
-  overflow: hidden;
-  color: var(--el-text-color-placeholder);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.link-dialog-form {
-  max-height: calc(90dvh - 112px);
-  overflow-y: auto;
-  box-sizing: border-box;
-  padding: 18px 20px;
-}
-
-.link-dialog-form :deep(.el-form-item) {
-  margin-bottom: 16px;
-}
-
-.link-dialog-form :deep(.el-form-item__label) {
-  margin-bottom: 6px;
-  color: var(--el-text-color-regular);
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 /* 描述标签行：标题在左、字数统计靠右 */
@@ -1862,13 +1274,6 @@ onMounted(() => {
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-size: 10.5px;
   line-height: 1;
-}
-
-.link-dialog-form :deep(.el-input__wrapper),
-.link-dialog-form :deep(.el-select__wrapper),
-.link-dialog-form :deep(.el-textarea__inner) {
-  border-radius: 5px;
-  font-size: 12px;
 }
 
 .link-dialog-meta {
@@ -1893,27 +1298,9 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-.link-dialog-chips .link-filter-chip:disabled {
+.link-dialog-chips .manager-filter-chip:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.link-dialog-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.link-dialog-footer > span {
-  margin-right: auto;
-  color: var(--el-text-color-placeholder);
-  font-size: 11px;
-}
-
-.link-dialog-footer :deep(.el-button) {
-  margin-left: 0;
-  border-radius: 5px;
-  font-size: 12px;
 }
 
 @media (max-width: 768px) {
@@ -1943,7 +1330,7 @@ onMounted(() => {
     min-width: 0;
   }
 
-  .link-dialog-footer > span {
+  .manager-dialog-footer > span {
     font-size: 10px;
   }
 }

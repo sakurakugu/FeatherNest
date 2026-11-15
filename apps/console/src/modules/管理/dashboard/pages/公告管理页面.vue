@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@feathernest/ui/styles/manager.css'
 /* global HTMLInputElement, KeyboardEvent, MouseEvent */
 import {
   ArrowLeft,
@@ -707,13 +708,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="announcement-manager" :class="{ 'is-card-view': 视图 === 'cards' }">
-    <header class="page-head">
+  <div class="manager-page announcement-manager" :class="{ 'is-card-view': 视图 === 'cards' }">
+    <header class="manager-head">
       <div class="page-head-main">
         <h1>{{ 回收站模式 ? '回收站' : '公告管理' }}</h1>
         <p>{{ 页头统计 }}</p>
       </div>
-      <div class="head-actions">
+      <div class="manager-head-actions">
         <ElButton v-if="!回收站模式" class="ann-create" type="primary" @click="打开新建">
           <ElIcon><Plus /></ElIcon>
           <span>新建公告</span>
@@ -732,10 +733,11 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div class="toolbar">
-      <div class="seg" role="group" aria-label="公告视图切换">
+    <div class="manager-toolbar">
+      <div class="manager-mode-nav" role="group" aria-label="公告视图切换">
         <button
           type="button"
+          class="manager-mode-nav__item"
           :class="{ 'is-active': 视图 === 'table' }"
           title="列表"
           @click="视图 = 'table'"
@@ -756,6 +758,7 @@ onBeforeUnmount(() => {
         </button>
         <button
           type="button"
+          class="manager-mode-nav__item"
           :class="{ 'is-active': 视图 === 'cards' }"
           title="卡片"
           @click="视图 = 'cards'"
@@ -779,10 +782,10 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="toolbar-right">
+      <div class="manager-filters">
         <div ref="筛选容器" class="filter-wrap">
           <button
-            class="filter-btn"
+            class="manager-filter-button"
             :class="{ 'is-active': 筛选条件数 > 0 }"
             type="button"
             :aria-expanded="筛选打开"
@@ -790,16 +793,16 @@ onBeforeUnmount(() => {
           >
             <ElIcon><Filter /></ElIcon>
             <span>筛选</span>
-            <span v-if="筛选条件数" class="filter-count">{{ 筛选条件数 }}</span>
+            <small v-if="筛选条件数">{{ 筛选条件数 }}</small>
           </button>
-          <div v-if="筛选打开" class="filter-pop">
-            <div class="filter-group">
-              <h4>正文</h4>
-              <div class="filter-chips">
+          <div v-if="筛选打开" class="filter-pop manager-popover">
+            <div class="manager-filter-group">
+              <label>正文</label>
+              <div class="manager-filter-chips">
                 <button
                   v-for="选项 in 正文选项"
                   :key="选项.值"
-                  class="filter-chip"
+                  class="manager-filter-chip"
                   :class="{ 'is-active': 正文筛选 === 选项.值 }"
                   type="button"
                   :aria-pressed="正文筛选 === 选项.值"
@@ -809,13 +812,13 @@ onBeforeUnmount(() => {
                 </button>
               </div>
             </div>
-            <div class="filter-group">
-              <h4>排序</h4>
-              <div class="filter-sort-options">
+            <div class="manager-filter-group">
+              <label>排序</label>
+              <div class="manager-sort-options">
                 <button
                   v-for="选项 in 排序选项"
                   :key="选项.值"
-                  class="filter-chip filter-sort-option"
+                  class="manager-filter-chip manager-sort-option"
                   :class="{ 'is-active': 排序字段 === 选项.值 }"
                   type="button"
                   :aria-label="`${选项.标签}，${排序字段 === 选项.值 ? (排序方向 === 'asc' ? '升序' : '降序') : '未排序'}`"
@@ -827,7 +830,7 @@ onBeforeUnmount(() => {
                 </button>
               </div>
             </div>
-            <div class="filter-foot">
+            <div class="manager-filter-footer">
               <span class="hint">{{
                 筛选条件数 ? `已选 ${筛选条件数} 个条件` : '未设置筛选条件'
               }}</span>
@@ -836,7 +839,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <label class="toolbar-search">
+        <label class="manager-search">
           <ElIcon><Search /></ElIcon>
           <input
             v-model="搜索词"
@@ -849,17 +852,17 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="tabs-row">
-      <nav class="tabs" aria-label="公告状态">
+    <div class="manager-tabs-row">
+      <nav class="manager-tabs" aria-label="公告状态">
         <template v-if="回收站模式">
-          <button class="tab tab--back" type="button" @click="切换回收站">
+          <button class="manager-tab tab--back" type="button" @click="切换回收站">
             <ElIcon><ArrowLeft /></ElIcon>
             <span>返回公告列表</span>
           </button>
         </template>
         <template v-else>
           <button
-            class="tab"
+            class="manager-tab"
             :class="{ 'is-active': 当前标签 === 'all' }"
             type="button"
             @click="切换标签('all')"
@@ -867,7 +870,7 @@ onBeforeUnmount(() => {
             全部<small>{{ 未删除总数 }}</small>
           </button>
           <button
-            class="tab"
+            class="manager-tab"
             :class="{ 'is-active': 当前标签 === 'active' }"
             type="button"
             @click="切换标签('active')"
@@ -875,7 +878,7 @@ onBeforeUnmount(() => {
             生效中<small>{{ 生效总数 }}</small>
           </button>
           <button
-            class="tab"
+            class="manager-tab"
             :class="{ 'is-active': 当前标签 === 'inactive' }"
             type="button"
             @click="切换标签('inactive')"
@@ -884,9 +887,9 @@ onBeforeUnmount(() => {
           </button>
         </template>
       </nav>
-      <div class="tabs-actions">
+      <div class="manager-tabs-actions">
         <button
-          class="recycle-tab"
+          class="manager-recycle-tab"
           :class="{ 'is-active': 回收站模式 }"
           type="button"
           @click="切换回收站"
@@ -897,7 +900,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div ref="列表容器" v-loading="加载中" class="list-body" @scroll.passive="关闭删除气泡">
+    <div ref="列表容器" v-loading="加载中" class="manager-list-body" @scroll.passive="关闭删除气泡">
       <div v-if="!加载中 && !公告列表.length" class="empty">
         <ElIcon class="empty-icon"><BellFilled /></ElIcon>
         <strong>{{ 空状态.标题 }}</strong>
@@ -908,11 +911,11 @@ onBeforeUnmount(() => {
         <div class="manager-table" :style="{ minWidth: 公告表格最小宽度 }">
           <div
             class="manager-row manager-row-head"
-            :style="{ '--announcement-grid-columns': 公告表格列 }"
+            :style="{ '--manager-grid-columns': 公告表格列 }"
           >
             <button
               v-if="可见公告列.includes('title')"
-              class="sort-heading"
+              class="manager-sort-heading"
               :class="{ 'is-active': 排序字段 === 'title' }"
               type="button"
               @click="切换排序('title')"
@@ -924,7 +927,7 @@ onBeforeUnmount(() => {
             <span v-if="可见公告列.includes('status')">状态</span>
             <button
               v-if="可见公告列.includes('date')"
-              class="sort-heading"
+              class="manager-sort-heading"
               :class="{ 'is-active': 排序字段 === (回收站模式 ? 'deleted_at' : 'created_at') }"
               type="button"
               @click="切换排序(回收站模式 ? 'deleted_at' : 'created_at')"
@@ -937,7 +940,7 @@ onBeforeUnmount(() => {
             </button>
             <button
               v-if="可见公告列.includes('updated_at')"
-              class="sort-heading"
+              class="manager-sort-heading"
               :class="{ 'is-active': 排序字段 === 'updated_at' }"
               type="button"
               @click="切换排序('updated_at')"
@@ -945,9 +948,14 @@ onBeforeUnmount(() => {
               <span>更新时间</span>
               <ElIcon><SortDirectionIcon :direction="排序图标方向('updated_at')" /></ElIcon>
             </button>
-            <div class="ops-head">
+            <div class="manager-column-actions">
               <span>操作</span>
-              <ElPopover placement="bottom-end" :width="180" trigger="click">
+              <ElPopover
+                popper-class="manager-popover"
+                placement="bottom-end"
+                :width="180"
+                trigger="click"
+              >
                 <template #reference>
                   <button type="button" title="设置显示列" aria-label="设置显示列">
                     <ElIcon
@@ -958,7 +966,7 @@ onBeforeUnmount(() => {
                     ></ElIcon>
                   </button>
                 </template>
-                <div class="announcement-column-settings">
+                <div class="manager-column-settings">
                   <label v-for="column in 公告列" :key="column.value">
                     <input
                       type="checkbox"
@@ -977,7 +985,7 @@ onBeforeUnmount(() => {
             v-for="公告 in 公告列表"
             :key="公告.id"
             class="manager-row"
-            :style="{ '--announcement-grid-columns': 公告表格列 }"
+            :style="{ '--manager-grid-columns': 公告表格列 }"
             :class="{ 'is-fresh': 公告.id === 新鲜ID }"
           >
             <div v-if="可见公告列.includes('title')" class="manager-title">
@@ -995,21 +1003,21 @@ onBeforeUnmount(() => {
             >
               {{ 公告.content.trim() ? 公告.content : '仅标题' }}
             </span>
-            <span v-if="可见公告列.includes('status')" class="status">
+            <span v-if="可见公告列.includes('status')" class="manager-status">
               <i :class="公告.is_active ? 'on' : 'off'" />{{ 公告.is_active ? '生效中' : '已下架' }}
             </span>
             <ElTooltip
               v-if="可见公告列.includes('date')"
               :content="完整时间(公告时间(公告))"
               placement="top"
-              popper-class="announcement-date-tooltip"
+              popper-class="manager-date-tooltip"
               ><span class="manager-date">{{ 相对时间(公告时间(公告)) }}</span></ElTooltip
             >
             <ElTooltip
               v-if="可见公告列.includes('updated_at')"
               :content="完整时间(公告.updated_at)"
               placement="top"
-              popper-class="announcement-date-tooltip"
+              popper-class="manager-date-tooltip"
               ><span class="manager-date">{{ 相对时间(公告.updated_at) }}</span></ElTooltip
             >
             <div class="manager-ops">
@@ -1071,7 +1079,7 @@ onBeforeUnmount(() => {
             :class="{ 'is-fresh': 公告.id === 新鲜ID }"
           >
             <div class="card-kicker">
-              <span class="status">
+              <span class="manager-status">
                 <i :class="公告.is_active ? 'on' : 'off'" />{{
                   公告.is_active ? '生效中' : '已下架'
                 }}
@@ -1082,7 +1090,7 @@ onBeforeUnmount(() => {
                 v-if="回收站模式"
                 :content="完整时间(公告.deleted_at)"
                 placement="top"
-                popper-class="announcement-date-tooltip"
+                popper-class="manager-date-tooltip"
                 ><span>删除于 {{ 相对时间(公告.deleted_at) }}</span></ElTooltip
               >
             </div>
@@ -1096,7 +1104,7 @@ onBeforeUnmount(() => {
               {{ 公告.content.trim() ? 公告.content : '这条公告只有标题。' }}
             </p>
             <footer>
-              <ElTooltip placement="top" popper-class="announcement-date-tooltip">
+              <ElTooltip placement="top" popper-class="manager-date-tooltip">
                 <template #content>
                   <div>创建于 {{ 完整时间(公告.created_at) }}</div>
                   <div>编辑于 {{ 完整时间(公告.updated_at) }}</div>
@@ -1157,8 +1165,8 @@ onBeforeUnmount(() => {
       </template>
       <div
         v-if="公告列表.length"
-        class="load-status"
-        :class="{ 'load-status--end': !还有更多 && !加载更多中 && !加载失败 }"
+        class="manager-list-status"
+        :class="{ 'manager-list-status--end': !还有更多 && !加载更多中 && !加载失败 }"
       >
         <button v-if="加载失败" type="button" @click="拉取公告(失败请求为追加)">
           加载失败，点击重试
@@ -1283,15 +1291,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .announcement-manager {
-  --announcement-ink: var(--el-text-color-primary);
-  --announcement-ink-2: var(--el-text-color-regular);
-  --announcement-muted: var(--el-text-color-secondary);
-  --announcement-placeholder: var(--el-text-color-placeholder);
-  --announcement-line: var(--el-border-color-lighter);
-  --announcement-line-soft: var(--el-fill-color-lighter);
-  --announcement-hover: var(--el-fill-color-light);
-  --announcement-active: var(--el-fill-color);
-  --announcement-bg: var(--el-bg-color);
   --announcement-border-strong: var(--el-border-color-dark);
   --announcement-border-panel: #e6e6e6;
   --announcement-border-pop: #e4e4e4;
@@ -1301,111 +1300,17 @@ onBeforeUnmount(() => {
   --announcement-danger-line: #e5cccc;
   --announcement-danger-soft: #fdf6f6;
   --announcement-primary-soft: #fdf2f6;
-  --announcement-success: #3f9c6d;
-  height: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
-  padding: 26px 24px 0;
-  background: var(--announcement-bg);
-  color: var(--announcement-ink);
-  font:
-    13px/1.5 'PingFang SC',
-    'HarmonyOS Sans SC',
-    'Microsoft YaHei',
-    'Noto Sans SC',
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  display: flex;
-  flex-direction: column;
-}
-
-.announcement-manager *,
-.announcement-manager *::before,
-.announcement-manager *::after {
-  box-sizing: border-box;
-}
-
-.announcement-manager button:where(:not(.el-button)) {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.announcement-manager input,
-.announcement-manager textarea,
-.announcement-manager select {
-  font: inherit;
-  color: inherit;
-}
-
-.announcement-manager .el-icon {
-  font-size: 15px;
-}
-
-.announcement-manager ::selection {
-  background: var(--announcement-line);
 }
 
 /* ==========================================================================
    页头与工具行
    ========================================================================== */
-.announcement-manager .page-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  flex: none;
-}
 
 .announcement-manager .page-head-main {
   min-width: 0;
 }
 
-.announcement-manager .page-head h1 {
-  margin: 0;
-  color: var(--announcement-ink);
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
-}
-
-.announcement-manager .page-head p {
-  margin: 6px 0 0;
-  color: var(--announcement-muted);
-  font-size: 12px;
-}
-
-.announcement-manager .head-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
 /* 页头按钮与友链 / 文章管理保持一致，使用 Element 按钮 */
-.announcement-manager .head-actions .el-button {
-  border-radius: 5px;
-  font-size: 12px;
-}
-
-.announcement-manager .head-actions :deep(.el-button > span) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.announcement-manager .head-actions :deep(.el-button .el-icon) {
-  font-size: 13px;
-}
 
 .announcement-manager .btn {
   display: inline-flex;
@@ -1414,10 +1319,10 @@ onBeforeUnmount(() => {
   gap: 6px;
   height: 30px;
   padding: 0 12px;
-  border: 1px solid var(--announcement-line);
+  border: 1px solid var(--manager-line);
   border-radius: 5px;
-  background: var(--announcement-bg);
-  color: var(--announcement-ink-2);
+  background: var(--manager-bg);
+  color: var(--manager-ink-2);
   font-size: 12.5px;
   white-space: nowrap;
   transition:
@@ -1429,7 +1334,7 @@ onBeforeUnmount(() => {
 
 .announcement-manager .btn:hover:not(:disabled) {
   border-color: var(--announcement-border-strong);
-  color: var(--announcement-ink);
+  color: var(--manager-ink);
 }
 
 .announcement-manager .btn:disabled {
@@ -1467,13 +1372,13 @@ onBeforeUnmount(() => {
 .announcement-manager .btn--ghost {
   border-color: transparent;
   background: transparent;
-  color: var(--announcement-ink-2);
+  color: var(--manager-ink-2);
 }
 
 .announcement-manager .btn--ghost:hover:not(:disabled) {
   border-color: transparent;
-  background: var(--announcement-active);
-  color: var(--announcement-ink);
+  background: var(--manager-active);
+  color: var(--manager-ink);
 }
 
 .announcement-manager .icon-btn {
@@ -1482,110 +1387,20 @@ onBeforeUnmount(() => {
   width: 26px;
   height: 26px;
   border-radius: 4px;
-  color: var(--announcement-muted);
+  color: var(--manager-muted);
   transition:
     background 0.12s,
     color 0.12s;
 }
 
 .announcement-manager .icon-btn:hover {
-  background: var(--announcement-active);
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  flex: none;
-  margin-top: 18px;
-}
-
-.announcement-manager .seg {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--announcement-line);
-  border-radius: 6px;
-}
-
-.announcement-manager .seg button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 58px;
-  line-height: 1;
-  gap: 5px;
-  height: 26px;
-  padding: 0 9px;
-  border-radius: 4px;
-  color: var(--announcement-muted);
-  font-size: 12px;
-  transition:
-    background 0.12s,
-    color 0.12s;
-}
-
-.announcement-manager .seg button:hover {
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .seg button.is-active {
-  background: var(--announcement-hover);
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  background: var(--manager-active);
+  color: var(--manager-ink);
 }
 
 .announcement-manager .filter-wrap {
   position: relative;
   display: inline-flex;
-}
-
-.announcement-manager .filter-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--announcement-line);
-  border-radius: 5px;
-  background: var(--announcement-bg);
-  color: var(--announcement-muted);
-  font-size: 12px;
-}
-
-.announcement-manager .filter-btn:hover {
-  border-color: var(--announcement-border-strong);
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .filter-btn.is-active {
-  border-color: var(--announcement-border-strong);
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .filter-btn.is-active .el-icon {
-  color: var(--el-color-primary, #e3769b);
-}
-
-.announcement-manager .filter-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: var(--el-color-primary, #e3769b);
-  color: #fff;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 9.5px;
 }
 
 .announcement-manager .filter-pop {
@@ -1598,107 +1413,23 @@ onBeforeUnmount(() => {
   max-height: calc(100vh - 160px);
   overflow-y: auto;
   padding: 14px;
-  border: 1px solid var(--announcement-line);
+  border: 1px solid var(--manager-line);
   border-radius: 8px;
-  background: var(--announcement-bg);
+  background: var(--manager-bg);
   animation: announcement-pop-in 0.13s ease-out;
 }
 
-.announcement-manager .filter-group h4 {
-  margin: 0 0 8px;
-  color: var(--announcement-placeholder);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-}
-
-.announcement-manager .filter-group + .filter-group {
-  margin-top: 15px;
-}
-
-.announcement-manager .filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.announcement-manager .filter-sort-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.announcement-manager .filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--announcement-line);
-  border-radius: 4px;
-  background: var(--announcement-bg);
-  color: var(--announcement-ink-2);
-  font-size: 11.5px;
-}
-
-.announcement-manager .filter-chip:hover {
-  border-color: var(--announcement-border-strong);
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .filter-chip.is-active {
-  border-color: var(--el-color-primary, #e3769b);
-  background: var(--el-color-primary, #e3769b);
-  color: #fff;
-}
-
-.announcement-manager .filter-chip .el-icon {
+.announcement-manager .manager-filter-chip .el-icon {
   font-size: 11px;
 }
 
-.announcement-manager .filter-sort-option {
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  text-align: left;
-}
-
-.announcement-manager .filter-sort-option > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.announcement-manager .filter-sort-option .el-icon {
-  flex: none;
-  font-size: 12px;
-}
-
-.announcement-manager .filter-sort-option.is-active {
-  color: var(--el-text-color-secondary);
-}
-
-.announcement-manager .filter-sort-option.is-active .el-icon {
-  color: var(--el-color-primary, #e3769b);
-}
-
-.announcement-manager .filter-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid var(--announcement-line-soft);
-}
-
-.announcement-manager .filter-foot .hint {
-  color: var(--announcement-placeholder);
+.announcement-manager .manager-filter-footer .hint {
+  color: var(--manager-placeholder);
   font-size: 11px;
 }
 
 .announcement-manager .text-btn {
-  color: var(--announcement-muted);
+  color: var(--manager-muted);
   font-size: 11.5px;
 }
 
@@ -1706,263 +1437,27 @@ onBeforeUnmount(() => {
   color: var(--el-color-primary, #e3769b);
 }
 
-/* 搜索框尺寸与文字样式与文章管理保持一致：宽度落在容器上，输入框占满剩余空间 */
-.announcement-manager .toolbar-search {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 7px;
-  width: 250px;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--announcement-line);
-  border-radius: 5px;
-  color: var(--announcement-muted);
-  transition: border-color 0.14s;
-}
-
-/* 聚焦只用浅灰加深描边，不引入主题色，与文章管理、友链管理保持一致 */
-.announcement-manager .toolbar-search:focus-within {
-  border-color: var(--el-border-color-dark, #d4d7de);
-}
-
-.announcement-manager .toolbar-search .el-icon {
-  flex: none;
-  font-size: 14px;
-}
-
-.announcement-manager .toolbar-search input {
-  width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--announcement-ink);
-  font: inherit;
-  font-size: 12px;
-}
-
-.announcement-manager .toolbar-search input::placeholder {
-  color: var(--announcement-placeholder);
-}
-
 /* ==========================================================================
    状态标签
    ========================================================================== */
-.announcement-manager .tabs-row {
-  display: flex;
-  align-items: stretch;
-  flex: none;
-  gap: 16px;
-  margin-top: 8px;
-  border-bottom: 1px solid var(--announcement-line);
-}
-
-.announcement-manager .tabs {
-  display: flex;
-  align-items: stretch;
-  gap: 22px;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-.announcement-manager .tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.announcement-manager .tab {
-  position: relative;
-  display: inline-flex;
-  align-items: baseline;
-  flex: none;
-  height: 34px;
-  color: var(--announcement-muted);
-  font-size: 12.5px;
-  line-height: 34px;
-  white-space: nowrap;
-}
-
-.announcement-manager .tab small {
-  margin-left: 4px;
-  color: var(--announcement-placeholder);
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 10.5px;
-  line-height: inherit;
-  vertical-align: baseline;
-}
-
-.announcement-manager .tab:hover {
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .tab.is-active {
-  color: var(--announcement-ink);
-  font-weight: 500;
-}
-
-.announcement-manager .tab.is-active::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: var(--el-color-primary, #e3769b);
-  content: '';
-}
 
 .announcement-manager .tab--back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--announcement-ink-2);
+  color: var(--manager-ink-2);
 }
 
 .announcement-manager .tab--back:hover {
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .tabs-actions {
-  display: flex;
-  align-items: center;
-  flex: none;
-  padding-left: 16px;
-}
-
-.announcement-manager .recycle-tab {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  height: 34px;
-  color: var(--announcement-muted);
-  font-size: 12.5px;
-  line-height: 34px;
-}
-
-.announcement-manager .recycle-tab:hover {
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .recycle-tab.is-active {
-  color: var(--el-color-primary, #e3769b);
-}
-
-.announcement-manager .recycle-tab small {
-  margin-left: 2px;
-  color: var(--announcement-placeholder);
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 10.5px;
-  line-height: inherit;
-  vertical-align: baseline;
-}
-
-.announcement-manager .recycle-tab.is-active small {
-  color: var(--el-color-primary, #e3769b);
+  color: var(--manager-ink);
 }
 
 /* ==========================================================================
    列表
    ========================================================================== */
-.announcement-manager .list-body {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-
-.announcement-manager .manager-row {
-  display: grid;
-  grid-template-columns: var(--announcement-grid-columns);
-  align-items: center;
-  column-gap: 16px;
-  min-height: 50px;
-  border-bottom: 1px solid var(--announcement-line);
-  transition: background 0.12s;
-}
-
-.announcement-manager .manager-row-head {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  min-height: 34px;
-  background: var(--announcement-bg);
-  color: var(--announcement-placeholder);
-  font-size: 11px;
-}
-
-.announcement-manager .manager-row:not(.manager-row-head):hover {
-  background: var(--announcement-hover);
-}
 
 .announcement-manager .manager-row.is-fresh {
   animation: announcement-fresh-bg 2.2s ease-out;
-}
-
-.announcement-manager .sort-heading {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  color: var(--announcement-muted);
-  font-size: 11px;
-  text-align: left;
-}
-
-.announcement-manager .sort-heading:hover {
-  color: var(--announcement-ink);
-}
-
-.announcement-manager .sort-heading.is-active {
-  color: var(--announcement-muted);
-}
-
-.announcement-manager .sort-heading .el-icon {
-  flex: none;
-  color: var(--announcement-muted);
-  font-size: 12px;
-}
-
-.announcement-manager .sort-heading.is-active .el-icon {
-  color: var(--el-color-primary, #e3769b);
-}
-
-.announcement-manager .ops-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  text-align: right;
-}
-
-.announcement-manager .ops-head button {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  color: var(--announcement-muted);
-}
-
-.announcement-manager .ops-head button:hover {
-  background: var(--announcement-active);
-  color: var(--el-color-primary, #e3769b);
-}
-
-.announcement-column-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.announcement-column-settings label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--announcement-ink-2);
-  font-size: 12px;
 }
 
 .announcement-manager .manager-title {
@@ -1976,7 +1471,7 @@ onBeforeUnmount(() => {
 .announcement-manager .manager-title .title-text {
   overflow: hidden;
   max-width: 100%;
-  color: var(--announcement-ink);
+  color: var(--manager-ink);
   font-weight: 500;
   text-align: left;
   text-overflow: ellipsis;
@@ -1990,7 +1485,7 @@ onBeforeUnmount(() => {
 
 .announcement-manager .manager-title small {
   flex: none;
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-size: 10.5px;
 }
 
@@ -1998,7 +1493,7 @@ onBeforeUnmount(() => {
   display: block;
   overflow: hidden;
   min-width: 0;
-  color: var(--announcement-muted);
+  color: var(--manager-muted);
   font-size: 11.5px;
   line-height: 1.5;
   text-overflow: ellipsis;
@@ -2006,60 +1501,12 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .manager-excerpt.is-empty {
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-style: italic;
 }
 
-.announcement-manager .status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--announcement-ink-2);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.announcement-manager .status i {
-  width: 5px;
-  height: 5px;
-  flex: none;
-  border-radius: 50%;
-  background: #b4b4b4;
-}
-
-.announcement-manager .status i.on {
-  background: var(--announcement-success);
-}
-
-.announcement-manager .manager-date {
-  justify-self: start;
-  color: var(--announcement-muted);
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-
-.announcement-manager .manager-ops {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1px;
-  margin-left: auto;
-}
-
-.announcement-manager .manager-ops button {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  color: var(--announcement-muted);
-  transition:
-    background 0.12s,
-    color 0.12s;
-}
-
-.announcement-manager .manager-ops button:hover {
-  background: var(--announcement-active);
-  color: var(--el-color-primary, #e3769b);
+.announcement-manager .manager-status i.on {
+  background: var(--manager-success);
 }
 
 .announcement-manager .manager-ops button.danger {
@@ -2075,8 +1522,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
-.announcement-manager .manager-row > .manager-ops,
-.announcement-manager .ops-head {
+.announcement-manager .manager-row > .manager-ops {
   position: sticky;
   right: 0;
   z-index: 2;
@@ -2084,29 +1530,11 @@ onBeforeUnmount(() => {
   align-items: center;
   width: 88px;
   margin-left: 0;
-  background: var(--announcement-bg);
+  background: var(--manager-bg);
 }
 
 .announcement-manager .manager-row:not(.manager-row-head):hover > .manager-ops {
-  background: var(--announcement-hover);
-}
-
-.announcement-manager .load-status {
-  padding: 4px 0 12px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-  text-align: center;
-}
-
-.announcement-manager .load-status--end {
-  color: var(--el-text-color-placeholder);
-}
-
-:global(.announcement-date-tooltip.el-popper) {
-  width: max-content;
-  min-width: 0;
-  max-width: calc(100vw - 24px);
-  white-space: nowrap;
+  background: var(--manager-hover);
 }
 
 /* ==========================================================================
@@ -2114,10 +1542,6 @@ onBeforeUnmount(() => {
    ========================================================================== */
 .announcement-manager .manager-cards {
   display: none;
-  grid-template-columns: repeat(auto-fill, minmax(min(272px, 100%), 1fr));
-  gap: 12px;
-  margin-top: 18px;
-  padding-bottom: 0;
 }
 
 .announcement-manager.is-card-view .manager-table {
@@ -2128,19 +1552,6 @@ onBeforeUnmount(() => {
   display: grid;
 }
 
-.announcement-manager .manager-card {
-  min-width: 0;
-  padding: 15px 16px 13px;
-  border: 1px solid var(--announcement-line);
-  border-radius: 7px;
-  background: var(--announcement-bg);
-  transition: border-color 0.14s;
-}
-
-.announcement-manager .manager-card:hover {
-  border-color: var(--el-color-primary, #e3769b);
-}
-
 .announcement-manager .manager-card.is-fresh {
   animation: announcement-fresh-bg 2.2s ease-out;
 }
@@ -2149,19 +1560,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--announcement-muted);
+  color: var(--manager-muted);
   font-size: 11px;
 }
 
-.announcement-manager .card-kicker > span:not(.status) {
-  color: var(--announcement-placeholder);
-}
-
-.announcement-manager .manager-card h3 {
-  margin: 9px 0 0;
-  font-size: 13.5px;
-  font-weight: 500;
-  line-height: 1.5;
+.announcement-manager .card-kicker > span:not(.manager-status) {
+  color: var(--manager-placeholder);
 }
 
 .announcement-manager .manager-card h3 button,
@@ -2169,7 +1573,7 @@ onBeforeUnmount(() => {
   display: block;
   max-width: 100%;
   overflow: hidden;
-  color: var(--announcement-ink);
+  color: var(--manager-ink);
   font: inherit;
   font-weight: 500;
   text-align: left;
@@ -2182,43 +1586,19 @@ onBeforeUnmount(() => {
   text-underline-offset: 3px;
 }
 
-.announcement-manager .manager-card p {
-  display: -webkit-box;
-  overflow: hidden;
-  min-height: 39px;
-  margin: 6px 0 0;
-  color: var(--announcement-muted);
-  font-size: 11.5px;
-  line-height: 1.7;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
 .announcement-manager .manager-card p.is-empty {
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-style: italic;
 }
 
 .announcement-manager .manager-card footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--announcement-line-soft);
-  color: var(--announcement-muted);
-  font-size: 11px;
-  white-space: nowrap;
 }
 
 .announcement-manager .card-created-at {
   justify-self: start;
   line-height: 1.5;
-}
-
-.announcement-manager .manager-card footer .manager-ops {
-  flex: none;
 }
 
 /* ==========================================================================
@@ -2231,7 +1611,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 8px;
   min-height: 280px;
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
 }
 
 .announcement-manager .empty-icon {
@@ -2239,7 +1619,7 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .empty strong {
-  color: var(--announcement-ink-2);
+  color: var(--manager-ink-2);
   font-size: 13px;
   font-weight: 500;
 }
@@ -2271,7 +1651,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border: 1px solid var(--announcement-border-panel);
   border-radius: 10px;
-  background: var(--announcement-bg);
+  background: var(--manager-bg);
   animation: announcement-panel-in 0.16s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
@@ -2286,7 +1666,7 @@ onBeforeUnmount(() => {
   flex: none;
   height: 52px;
   padding: 0 18px 0 20px;
-  border-bottom: 1px solid var(--announcement-line-soft);
+  border-bottom: 1px solid var(--manager-line-soft);
 }
 
 .announcement-manager .panel-head h2 {
@@ -2297,7 +1677,7 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .panel-sub {
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-size: 11.5px;
 }
 
@@ -2332,7 +1712,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  color: var(--announcement-ink-2);
+  color: var(--manager-ink-2);
   font-size: 12px;
 }
 
@@ -2343,7 +1723,7 @@ onBeforeUnmount(() => {
 
 .announcement-manager .field-label .counter {
   margin-left: auto;
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-size: 10.5px;
 }
@@ -2352,10 +1732,10 @@ onBeforeUnmount(() => {
 .announcement-manager .field textarea {
   width: 100%;
   padding: 9px 10px;
-  border: 1px solid var(--announcement-line);
+  border: 1px solid var(--manager-line);
   border-radius: 5px;
-  background: var(--announcement-bg);
-  color: var(--announcement-ink);
+  background: var(--manager-bg);
+  color: var(--manager-ink);
   font-size: 13px;
   outline: 0;
   transition: border-color 0.14s;
@@ -2372,7 +1752,7 @@ onBeforeUnmount(() => {
 
 .announcement-manager .field input[type='text']::placeholder,
 .announcement-manager .field textarea::placeholder {
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
 }
 
 .announcement-manager .field textarea {
@@ -2382,7 +1762,7 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .field-hint {
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-size: 11px;
 }
 
@@ -2391,7 +1771,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 14px;
   padding: 14px 0 0;
-  border-top: 1px dashed var(--announcement-line-soft);
+  border-top: 1px dashed var(--manager-line-soft);
 }
 
 .announcement-manager .switch-copy {
@@ -2408,7 +1788,7 @@ onBeforeUnmount(() => {
 .announcement-manager .switch-copy span {
   display: block;
   margin-top: 3px;
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-size: 11px;
 }
 
@@ -2429,7 +1809,7 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--announcement-bg);
+  background: var(--manager-bg);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   transition: transform 0.16s;
   content: '';
@@ -2449,13 +1829,13 @@ onBeforeUnmount(() => {
   gap: 8px;
   flex: none;
   padding: 12px 20px;
-  border-top: 1px solid var(--announcement-line-soft);
-  background: var(--announcement-bg);
+  border-top: 1px solid var(--manager-line-soft);
+  background: var(--manager-bg);
 }
 
 .announcement-manager .panel-foot .foot-hint {
   margin-right: auto;
-  color: var(--announcement-placeholder);
+  color: var(--manager-placeholder);
   font-size: 11px;
 }
 
@@ -2476,7 +1856,7 @@ onBeforeUnmount(() => {
   padding: 12px 14px 10px;
   border: 1px solid var(--announcement-border-pop);
   border-radius: 8px;
-  background: var(--announcement-bg);
+  background: var(--manager-bg);
   animation: announcement-pop-in 0.13s ease-out;
 }
 
@@ -2491,7 +1871,7 @@ onBeforeUnmount(() => {
   height: 8px;
   border-top: 1px solid var(--announcement-border-pop);
   border-left: 1px solid var(--announcement-border-pop);
-  background: var(--announcement-bg);
+  background: var(--manager-bg);
   transform: rotate(45deg);
 }
 
@@ -2509,7 +1889,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 7px;
   margin: 0;
-  color: var(--announcement-muted);
+  color: var(--manager-muted);
   font-size: 11px;
   letter-spacing: 0.04em;
 }
@@ -2525,7 +1905,7 @@ onBeforeUnmount(() => {
 .announcement-manager .pop-title {
   overflow: hidden;
   margin: 7px 0 0;
-  color: var(--announcement-ink);
+  color: var(--manager-ink);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
@@ -2535,7 +1915,7 @@ onBeforeUnmount(() => {
 
 .announcement-manager .pop-desc {
   margin: 5px 0 0;
-  color: var(--announcement-muted);
+  color: var(--manager-muted);
   font-size: 11.5px;
   line-height: 1.6;
 }
@@ -2546,7 +1926,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   margin-top: 8px;
   padding-top: 7px;
-  border-top: 1px solid var(--announcement-line-soft);
+  border-top: 1px solid var(--manager-line-soft);
 }
 
 .announcement-manager .pop-foot .btn {
@@ -2576,10 +1956,10 @@ onBeforeUnmount(() => {
   min-width: 240px;
   max-width: 380px;
   padding: 10px 12px 10px 14px;
-  border: 1px solid var(--announcement-line);
+  border: 1px solid var(--manager-line);
   border-radius: 7px;
-  background: var(--announcement-bg);
-  color: var(--announcement-ink-2);
+  background: var(--manager-bg);
+  color: var(--manager-ink-2);
   font-size: 12.5px;
   pointer-events: auto;
   animation: announcement-toast-in 0.18s ease-out;
@@ -2676,25 +2056,25 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
-  .announcement-manager .page-head {
+  .announcement-manager .manager-head {
     gap: 14px;
   }
 
-  .announcement-manager .head-actions {
+  .announcement-manager .manager-head-actions {
     flex: none;
   }
 
-  .announcement-manager .toolbar {
+  .announcement-manager .manager-toolbar {
     flex-wrap: nowrap;
     gap: 8px;
   }
 
-  .announcement-manager .seg button {
+  .announcement-manager .manager-mode-nav button {
     flex: 1;
     justify-content: center;
   }
 
-  .announcement-manager .toolbar-right {
+  .announcement-manager .manager-filters {
     flex: 1;
     width: auto;
     min-width: 0;
@@ -2711,18 +2091,18 @@ onBeforeUnmount(() => {
     max-width: calc(100vw - 32px);
   }
 
-  .announcement-manager .toolbar-search {
+  .announcement-manager .manager-search {
     flex: 1;
     min-width: 0;
     margin-left: 0;
   }
 
-  .announcement-manager .toolbar-search input {
+  .announcement-manager .manager-search input {
     width: 100%;
     min-width: 0;
   }
 
-  .announcement-manager .tabs {
+  .announcement-manager .manager-tabs {
     gap: 18px;
   }
 
@@ -2753,19 +2133,19 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) and (orientation: portrait) {
-  .announcement-manager .seg {
+  .announcement-manager .manager-mode-nav {
     display: inline-flex;
   }
 }
 
 /* 手机横屏保留列表视图，允许横向滚动查看所选列 */
 @media (max-width: 640px) and (orientation: landscape) {
-  .announcement-manager .toolbar {
+  .announcement-manager .manager-toolbar {
     align-items: center;
     flex-direction: row;
   }
 
-  .announcement-manager .toolbar-right {
+  .announcement-manager .manager-filters {
     align-items: center;
     flex-direction: row;
     width: auto;
@@ -2776,15 +2156,15 @@ onBeforeUnmount(() => {
     width: auto;
   }
 
-  .announcement-manager .filter-btn {
+  .announcement-manager .manager-filter-button {
     width: auto;
   }
 
-  .announcement-manager .toolbar-search {
+  .announcement-manager .manager-search {
     width: 180px;
   }
 
-  .announcement-manager .toolbar-search input {
+  .announcement-manager .manager-search input {
     width: 100%;
   }
 
@@ -2792,7 +2172,7 @@ onBeforeUnmount(() => {
     display: block;
   }
 
-  .announcement-manager .list-body {
+  .announcement-manager .manager-list-body {
     overflow-x: auto;
   }
 }
@@ -2802,7 +2182,7 @@ onBeforeUnmount(() => {
     min-width: 0;
   }
 
-  .announcement-manager .list-body {
+  .announcement-manager .manager-list-body {
     overflow-x: auto;
   }
 }
@@ -2813,34 +2193,34 @@ onBeforeUnmount(() => {
     padding: 6px 16px 0;
   }
 
-  .announcement-manager .page-head {
+  .announcement-manager .manager-head {
     align-items: center;
     gap: 10px;
   }
 
-  .announcement-manager .page-head h1 {
+  .announcement-manager .manager-head h1 {
     font-size: 18px;
   }
 
-  .announcement-manager .page-head p {
+  .announcement-manager .manager-head p {
     display: none;
   }
 
-  .announcement-manager .head-actions {
+  .announcement-manager .manager-head-actions {
     width: auto;
     flex: 0 0 auto;
   }
 
-  .announcement-manager .head-actions .el-button {
+  .announcement-manager .manager-head-actions .el-button {
     flex: 0 0 auto;
     height: 28px;
   }
 
-  .announcement-manager .toolbar {
+  .announcement-manager .manager-toolbar {
     margin-top: 6px;
   }
 
-  .announcement-manager .tabs-row {
+  .announcement-manager .manager-tabs-row {
     margin-top: 4px;
   }
 
@@ -2861,6 +2241,5 @@ html.dark .announcement-manager {
   --announcement-danger-line: #5a3a3a;
   --announcement-danger-soft: #2a1c1c;
   --announcement-primary-soft: #2a1c22;
-  --announcement-success: #5fbf8a;
 }
 </style>

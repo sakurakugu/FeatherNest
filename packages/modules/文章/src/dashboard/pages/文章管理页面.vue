@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@feathernest/ui/styles/manager.css'
 import { useInfiniteScroll, useMediaQuery, useStorage } from '@vueuse/core'
 /* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
 import {
@@ -972,14 +973,14 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 
 <template>
   <div
-    class="article-manager"
+    class="manager-page article-manager"
     :class="{
       'is-split': activeListMode === 'active-split',
       'is-narrow-split-writing': writingFromNarrowSplit,
     }"
   >
     <section class="article-page" :inert="writingOpen && !writingInSplit && !isNarrowSplitViewport">
-      <header class="article-page-head">
+      <header class="manager-head">
         <div>
           <button
             v-if="props.showBack"
@@ -992,7 +993,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
           <h1>{{ isRecycleBinMode ? '回收站' : '文章管理' }}</h1>
           <p>共 {{ allArticleTotal }} 篇文章</p>
         </div>
-        <div class="page-actions">
+        <div class="manager-head-actions">
           <ElButton v-if="!isRecycleBinMode" class="article-action" @click="openQuickDialog">
             <ElIcon>
               <svg viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true">
@@ -1034,12 +1035,12 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 
       <ElSkeleton :loading="showSkeleton" animated>
         <div v-loading="refreshing" class="article-list">
-          <div class="article-toolbar">
-            <div class="article-mode-nav" aria-label="文章视图切换">
+          <div class="manager-toolbar">
+            <div class="manager-mode-nav" aria-label="文章视图切换">
               <button
                 v-for="item in articleListModeOptions"
                 :key="item.value"
-                class="article-mode-nav__item"
+                class="manager-mode-nav__item"
                 :class="{ 'is-active': activeListMode === item.value }"
                 type="button"
                 :title="item.label"
@@ -1074,12 +1075,17 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                 <span>{{ item.label }}</span>
               </button>
             </div>
-            <div class="article-filters">
-              <ElPopover placement="bottom-end" :width="330" trigger="click">
+            <div class="manager-filters">
+              <ElPopover
+                popper-class="manager-popover"
+                placement="bottom-end"
+                :width="330"
+                trigger="click"
+              >
                 <template #reference
                   ><button
                     type="button"
-                    class="article-filter-button"
+                    class="manager-filter-button"
                     :class="{ 'is-active': filterCount > 0 }"
                     aria-label="筛选文章"
                   >
@@ -1087,15 +1093,15 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     ><small v-if="filterCount">{{ filterCount }}</small>
                   </button></template
                 >
-                <div class="article-filter-panel article-filter-panel--chips">
-                  <div class="article-filter-group">
+                <div class="manager-filter-panel article-filter-panel--chips">
+                  <div class="manager-filter-group">
                     <label>状态</label>
-                    <div class="article-filter-chips">
+                    <div class="manager-filter-chips">
                       <button
                         v-for="option in statusFilterOptions"
                         :key="option.value || 'all-status'"
                         type="button"
-                        class="article-filter-chip"
+                        class="manager-filter-chip"
                         :class="{ 'is-active': selectedStatus === option.value }"
                         @click="selectedStatus = option.value"
                       >
@@ -1103,14 +1109,14 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       </button>
                     </div>
                   </div>
-                  <div class="article-filter-group">
+                  <div class="manager-filter-group">
                     <label>整理状态</label>
-                    <div class="article-filter-chips">
+                    <div class="manager-filter-chips">
                       <button
                         v-for="option in organizationFilterOptions"
                         :key="option.value || 'all-organization'"
                         type="button"
-                        class="article-filter-chip"
+                        class="manager-filter-chip"
                         :class="{ 'is-active': selectedOrganizationState === option.value }"
                         @click="selectedOrganizationState = option.value"
                       >
@@ -1118,14 +1124,14 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       </button>
                     </div>
                   </div>
-                  <div class="article-filter-group">
+                  <div class="manager-filter-group">
                     <label>标签 · 可多选</label>
-                    <div class="article-filter-chips article-filter-chips--tags">
+                    <div class="manager-filter-chips article-filter-chips--tags">
                       <button
                         v-for="tag in tags"
                         :key="tag.id"
                         type="button"
-                        class="article-filter-chip"
+                        class="manager-filter-chip"
                         :class="{ 'is-active': selectedTagIds.includes(tag.id) }"
                         @click="
                           selectedTagIds = selectedTagIds.includes(tag.id)
@@ -1138,14 +1144,14 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       <span v-if="tags.length === 0" class="article-filter-empty">暂无标签</span>
                     </div>
                   </div>
-                  <div class="article-filter-group">
+                  <div class="manager-filter-group">
                     <label>排序</label>
-                    <div class="article-sort-options">
+                    <div class="manager-sort-options">
                       <button
                         v-for="item in sortOptions"
                         :key="item.value"
                         type="button"
-                        class="article-filter-chip article-sort-option"
+                        class="manager-filter-chip manager-sort-option"
                         :class="{ 'is-active': sortBy === item.value }"
                         :aria-label="`${item.label}，${sortBy === item.value ? (sortOrder === 'asc' ? '升序' : '降序') : '未排序'}`"
                         :aria-pressed="sortBy === item.value"
@@ -1158,7 +1164,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       </button>
                     </div>
                   </div>
-                  <div class="article-filter-group article-date-setting">
+                  <div class="manager-filter-group article-date-setting">
                     <label for="article-relative-edit-date">最近编辑显示相对时间</label>
                     <ElSwitch
                       id="article-relative-edit-date"
@@ -1166,7 +1172,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       size="small"
                     />
                   </div>
-                  <div class="article-filter-footer">
+                  <div class="manager-filter-footer">
                     <span>{{ filterCount ? `已选 ${filterCount} 个条件` : '未设置筛选条件' }}</span>
                     <ElButton text @click="clearFilters">清除筛选</ElButton>
                   </div>
@@ -1182,13 +1188,13 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
               /></label>
             </div>
           </div>
-          <div class="article-tabs-row">
-            <nav class="article-tabs" aria-label="文章分类" @wheel="scrollCategoryTabs">
+          <div class="manager-tabs-row">
+            <nav class="manager-tabs" aria-label="文章分类" @wheel="scrollCategoryTabs">
               <button
                 v-for="category in categoryFilterOptions"
                 :key="category.value"
                 type="button"
-                class="article-tab"
+                class="manager-tab"
                 :class="{ 'is-active': selectedCategoryId === category.value }"
                 @click="selectCategory(category.value)"
               >
@@ -1197,7 +1203,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
             </nav>
             <button
               type="button"
-              class="article-tab"
+              class="manager-tab"
               :class="{ 'is-active': isRecycleBinMode }"
               :aria-pressed="isRecycleBinMode"
               @click="toggleRecycleBin"
@@ -1208,7 +1214,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 
           <div
             ref="pageContainerRef"
-            class="article-list-body"
+            class="manager-list-body"
             :class="{
               'article-list-body--writing': writingOpen && isNarrowSplitViewport && !writingInSplit,
             }"
@@ -1237,6 +1243,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                 <div class="manager-column-actions">
                   <span>操作</span
                   ><ElPopover
+                    popper-class="manager-popover"
                     v-model:visible="showColumnSettings"
                     placement="bottom-end"
                     :width="190"
@@ -1250,7 +1257,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                             <circle cx="12" cy="19" r="2" /></svg
                         ></ElIcon></button
                     ></template>
-                    <div class="article-column-settings">
+                    <div class="manager-column-settings">
                       <label v-for="column in articleColumns" :key="column.value"
                         ><input
                           type="checkbox"
@@ -1306,7 +1313,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                   v-if="visibleArticleColumns.includes('last_edited_at')"
                   :content="getArticleEditDate(article)"
                   placement="top"
-                  popper-class="article-edit-date-tooltip"
+                  popper-class="manager-date-tooltip"
                   ><span class="manager-date">{{
                     getArticleDisplayedEditDate(article)
                   }}</span></ElTooltip
@@ -1377,7 +1384,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     placement="bottom-end"
                     :width="288"
                     trigger="click"
-                    popper-class="article-delete-popover"
+                    popper-class="manager-popover article-delete-popover"
                   >
                     <template #reference
                       ><button
@@ -1438,7 +1445,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     <ElTooltip
                       :content="getArticleEditDate(article)"
                       placement="top"
-                      popper-class="article-edit-date-tooltip"
+                      popper-class="manager-date-tooltip"
                       ><span>编辑于 {{ getArticleDisplayedEditDate(article) }}</span></ElTooltip
                     >
                   </small>
@@ -1475,7 +1482,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                     <ElTooltip
                       :content="getArticleEditDate(selectedArticle)"
                       placement="top"
-                      popper-class="article-edit-date-tooltip"
+                      popper-class="manager-date-tooltip"
                       ><span
                         >编辑于 {{ getArticleDisplayedEditDate(selectedArticle) }}</span
                       ></ElTooltip
@@ -1551,7 +1558,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       placement="bottom-end"
                       :width="288"
                       trigger="click"
-                      popper-class="article-delete-popover"
+                      popper-class="manager-popover article-delete-popover"
                     >
                       <template #reference>
                         <button
@@ -1614,7 +1621,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                   ><ElTooltip
                     :content="getArticleEditDate(article)"
                     placement="top"
-                    popper-class="article-edit-date-tooltip"
+                    popper-class="manager-date-tooltip"
                     ><span>编辑于 {{ getArticleDisplayedEditDate(article) }}</span></ElTooltip
                   >
                   <div class="manager-ops">
@@ -1683,7 +1690,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
                       placement="bottom-end"
                       :width="288"
                       trigger="click"
-                      popper-class="article-delete-popover"
+                      popper-class="manager-popover article-delete-popover"
                     >
                       <template #reference
                         ><button
@@ -1964,64 +1971,13 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   padding: 24px;
   box-sizing: border-box;
 }
-
-.page-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-}
-.page-actions :deep(.el-button + .el-button) {
+.manager-head-actions :deep(.el-button + .el-button) {
   margin-left: 0;
 }
 
 .create-button-wrapper {
   display: flex;
   flex: 0 0 auto;
-}
-
-.article-mode-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  background: var(--el-fill-color-lighter);
-}
-
-.article-mode-nav__item {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-width: 68px;
-  height: 30px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  line-height: 1;
-  transition:
-    background-color 0.15s,
-    color 0.15s,
-    box-shadow 0.15s;
-  white-space: nowrap;
-}
-
-.article-mode-nav__item:hover {
-  color: var(--el-color-primary);
-}
-
-.article-mode-nav__item.is-active {
-  background: var(--el-bg-color);
-  color: var(--el-color-primary);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 }
 
 .article-card {
@@ -2038,7 +1994,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 }
 
 .article-quick-entry,
-.article-filters,
 .article-derived,
 .article-convert-form {
   display: flex;
@@ -2050,9 +2005,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 }
 .article-quick-entry .el-textarea {
   flex: 1;
-}
-.article-filters {
-  align-items: center;
 }
 .article-state-filter {
   width: 160px;
@@ -2071,10 +2023,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .article-convert-actions {
   display: flex;
   justify-content: flex-end;
-}
-
-.article-tabs {
-  margin-bottom: 4px;
 }
 
 .article-table-wrapper {
@@ -2541,33 +2489,12 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   padding: 0 7px;
   font-size: 11px;
 }
-
-/* 文章管理页面使用独立的颜色和组件样式，避免受其他模块样式影响。 */
 .article-page {
   --article-ink: #171717;
   --article-muted: #8a8a8a;
   --article-line: #e8e8e8;
   color: var(--article-ink);
   font-size: 13px;
-}
-
-.article-page-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-}
-.article-page-head h1 {
-  margin: 0;
-  color: var(--article-ink);
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-.article-page-head p {
-  margin: 6px 0 0;
-  color: var(--article-muted);
-  font-size: 12px;
 }
 .article-back {
   margin: 0 0 8px;
@@ -2590,45 +2517,11 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .article-list {
   gap: 0;
 }
-.article-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-}
-.article-mode-nav {
-  gap: 2px;
-  padding: 2px;
-  border-color: var(--article-line);
-  border-radius: 6px;
-  background: #fff;
-}
-.article-mode-nav__item {
-  min-width: 58px;
-  height: 26px;
-  border-radius: 4px;
-  color: var(--article-muted);
-  font-size: 12px;
-}
-.article-mode-nav__item:hover {
-  color: var(--article-ink);
-}
-.article-mode-nav__item.is-active {
-  background: #f0f0f0;
-  color: var(--article-ink);
-  box-shadow: none;
-}
-.article-filters {
-  margin-left: auto;
-}
 .article-search {
   width: 260px;
 }
 .article-quick-entry {
   margin-top: 16px;
-}
-.article-tabs {
-  margin: 20px 0 2px;
 }
 .article-table :deep(.el-table__inner-wrapper::before) {
   display: none;
@@ -2797,32 +2690,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 }
 
 .article-manager {
-  --manager-bg: var(--el-bg-color, #fff);
-  --manager-ink: var(--el-text-color-primary, #171717);
-  --manager-muted: var(--el-text-color-secondary, #8a8a8a);
-  --manager-line: var(--el-border-color-lighter, #e8e8e8);
-  --manager-hover: var(--el-fill-color-light, #fafafa);
-  height: 100%;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-sizing: border-box;
-  /* 底部不再留白：列表/卡片里写作浮层要贴住页面底边，和分栏保持一致 */
-  padding: 26px 24px 0;
-  background: var(--manager-bg);
-  color: var(--manager-ink);
-  font:
-    13px/1.5 'PingFang SC',
-    'HarmonyOS Sans SC',
-    'Microsoft YaHei',
-    'Noto Sans SC',
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 .article-manager .article-page,
 .article-manager :deep(.el-skeleton) {
@@ -2836,30 +2704,13 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   min-height: 0;
   overflow: hidden;
 }
-.article-manager .article-list-body {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow-y: scroll;
-}
 .article-manager .article-list-body--writing {
   overflow: hidden;
-}
-.article-manager .article-tabs::-webkit-scrollbar {
-  display: none;
-}
-.article-manager *,
-.article-manager *::before,
-.article-manager *::after {
-  box-sizing: border-box;
 }
 .article-manager .article-page {
   --article-ink: var(--manager-ink);
   --article-muted: var(--manager-muted);
   --article-line: var(--manager-line);
-  color: var(--manager-ink);
-}
-.article-manager .article-page-head h1 {
   color: var(--manager-ink);
 }
 .article-manager .article-page :deep(.el-button--primary) {
@@ -2868,157 +2719,8 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   --el-button-hover-bg-color: var(--el-color-primary-light-3);
   --el-button-hover-border-color: var(--el-color-primary-light-3);
 }
-.article-manager .article-mode-nav {
-  background: var(--manager-bg);
-  border-color: var(--manager-line);
-}
-.article-manager .article-mode-nav__item {
-  color: var(--manager-muted);
-}
-.article-manager .article-mode-nav__item.is-active {
-  color: var(--manager-ink);
-  background: var(--manager-hover);
-}
-.article-manager .manager-search {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 250px;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--manager-line);
-  border-radius: 5px;
-  color: var(--manager-muted);
-}
-.article-manager .manager-search:focus-within {
-  /* 聚焦只用浅灰加深描边，不引入主题色，保持与管理页其他输入框一致 */
-  border-color: var(--el-border-color-dark, #d4d7de);
-}
-.article-manager .manager-search input {
-  width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--manager-ink);
-  font: inherit;
-  font-size: 12px;
-}
-.article-manager .manager-search input::placeholder {
-  color: var(--el-text-color-placeholder, #a3a3a3);
-}
-.article-manager .article-tabs-row {
-  display: flex;
-  align-items: stretch;
-  gap: 16px;
-  margin-top: 8px;
-  border-bottom: 1px solid var(--manager-line);
-}
-.article-manager .article-tabs {
-  display: flex;
-  flex: 1;
-  gap: 22px;
-  min-width: 0;
-  margin: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  overscroll-behavior-x: contain;
-}
-.article-manager .article-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: baseline;
-  flex: none;
-  height: 34px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--manager-muted);
-  font: inherit;
-  font-size: 12.5px;
-  line-height: 34px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.article-manager .article-tab.is-active {
-  color: var(--manager-ink);
-  font-weight: 500;
-}
-.article-manager .article-tab.is-active::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: var(--el-color-primary);
-  content: '';
-}
-.article-manager .article-tab small {
-  margin-left: 4px;
-  color: var(--manager-muted);
-  font-size: 10.5px;
-  line-height: inherit;
-  vertical-align: baseline;
-}
-.article-manager .manager-row {
-  display: grid;
-  grid-template-columns: var(--manager-grid-columns, minmax(0, 1fr) 96px 200px 64px 150px 80px);
-  align-items: center;
-  gap: 16px;
-  min-height: 50px;
-  border-bottom: 1px solid var(--manager-line);
-}
-.article-manager .manager-row:not(.manager-row-head):hover {
-  background: var(--manager-hover);
-}
-.article-manager .manager-row-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: var(--manager-bg);
-  min-height: 34px;
-  color: var(--manager-muted);
-  font-size: 11px;
-}
-.article-manager .manager-column-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-}
 .article-manager .manager-column-actions > :deep(.el-popover__reference-wrapper) {
   display: flex;
-}
-.article-manager .manager-column-actions button {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--manager-muted);
-  cursor: pointer;
-}
-.article-manager .manager-column-actions button:hover {
-  background: var(--manager-hover);
-  color: var(--manager-ink);
-}
-.article-column-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  color: var(--el-text-color-primary);
-  font-size: 12px;
-}
-.article-column-settings label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
 }
 .article-manager .manager-title {
   display: flex;
@@ -3051,15 +2753,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   font-style: normal;
   white-space: nowrap;
 }
-.article-manager .manager-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--manager-ink);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.article-manager .manager-status i,
 .article-manager .article-status-dot {
   width: 5px;
   height: 5px;
@@ -3086,8 +2779,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   margin-left: 8px;
 }
 .article-manager .manager-words,
-.article-manager .manager-organization,
-.article-manager .manager-date {
+.article-manager .manager-organization {
   color: var(--manager-muted);
   font-family: inherit;
   font-size: 12.5px;
@@ -3096,12 +2788,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 }
 .article-manager .manager-row > .manager-date {
   justify-self: start;
-}
-:global(.article-edit-date-tooltip.el-popper) {
-  width: max-content;
-  min-width: 0;
-  max-width: calc(100vw - 24px);
-  white-space: nowrap;
 }
 :global(.article-delete-popover.el-popover) {
   width: 288px;
@@ -3119,83 +2805,17 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   inset: 0;
   background: rgba(23, 23, 23, 0.16);
 }
-.article-manager .manager-ops {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1px;
-  margin-left: auto;
-}
-.article-manager .manager-ops button {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--manager-muted);
-  font-size: 14px;
-  cursor: pointer;
-}
-.article-manager .manager-ops button:hover {
-  background: var(--manager-hover);
-  color: var(--el-color-primary);
-}
 .article-manager .manager-ops button[data-article-delete] {
   color: var(--el-color-danger);
 }
 .article-manager .manager-ops button[data-article-delete]:hover {
   background: var(--el-color-danger-light-9);
 }
-.article-manager .manager-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(272px, 100%), 1fr));
-  gap: 12px;
-  margin-top: 18px;
-}
-.article-manager .manager-card {
-  min-width: 0;
-  padding: 15px 16px 13px;
-  border: 1px solid var(--manager-line);
-  border-radius: 7px;
-  background: var(--manager-bg);
-}
-.article-manager .manager-card:hover {
-  border-color: var(--el-color-primary);
-}
-.article-manager .manager-card h3 {
-  margin: 9px 0 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-}
 .article-manager .manager-card h3 button {
   display: block;
   max-width: 100%;
   margin: 0;
   text-indent: 0;
-}
-.article-manager .manager-card p {
-  display: -webkit-box;
-  overflow: hidden;
-  min-height: 39px;
-  margin: 6px 0 0;
-  color: var(--manager-muted);
-  font-size: 11.5px;
-  line-height: 1.7;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.article-manager .manager-card footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--manager-line);
-  color: var(--manager-muted);
-  font-size: 11px;
-  white-space: nowrap;
 }
 .article-manager .manager-card footer > span {
   flex: none;
@@ -3205,9 +2825,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   overflow: hidden;
   min-width: 0;
   text-overflow: ellipsis;
-}
-.article-manager .manager-card footer .manager-ops {
-  flex: none;
 }
 .article-manager .article-split-list {
   border-color: var(--manager-line);
@@ -3242,12 +2859,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .article-action :deep(.el-icon + span) {
   margin-left: 0;
 }
-.article-filter-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.article-filter-panel label {
+.manager-filter-panel label {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
@@ -3255,25 +2867,11 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   gap: 0;
   padding: 2px;
 }
-.article-filter-group + .article-filter-group {
-  margin-top: 15px;
-}
-.article-filter-group > label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-}
-.article-filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 .article-filter-chips--tags {
   max-height: calc(26px * 5 + 6px * 4);
   overflow-y: auto;
 }
-.article-filter-chips--tags .article-filter-chip {
+.article-filter-chips--tags .manager-filter-chip {
   box-sizing: border-box;
   height: 26px;
   max-width: 100%;
@@ -3281,42 +2879,9 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.article-filter-chip {
-  min-height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-secondary);
-  font: inherit;
-  font-size: 11.5px;
-  cursor: pointer;
-}
-.article-filter-chip:hover,
-.article-filter-chip.is-active {
-  border-color: var(--el-color-primary);
-}
-.article-filter-chip.is-active {
-  background: var(--el-color-primary);
-  color: #fff;
-}
 .article-filter-empty {
   color: var(--el-text-color-secondary);
   font-size: 11.5px;
-}
-.article-filter-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-}
-.article-filter-footer :deep(.el-button) {
-  font-size: 11px;
 }
 .article-date-setting {
   display: flex;
@@ -3326,94 +2891,6 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 .article-date-setting > label {
   margin-bottom: 0;
   letter-spacing: normal;
-}
-.article-filter-button,
-.manager-sort-heading {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  background: transparent;
-  color: var(--manager-muted);
-  font: inherit;
-  cursor: pointer;
-}
-.article-filter-button {
-  flex: none;
-  align-self: center;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--manager-line);
-  border-radius: 5px;
-  font-size: 12px;
-}
-.article-filter-button.is-active,
-.article-filter-button:hover {
-  color: var(--manager-ink);
-  border-color: var(--el-border-color-dark, #d4d7de);
-}
-.article-filter-button.is-active .el-icon {
-  color: var(--el-color-primary);
-}
-.article-filter-button small {
-  display: inline-grid;
-  place-items: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: var(--el-color-primary);
-  color: #fff;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 9.5px;
-  line-height: 1;
-}
-.article-sort-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-.article-sort-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  text-align: left;
-}
-.article-sort-option > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.article-sort-option .el-icon {
-  flex: none;
-  font-size: 12px;
-}
-.article-sort-option.is-active {
-  color: var(--el-text-color-secondary);
-}
-.article-sort-option.is-active .el-icon {
-  color: var(--el-color-primary);
-}
-.manager-sort-heading {
-  justify-content: flex-start;
-  padding: 0;
-  font-size: 11px;
-  text-align: left;
-}
-.manager-sort-heading:hover {
-  color: var(--manager-ink);
-}
-.manager-sort-heading.is-active {
-  color: var(--manager-muted);
-}
-.manager-sort-heading .el-icon {
-  flex: none;
-  font-size: 12px;
-}
-.manager-sort-heading.is-active .el-icon {
-  color: var(--el-color-primary);
 }
 .article-manager.is-split {
   display: flex;
@@ -3427,14 +2904,9 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   flex-direction: column;
   min-height: 0;
 }
-.article-manager.is-split .article-list-body {
+.article-manager.is-split .manager-list-body {
   display: flex;
   overflow: hidden;
-}
-.article-manager .article-page-head,
-.article-manager .article-toolbar,
-.article-manager .article-tabs-row {
-  flex: none;
 }
 .article-detail-kicker {
   display: flex;
@@ -3525,14 +2997,14 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 }
 
 @media (--mobile-viewport) {
-  .article-page-head {
+  .manager-head {
     flex-wrap: wrap;
   }
-  .article-toolbar {
+  .manager-toolbar {
     flex-wrap: nowrap;
     gap: 8px;
   }
-  .article-filters {
+  .manager-filters {
     flex: 1;
     min-width: 0;
     margin-left: 0;
@@ -3559,14 +3031,14 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
     width: auto;
     min-width: 0;
   }
-  .article-manager .article-tabs {
+  .article-manager .manager-tabs {
     gap: 18px;
   }
   .article-quick-entry {
     align-items: stretch;
     flex-direction: column;
   }
-  .article-filters {
+  .manager-filters {
     flex-wrap: nowrap;
   }
   .article-search {
@@ -3582,16 +3054,16 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
     align-items: stretch;
   }
 
-  .page-actions {
+  .manager-head-actions {
     justify-content: stretch;
     flex-wrap: wrap;
   }
 
-  .article-mode-nav {
+  .manager-mode-nav {
     width: 100%;
   }
 
-  .article-mode-nav__item {
+  .manager-mode-nav__item {
     flex: 1 1 0;
     min-width: 0;
   }
@@ -3600,7 +3072,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
     flex: 1 1 0;
   }
 
-  .page-actions :deep(.el-button) {
+  .manager-head-actions :deep(.el-button) {
     flex: 1 1 0;
   }
 

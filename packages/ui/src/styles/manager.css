@@ -1,6 +1,6 @@
 /*
  * 控制台「管理页」共享样式。
- * 与友链管理、公告管理、文章管理保持同一套视觉：页头 + 工具行 + 页签 + 列表 / 卡片。
+ * 控制台各管理页共用的页头、工具行、页签与列表 / 卡片样式。
  * 使用方式：页面根节点加 class="manager-page"，弹层加 popper-class="manager-popover"，
  * 弹窗加 class="manager-dialog"；然后在页面脚本里 import 本文件。
  */
@@ -56,8 +56,7 @@
   box-sizing: border-box;
 }
 
-.manager-page button:where(:not(.el-button)),
-:is(.manager-popover, .manager-dialog) button:where(:not(.el-button)) {
+:where(.manager-page, .manager-popover, .manager-dialog) button:where(:not(.el-button)) {
   padding: 0;
   border: 0;
   background: none;
@@ -106,6 +105,20 @@
   margin: 6px 0 0;
   color: var(--manager-muted);
   font-size: 12px;
+}
+
+.manager-page .manager-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  color: var(--manager-muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.manager-page .manager-back:hover {
+  color: var(--manager-ink);
 }
 
 .manager-page .manager-head-actions {
@@ -309,6 +322,27 @@
 
 .manager-popover .manager-filter-footer .el-button {
   font-size: 11px;
+}
+
+.manager-popover .manager-sort-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.manager-popover .manager-sort-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  text-align: left;
+}
+
+.manager-popover .manager-sort-option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 标签组：筛选面板与弹窗共用 */
@@ -742,6 +776,62 @@
   color: var(--el-color-primary);
   font: inherit;
   cursor: pointer;
+}
+
+/* 文字卡片；作品海报等专属卡片由页面定义。 */
+.manager-page .manager-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(272px, 100%), 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.manager-page .manager-card {
+  min-width: 0;
+  padding: 15px 16px 13px;
+  border: 1px solid var(--manager-line);
+  border-radius: 7px;
+  background: var(--manager-bg);
+}
+
+.manager-page .manager-card:hover {
+  border-color: var(--el-color-primary);
+}
+
+.manager-page .manager-card h3 {
+  margin: 9px 0 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.manager-page .manager-card p {
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: 39px;
+  margin: 6px 0 0;
+  color: var(--manager-muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.manager-page .manager-card footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--manager-line);
+  color: var(--manager-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.manager-page .manager-card footer .manager-ops {
+  flex: none;
+  margin-left: auto;
 }
 
 /* ==========================================================================
