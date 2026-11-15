@@ -15,11 +15,53 @@ from pathlib import Path
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit, urlunsplit
 from xml.sax.saxutils import escape
 
-from playwright.async_api import async_playwright
+from playwright.async_api import Error as PlaywrightError, TimeoutError as PlaywrightTimeoutError, async_playwright
 
 博客目录 = Path(__file__).resolve().parents[1]
 产物目录 = 博客目录 / "dist"
 静态栏目 = ["/", "/blog", "/archive", "/announcements", "/friends", "/about", "/guestbook", "/sponsor", "/media", "/gallery", "/rss"]
+
+
+async def 请求公开资源(客户端, 地址):
+    # 单次请求与退避合计最多约 48 秒，留在页面导航的 60 秒期限内。
+    路径 = urlsplit(地址).path
+    for 次数 in range(1, 4):
+        try:
+            响应 = await 客户端.get(地址, timeout=15000)
+        except PlaywrightError as 错误:
+            可重试 = isinstance(错误, PlaywrightTimeoutError) or any(
+                标记 in str(错误).lower()
+                for 标记 in ("socket hang up", "econnreset", "econnrefused", "etimedout", "eai_again", "connection closed")
+            )
+            if not 可重试 or 次数 == 3:
+                # Playwright 原始异常可能包含带签名的完整 URL，不写入构建日志。
+                raise RuntimeError(f"SSG 请求失败：{路径}，尝试 {次数} 次，{type(错误).__name__}") from None
+            原因 = "请求超时" if isinstance(错误, PlaywrightTimeoutError) else "连接中断"
+        else:
+            if 响应.status not in (502, 503, 504) or 次数 == 3:
+                return 响应
+            原因 = f"HTTP {响应.status}"
+            await 响应.dispose()
+        print(f"[SSG] 请求重试：{路径}，第 {次数}/3 次失败（{原因}），{次数} 秒后重试", flush=True)
+        await asyncio.sleep(次数)
+
+
+async def 转发接口(route, 客户端, 地址, 失败请求):
+    路径 = urlsplit(地址).path
+    try:
+        响应 = await 请求公开资源(客户端, 地址)
+        if not 响应.ok and not (路径.endswith("/users/me") and 响应.status == 401):
+            失败请求.append(f"{路径}：HTTP {响应.status}")
+        await route.fulfill(response=响应)
+    except (PlaywrightError, RuntimeError) as 错误:
+        信息 = str(错误) if isinstance(错误, RuntimeError) else f"{路径}：浏览器代理失败（{type(错误).__name__}）"
+        失败请求.append(信息)
+        print(f"[SSG] {信息}", flush=True)
+        try:
+            await route.abort()
+        except PlaywrightError:
+            # 页面已关闭或请求已结束时，无需再次中断。
+            pass
 
 
 class 构建服务器(SimpleHTTPRequestHandler):
@@ -62,7 +104,7 @@ async def 生成():
             上下文 = await 浏览器.new_context(viewport={"width": 1440, "height": 1000}, service_workers="block")
 
             async def 读取接口(路径):
-                响应 = await 上下文.request.get(接口基址 + 路径, timeout=30000)
+                响应 = await 请求公开资源(上下文.request, 接口基址 + 路径)
                 if not 响应.ok:
                     raise RuntimeError(f"SSG 接口失败：{路径}，HTTP {响应.status}")
                 return await 响应.json()
@@ -101,10 +143,7 @@ async def 生成():
                         失败请求.append(f"静态生成期间出现写请求：{请求.method} {地址.path}")
                         await route.abort()
                         return
-                    响应 = await 上下文.request.get(接口基址 + 地址.path.removeprefix("/api/v1") + (f"?{地址.query}" if 地址.query else ""), timeout=30000)
-                    if not 响应.ok and not (地址.path == "/api/v1/users/me" and 响应.status == 401):
-                        失败请求.append(f"{地址.path}：HTTP {响应.status}")
-                    await route.fulfill(response=响应)
+                    await 转发接口(route, 上下文.request, 接口基址 + 地址.path.removeprefix("/api/v1") + (f"?{地址.query}" if 地址.query else ""), 失败请求)
                 elif 请求.resource_type in ("image", "media", "font") or 地址.netloc != urlsplit(本地地址).netloc:
                     # HTML 保留资源 URL；构建无需下载图片、评论脚本和第三方数据。
                     await route.abort()
@@ -117,12 +156,19 @@ async def 生成():
             for 路由, 文章 in 路由清单.items():
                 失败请求.clear()
                 页面错误.clear()
-                await 页面.goto(本地地址 + 路由, wait_until="networkidle", timeout=60000)
-                await 页面.locator(".blog-home").wait_for()
-                if 文章:
-                    await 页面.locator(".article-markdown-preview").wait_for()
-                    await 页面.locator(".post-container").wait_for()
-                await 页面.evaluate("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
+                try:
+                    await 页面.goto(本地地址 + 路由, wait_until="networkidle", timeout=60000)
+                    if 失败请求:
+                        raise RuntimeError("接口请求失败")
+                    await 页面.locator(".blog-home").wait_for()
+                    if 文章:
+                        await 页面.locator(".article-markdown-preview").wait_for()
+                        await 页面.locator(".post-container").wait_for()
+                    await 页面.evaluate("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
+                except (PlaywrightError, RuntimeError):
+                    if 失败请求 or 页面错误:
+                        raise RuntimeError(f"SSG 页面失败：{路由}\n" + "\n".join(失败请求 + 页面错误)) from None
+                    raise
                 if 失败请求 or 页面错误:
                     raise RuntimeError(f"SSG 页面失败：{路由}\n" + "\n".join(失败请求 + 页面错误))
                 标题 = f'{文章["title"]} · Sakurakuguの小窝' if 文章 else "Sakurakuguの小窝"
@@ -156,11 +202,11 @@ async def 生成():
                     if 稳定地址 not in 文件映射:
                         源地址 = urlunsplit((urlsplit(接口基址).scheme, urlsplit(接口基址).netloc, 地址.path, 地址.query, ""))
                         验证地址 = urlunsplit((urlsplit(接口基址).scheme, urlsplit(接口基址).netloc, 地址.path, 查询, ""))
-                        响应 = await 上下文.request.get(验证地址, timeout=30000)
+                        响应 = await 请求公开资源(上下文.request, 验证地址)
                         文件映射[稳定地址] = 稳定地址
                         if not 响应.ok:
                             # 老数据可能只支持签名访问；把已在公开页面展示的资源一并静态化。
-                            源响应 = await 上下文.request.get(源地址, timeout=30000)
+                            源响应 = await 请求公开资源(上下文.request, 源地址)
                             if 源响应.ok:
                                 文件名 = hashlib.sha256((地址.path + "?" + 查询).encode()).hexdigest() + Path(地址.path).suffix
                                 文件路径 = 产物目录 / "ssg-assets" / 文件名
