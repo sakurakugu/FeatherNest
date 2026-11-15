@@ -1283,16 +1283,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .announcement-manager {
-  --announcement-ink: #171717;
-  --announcement-ink-2: #525252;
-  --announcement-muted: #8a8a8a;
-  --announcement-placeholder: #a3a3a3;
-  --announcement-line: #e8e8e8;
-  --announcement-line-soft: #f0f0f0;
-  --announcement-hover: #fafafa;
-  --announcement-active: #f4f4f4;
-  --announcement-bg: #fff;
-  --announcement-border-strong: #cfcfcf;
+  --announcement-ink: var(--el-text-color-primary);
+  --announcement-ink-2: var(--el-text-color-regular);
+  --announcement-muted: var(--el-text-color-secondary);
+  --announcement-placeholder: var(--el-text-color-placeholder);
+  --announcement-line: var(--el-border-color-lighter);
+  --announcement-line-soft: var(--el-fill-color-lighter);
+  --announcement-hover: var(--el-fill-color-light);
+  --announcement-active: var(--el-fill-color);
+  --announcement-bg: var(--el-bg-color);
+  --announcement-border-strong: var(--el-border-color-dark);
   --announcement-border-panel: #e6e6e6;
   --announcement-border-pop: #e4e4e4;
   --announcement-switch-off: #ddd;
@@ -1513,6 +1513,9 @@ onBeforeUnmount(() => {
 .announcement-manager .seg button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  line-height: 1;
   gap: 5px;
   height: 26px;
   padding: 0 9px;
@@ -1529,9 +1532,8 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .seg button.is-active {
-  background: var(--announcement-line-soft);
+  background: var(--announcement-hover);
   color: var(--announcement-ink);
-  font-weight: 500;
 }
 
 .announcement-manager .toolbar-right {
@@ -1555,7 +1557,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--announcement-line);
   border-radius: 5px;
   background: var(--announcement-bg);
-  color: var(--announcement-ink-2);
+  color: var(--announcement-muted);
   font-size: 12px;
 }
 
@@ -1605,7 +1607,7 @@ onBeforeUnmount(() => {
 .announcement-manager .filter-group h4 {
   margin: 0 0 8px;
   color: var(--announcement-placeholder);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 400;
   letter-spacing: 0.06em;
 }
@@ -1624,32 +1626,6 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-}
-
-.announcement-manager .filter-sort-option {
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  text-align: left;
-}
-
-.announcement-manager .filter-sort-option > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.announcement-manager .filter-sort-option .el-icon {
-  flex: none;
-  font-size: 12px;
-}
-
-.announcement-manager .filter-sort-option.is-active {
-  color: var(--announcement-ink-2);
-}
-
-.announcement-manager .filter-sort-option.is-active .el-icon {
-  color: var(--el-color-primary, #e3769b);
 }
 
 .announcement-manager .filter-chip {
@@ -1680,6 +1656,32 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 
+.announcement-manager .filter-sort-option {
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  text-align: left;
+}
+
+.announcement-manager .filter-sort-option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.announcement-manager .filter-sort-option .el-icon {
+  flex: none;
+  font-size: 12px;
+}
+
+.announcement-manager .filter-sort-option.is-active {
+  color: var(--el-text-color-secondary);
+}
+
+.announcement-manager .filter-sort-option.is-active .el-icon {
+  color: var(--el-color-primary, #e3769b);
+}
+
 .announcement-manager .filter-foot {
   display: flex;
   align-items: center;
@@ -1704,32 +1706,40 @@ onBeforeUnmount(() => {
   color: var(--el-color-primary, #e3769b);
 }
 
+/* 搜索框尺寸与文字样式与文章管理保持一致：宽度落在容器上，输入框占满剩余空间 */
 .announcement-manager .toolbar-search {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 7px;
+  width: 250px;
   height: 30px;
   padding: 0 9px;
   border: 1px solid var(--announcement-line);
   border-radius: 5px;
-  color: var(--announcement-placeholder);
+  color: var(--announcement-muted);
   transition: border-color 0.14s;
 }
 
+/* 聚焦只用浅灰加深描边，不引入主题色，与文章管理、友链管理保持一致 */
 .announcement-manager .toolbar-search:focus-within {
-  border-color: var(--announcement-border-strong);
+  border-color: var(--el-border-color-dark, #d4d7de);
 }
 
 .announcement-manager .toolbar-search .el-icon {
+  flex: none;
   font-size: 14px;
 }
 
 .announcement-manager .toolbar-search input {
-  width: 250px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--announcement-ink);
+  font: inherit;
   font-size: 12px;
 }
 
@@ -1756,6 +1766,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 
@@ -1765,10 +1776,13 @@ onBeforeUnmount(() => {
 
 .announcement-manager .tab {
   position: relative;
+  display: inline-flex;
+  align-items: baseline;
   flex: none;
   height: 34px;
   color: var(--announcement-muted);
   font-size: 12.5px;
+  line-height: 34px;
   white-space: nowrap;
 }
 
@@ -1777,6 +1791,8 @@ onBeforeUnmount(() => {
   color: var(--announcement-placeholder);
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-size: 10.5px;
+  line-height: inherit;
+  vertical-align: baseline;
 }
 
 .announcement-manager .tab:hover {
@@ -1818,11 +1834,12 @@ onBeforeUnmount(() => {
 
 .announcement-manager .recycle-tab {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 5px;
   height: 34px;
   color: var(--announcement-muted);
   font-size: 12.5px;
+  line-height: 34px;
 }
 
 .announcement-manager .recycle-tab:hover {
@@ -1838,6 +1855,8 @@ onBeforeUnmount(() => {
   color: var(--announcement-placeholder);
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-size: 10.5px;
+  line-height: inherit;
+  vertical-align: baseline;
 }
 
 .announcement-manager .recycle-tab.is-active small {
@@ -1885,8 +1904,9 @@ onBeforeUnmount(() => {
 .announcement-manager .sort-heading {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--announcement-placeholder);
+  justify-content: flex-start;
+  gap: 6px;
+  color: var(--announcement-muted);
   font-size: 11px;
   text-align: left;
 }
@@ -1896,11 +1916,12 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .sort-heading.is-active {
-  color: var(--announcement-placeholder);
+  color: var(--announcement-muted);
 }
 
 .announcement-manager .sort-heading .el-icon {
-  color: var(--announcement-placeholder);
+  flex: none;
+  color: var(--announcement-muted);
   font-size: 12px;
 }
 
@@ -1912,15 +1933,15 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 7px;
+  gap: 5px;
   text-align: right;
 }
 
 .announcement-manager .ops-head button {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
   color: var(--announcement-muted);
 }
@@ -1933,7 +1954,7 @@ onBeforeUnmount(() => {
 .announcement-column-settings {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 
 .announcement-column-settings label {
@@ -2042,16 +2063,16 @@ onBeforeUnmount(() => {
 }
 
 .announcement-manager .manager-ops button.danger {
-  color: var(--announcement-danger);
+  color: var(--el-color-danger);
 }
 
 .announcement-manager .manager-ops button.danger:hover {
-  background: var(--announcement-danger-soft);
-  color: var(--announcement-danger);
+  background: var(--el-color-danger-light-9);
+  color: var(--el-color-danger);
 }
 
 .announcement-manager .manager-ops .el-icon {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .announcement-manager .manager-row > .manager-ops,
@@ -2664,8 +2685,8 @@ onBeforeUnmount(() => {
   }
 
   .announcement-manager .toolbar {
-    align-items: stretch;
-    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
 
   .announcement-manager .seg button {
@@ -2674,7 +2695,8 @@ onBeforeUnmount(() => {
   }
 
   .announcement-manager .toolbar-right {
-    width: 100%;
+    flex: 1;
+    width: auto;
     min-width: 0;
     margin-left: 0;
   }
@@ -2831,16 +2853,6 @@ onBeforeUnmount(() => {
   }
 }
 html.dark .announcement-manager {
-  --announcement-ink: #e8e8e8;
-  --announcement-ink-2: #c9c9c9;
-  --announcement-muted: #9c9c9c;
-  --announcement-placeholder: #7f7f7f;
-  --announcement-line: #3a3a3a;
-  --announcement-line-soft: #2e2e2e;
-  --announcement-hover: #242424;
-  --announcement-active: #2f2f2f;
-  --announcement-bg: #141414;
-  --announcement-border-strong: #4a4a4a;
   --announcement-border-panel: #3a3a3a;
   --announcement-border-pop: #3a3a3a;
   --announcement-switch-off: #4a4a4a;

@@ -2891,7 +2891,8 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   color: var(--manager-muted);
 }
 .article-manager .manager-search:focus-within {
-  border-color: var(--el-color-primary);
+  /* 聚焦只用浅灰加深描边，不引入主题色，保持与管理页其他输入框一致 */
+  border-color: var(--el-border-color-dark, #d4d7de);
 }
 .article-manager .manager-search input {
   width: 100%;
@@ -2903,6 +2904,9 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   color: var(--manager-ink);
   font: inherit;
   font-size: 12px;
+}
+.article-manager .manager-search input::placeholder {
+  color: var(--el-text-color-placeholder, #a3a3a3);
 }
 .article-manager .article-tabs-row {
   display: flex;
@@ -2924,6 +2928,8 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
 }
 .article-manager .article-tab {
   position: relative;
+  display: inline-flex;
+  align-items: baseline;
   flex: none;
   height: 34px;
   padding: 0;
@@ -2932,6 +2938,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   color: var(--manager-muted);
   font: inherit;
   font-size: 12.5px;
+  line-height: 34px;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -2952,6 +2959,8 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   margin-left: 4px;
   color: var(--manager-muted);
   font-size: 10.5px;
+  line-height: inherit;
+  vertical-align: baseline;
 }
 .article-manager .manager-row {
   display: grid;
@@ -3520,10 +3529,12 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
     flex-wrap: wrap;
   }
   .article-toolbar {
-    align-items: stretch;
-    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
   .article-filters {
+    flex: 1;
+    min-width: 0;
     margin-left: 0;
   }
   .article-split {
@@ -3546,7 +3557,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
   .article-manager .manager-search {
     flex: 1;
     width: auto;
-    min-width: 120px;
+    min-width: 0;
   }
   .article-manager .article-tabs {
     gap: 18px;
@@ -3556,7 +3567,7 @@ useInfiniteScroll(splitListRef, fetchNextPage, {
     flex-direction: column;
   }
   .article-filters {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
   .article-search {
     max-width: none;

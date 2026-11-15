@@ -235,10 +235,25 @@ async def 文章转资料(article_id: str, body: 文章转资料请求, user: �
 async def 管理博客列表(
     page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=50),
     search: str | None = None, state: str = Query("all", pattern="^(all|published|unpublished|changed)$"),
+    visibility: str | None = Query(default=None, pattern="^(public|login_required|none)$"),
+    has_cover: bool | None = Query(default=None, description="是否有封面"),
+    sort_by: str = Query("updated_at", pattern="^(updated_at|published_at|title|status|visibility|word_count|version|view_count|like_count)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db),
 ):
     """管理文章对应的博客发布记录。"""
-    return await 列出博客管理(db, user, page, page_size, search, state)
+    return await 列出博客管理(
+        db,
+        user,
+        page,
+        page_size,
+        search,
+        state,
+        visibility=visibility,
+        has_cover=has_cover,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
 
 
 @router.get("/blog/{article_id}/snapshot", response_model=文章信息)

@@ -1,4 +1,5 @@
-export type MediaType = 'game' | 'novel' | 'book' | 'anime' | 'comic' | 'movie' | 'tv' | 'music' | 'other'
+export type MediaType =
+  'game' | 'novel' | 'book' | 'anime' | 'comic' | 'movie' | 'tv' | 'music' | 'other'
 export type MediaStatus = 'planned' | 'doing' | 'done' | 'paused' | 'dropped'
 export type MediaAssetType = 'cover' | 'backdrop' | 'screenshot' | 'logo' | 'other'
 
@@ -98,6 +99,21 @@ export interface MediaPayload {
   is_visible?: boolean
 }
 
+export type MediaSortField =
+  | 'updated_at'
+  | 'created_at'
+  | 'deleted_at'
+  | 'title'
+  | 'media_type'
+  | 'status'
+  | 'rating'
+  | 'creator'
+  | 'genres'
+  | 'tags'
+  | 'personal_tags'
+  | 'is_visible'
+  | 'release_date'
+
 export interface MediaListQuery {
   page?: number
   page_size?: number
@@ -109,6 +125,8 @@ export interface MediaListQuery {
   tag?: string
   personal_tag?: string
   is_deleted?: boolean
+  sort_by?: MediaSortField
+  sort_order?: 'asc' | 'desc'
 }
 
 export interface ExternalMediaCandidate {

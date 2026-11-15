@@ -10,6 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 文娱主分类 = Literal["game", "novel", "book", "anime", "comic", "movie", "tv", "music", "other"]
 文娱状态 = Literal["planned", "doing", "done", "paused", "dropped"]
+文娱排序字段 = Literal[
+    "updated_at", "created_at", "deleted_at", "title", "media_type", "status",
+    "rating", "creator", "genres", "tags", "personal_tags", "is_visible", "release_date",
+]
 文娱资源类型 = Literal["cover", "backdrop", "screenshot", "logo", "other"]
 
 允许的文娱主分类 = {"game", "novel", "book", "anime", "comic", "movie", "tv", "music", "other"}

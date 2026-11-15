@@ -25,6 +25,8 @@ function 构建列表参数(query: MediaListQuery = {}) {
   if (query.tag) params.tag = query.tag
   if (query.personal_tag) params.personal_tag = query.personal_tag
   if (query.is_deleted !== undefined) params.is_deleted = query.is_deleted
+  if (query.sort_by) params.sort_by = query.sort_by
+  if (query.sort_order) params.sort_order = query.sort_order
   return params
 }
 
@@ -34,7 +36,9 @@ export async function 获取文娱列表(query: MediaListQuery = {}): Promise<Me
 }
 
 export async function 获取公开文娱列表(query: MediaListQuery = {}): Promise<MediaListResponse> {
-  const { data } = await api.get<MediaListResponse>('/media/public', { params: 构建列表参数(query) })
+  const { data } = await api.get<MediaListResponse>('/media/public', {
+    params: 构建列表参数(query),
+  })
   return data
 }
 
@@ -99,7 +103,10 @@ export async function 获取文娱个人标签统计(mediaType?: string): Promis
   return data
 }
 
-export async function 获取文娱创作者建议(keyword?: string, limit = 10): Promise<MediaCreatorSuggestion[]> {
+export async function 获取文娱创作者建议(
+  keyword?: string,
+  limit = 10,
+): Promise<MediaCreatorSuggestion[]> {
   const params: Record<string, string | number> = { limit }
   if (keyword?.trim()) {
     params.keyword = keyword.trim()
@@ -120,8 +127,13 @@ export async function 搜索外部文娱(
   return data
 }
 
-export async function 获取外部文娱详情(provider: string, externalId: string): Promise<ExternalMediaCandidate> {
-  const { data } = await api.get<ExternalMediaCandidate>(`/media/external/${provider}/${externalId}`)
+export async function 获取外部文娱详情(
+  provider: string,
+  externalId: string,
+): Promise<ExternalMediaCandidate> {
+  const { data } = await api.get<ExternalMediaCandidate>(
+    `/media/external/${provider}/${externalId}`,
+  )
   return data
 }
 

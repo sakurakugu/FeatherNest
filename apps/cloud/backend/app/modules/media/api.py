@@ -20,6 +20,7 @@ from app.modules.media.schemas import (
     外部文娱搜索响应,
     文娱创作者建议,
     文娱列表响应,
+    文娱排序字段,
     文娱条目创建,
     文娱条目信息,
     文娱条目更新,
@@ -114,6 +115,11 @@ async def 列出文娱(
     tag: str | None = Query(default=None),
     personal_tag: str | None = Query(default=None),
     is_deleted: bool = Query(False, description="是否显示回收站文娱条目"),
+    sort_by: 文娱排序字段 | None = Query(
+        default=None,
+        description="排序字段，留空按更新时间倒序",
+    ),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
@@ -131,6 +137,8 @@ async def 列出文娱(
         tag=tag,
         personal_tag=personal_tag,
         is_deleted=is_deleted,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
 

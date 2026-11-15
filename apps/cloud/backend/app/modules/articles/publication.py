@@ -4,7 +4,7 @@ import logging
 import math
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.models import 文章, 博客发布
@@ -54,9 +54,20 @@ def 构建博客管理项(article: 文章) -> dict:
 
 
 async def 列出博客管理(
-    db: AsyncSession, user: 用户, page: int, page_size: int, search: str | None, state: str
+    db: AsyncSession,
+    user: 用户,
+    page: int,
+    page_size: int,
+    search: str | None,
+    state: str,
+    *,
+    visibility: str | None = None,
+    has_cover: bool | None = None,
+    sort_by: str = "updated_at",
+    sort_order: str = "desc",
 ) -> dict:
-    """分页管理全部文章及发布状态。"""
+    """分页管理全部文章及发布状态，支持可见性 / 封面筛选与排序。"""
+    logger.debug("查询博客管理列表：排序字段=%s，方向=%s，页码=%s", sort_by, sort_order, page)
     query = 文章查询().where(文章.author_id == user.id, 文章.is_deleted.is_(False))
     if search and search.strip():
         query = query.where(文章.title.ilike(f"%{search.strip()}%"))
@@ -66,11 +77,50 @@ async def 列出博客管理(
         query = query.where(~文章.blog.has(博客发布.is_published.is_(True)))
     elif state == "changed":
         query = query.where(文章.blog.has(博客发布.source_revision != 文章.revision))
+    if visibility == "none":
+        query = query.where(~文章.blog.has())
+    elif visibility:
+        query = query.where(文章.blog.has(博客发布.status == visibility))
+    封面列 = func.coalesce(文章.cover_url, "")
+    if has_cover is True:
+        query = query.where(封面列 != "")
+    elif has_cover is False:
+        query = query.where(封面列 == "")
+
+    # 排序：发布相关字段取发布快照里的值，没有快照时排最后
+    发布更新列 = select(博客发布.last_edited_at).where(博客发布.id == 文章.id).scalar_subquery()
+    阅读量列 = select(博客发布.view_count).where(博客发布.id == 文章.id).scalar_subquery()
+    点赞数列 = select(博客发布.like_count).where(博客发布.id == 文章.id).scalar_subquery()
+    版本列 = select(博客发布.version).where(博客发布.id == 文章.id).scalar_subquery()
+    可见性列 = select(博客发布.status).where(博客发布.id == 文章.id).scalar_subquery()
+    # 状态按未发布、已撤下、已发布、有未发布修改分组，可见性按公开、登录可见分组。
+    发布状态列 = case(
+        (~文章.blog.has(), 0),
+        (文章.blog.has(博客发布.is_published.is_(False)), 1),
+        (文章.blog.has(博客发布.source_revision != 文章.revision), 3),
+        else_=2,
+    )
+    可排序列 = {
+        "updated_at": 文章.last_edited_at,
+        "published_at": 发布更新列,
+        "title": 文章.title,
+        "status": 发布状态列,
+        "visibility": case((可见性列 == "public", 0), (可见性列 == "login_required", 1), else_=None),
+        "word_count": 文章.word_count,
+        "version": 版本列,
+        "view_count": 阅读量列,
+        "like_count": 点赞数列,
+    }
+    排序列 = 可排序列.get(sort_by, 文章.last_edited_at)
+    排序表达式 = 排序列.asc() if sort_order == "asc" else 排序列.desc()
+    if sort_by in {"published_at", "visibility", "version", "view_count", "like_count"}:
+        排序表达式 = 排序表达式.nullslast()
+
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     articles = (
         (
             await db.execute(
-                query.order_by(文章.last_edited_at.desc())
+                query.order_by(排序表达式, 文章.last_edited_at.desc(), 文章.id.asc())
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )

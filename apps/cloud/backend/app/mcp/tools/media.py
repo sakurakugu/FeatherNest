@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from app.mcp.context import MCP调用上下文
 from app.mcp.registry import MCP工具定义, 注册工具
 from app.modules.media.models import 文娱条目
-from app.modules.media.schemas import 文娱主分类, 文娱条目信息, 文娱条目创建, 文娱条目更新, 文娱筛选项, 文娱状态
+from app.modules.media.schemas import 文娱主分类, 文娱条目信息, 文娱条目创建, 文娱条目更新, 文娱筛选项, 文娱状态, 文娱排序字段
 from app.modules.media.service import (
     get_media_or_404,
     创建文娱,
@@ -40,6 +40,8 @@ class 文娱列表参数(BaseModel):
     tag: str | None = Field(default=None, max_length=100, description="标签")
     personal_tag: str | None = Field(default=None, max_length=100, description="个人标签")
     is_deleted: bool = Field(default=False, description="是否查询回收站")
+    sort_by: 文娱排序字段 | None = Field(default=None, description="排序字段，留空使用默认时间排序")
+    sort_order: Literal["asc", "desc"] = Field(default="desc", description="排序方向")
 
 
 class 文娱聚合筛选参数(BaseModel):
@@ -191,6 +193,8 @@ async def media_list(args: dict[str, Any], context: MCP调用上下文) -> dict[
         tag=body.tag,
         personal_tag=body.personal_tag,
         is_deleted=body.is_deleted,
+        sort_by=body.sort_by,
+        sort_order=body.sort_order,
     )
     return {
         "items": [_文娱读取(item) for item in response.items],

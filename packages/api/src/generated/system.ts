@@ -4588,6 +4588,10 @@ export interface operations {
         page_size?: number
         search?: string | null
         state?: string
+        visibility?: string | null
+        has_cover?: boolean | null
+        sort_by?: string
+        sort_order?: string
       }
       header?: never
       path?: never
@@ -6891,6 +6895,24 @@ export interface operations {
         tag?: string | null
         personal_tag?: string | null
         is_deleted?: boolean
+        sort_by?:
+          | (
+              | 'updated_at'
+              | 'created_at'
+              | 'deleted_at'
+              | 'title'
+              | 'media_type'
+              | 'status'
+              | 'rating'
+              | 'creator'
+              | 'genres'
+              | 'tags'
+              | 'personal_tags'
+              | 'is_visible'
+              | 'release_date'
+            )
+          | null
+        sort_order?: string
       }
       header?: never
       path?: never

@@ -10,6 +10,7 @@ import {
   ElPopconfirm,
   ElPopover,
   ElSkeleton,
+  ElTooltip,
 } from 'element-plus'
 import {
   Check,
@@ -41,7 +42,7 @@ import type {
   FriendLinkStatus,
 } from '../../types'
 import { 获取API错误消息 } from '../../../../shared/api'
-import { BaseDialog, PencilEditIcon, SortDirectionIcon } from '@feathernest/ui'
+import { BaseDialog, PencilEditIcon, SortDirectionIcon, SortOrderControl } from '@feathernest/ui'
 import { FriendLinkIcon } from '@feathernest/module-blog/widgets'
 import { 创建字符图标, 读取字符图标, 获取名称缩写 } from '@feathernest/module-blog/friend-links/icon'
 
@@ -209,6 +210,12 @@ function changeSort(field: FriendLinkSortField) {
   }
 }
 
+function 设置排序方向(方向: 'asc' | 'desc') {
+  sortBy.value ||= showRecycleBin.value ? 'deleted_at' : 'created_at'
+  sortOrder.value = 方向
+  console.info('[友链管理] 排序已更新', { 字段: sortBy.value, 方向 })
+}
+
 function clearFilters() {
   statusFilter.value = ''
   categoryFilter.value = ''
@@ -216,16 +223,30 @@ function clearFilters() {
 }
 
 function formatDate(value: string | null | undefined) {
-  return value
-    ? new Date(value).toLocaleString('zh-CN', {
-        hour12: false,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '—'
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function formatRelativeDate(value: string | null | undefined) {
+  if (!value) return '—'
+  const date = new Date(value)
+  const timestamp = date.getTime()
+  if (Number.isNaN(timestamp)) return '—'
+  const difference = Date.now() - timestamp
+  const minutes = Math.floor(difference / 60000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+  const today = new Date().setHours(0, 0, 0, 0)
+  const targetDay = new Date(timestamp).setHours(0, 0, 0, 0)
+  const days = Math.round((today - targetDay) / 86400000)
+  if (days <= 0) return `${Math.floor(difference / 3600000)} 小时前`
+  if (days === 1) return '昨天'
+  if (days < 7) return `${days} 天前`
+  const shortDate = formatDate(value).slice(0, 10)
+  return date.getFullYear() === new Date().getFullYear() ? shortDate.slice(5) : shortDate
 }
 
 const showDialog = ref(false)
@@ -501,18 +522,8 @@ onMounted(() => {
           :aria-pressed="navigationMode === option.value"
           @click="selectNavigationMode(option.value)"
         >
-          <ElIcon
-            ><svg
-              v-if="option.value === 'status'"
-              viewBox="0 0 1194 1024"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                d="M970.24 597.333333H792.746667c1.450667-38.826667 13.312-76.458667 34.133333-109.226666a350.890667 350.890667 0 0 0 74.24-204.8A284.757333 284.757333 0 0 0 810.581333 76.8C753.237333 23.296 680.021333 0.853333 598.186667 0.853333a11.434667 11.434667 0 0 1-0.853334 0c-79.530667 0-156.416 23.04-213.674666 76.373334A286.122667 286.122667 0 0 0 292.693333 283.306667c2.389333 74.410667 28.416 146.176 74.24 204.8 20.821333 32.768 32.682667 70.4 34.133334 109.226666H223.573333c-76.8 0-139.008 62.122667-139.093333 138.837334v187.733333a100.096 100.096 0 0 0 99.84 99.584h825.173333A100.096 100.096 0 0 0 1109.333333 923.904v-187.733333A139.008 139.008 0 0 0 970.24 597.333333z m-797.866667 338.261334V736.170667a51.2 51.2 0 0 1 51.2-51.2h207.36a45.056 45.056 0 0 0 35.84-18.602667c12.117333-17.493333 19.456-37.802667 21.333334-59.050667V601.6a325.888 325.888 0 0 0-53.76-168.789333 262.656 262.656 0 0 1-53.76-150.869334c0.768-54.272 23.893333-105.813333 64-142.506666 40.106667-36.693333 91.306667-51.029333 147.626666-51.029334h9.386667c65.28 0 107.52 14.421333 147.626667 51.029334 40.106667 36.693333 63.232 88.234667 64 142.506666a262.656 262.656 0 0 1-53.76 150.869334 325.888 325.888 0 0 0-53.76 168.789333v5.717333c1.877333 21.248 9.216 41.557333 21.333333 59.050667a45.056 45.056 0 0 0 35.84 18.602667h207.36a51.2 51.2 0 0 1 51.2 51.2v199.424H172.373333z"
-              /></svg
-            ><svg
-              v-else
+          <ElIcon>
+            <svg
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -521,11 +532,19 @@ onMounted(() => {
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <rect x="3" y="4" width="8" height="7" rx="1" />
-              <rect x="13" y="4" width="8" height="7" rx="1" />
-              <rect x="3" y="13" width="8" height="7" rx="1" />
-              <rect x="13" y="13" width="8" height="7" rx="1" /></svg></ElIcon
-          ><span>{{ option.label }}</span>
+              <path
+                v-if="option.value === 'status'"
+                d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"
+              />
+              <template v-else>
+                <rect x="3" y="4" width="8" height="7" rx="1" />
+                <rect x="13" y="4" width="8" height="7" rx="1" />
+                <rect x="3" y="13" width="8" height="7" rx="1" />
+                <rect x="13" y="13" width="8" height="7" rx="1" />
+              </template>
+            </svg>
+          </ElIcon>
+          <span>{{ option.label }}</span>
         </button>
       </div>
       <div class="manager-filters">
@@ -607,6 +626,10 @@ onMounted(() => {
                   /></ElIcon>
                 </button>
               </div>
+              <SortOrderControl
+                :model-value="sortBy ? sortOrder : ''"
+                @update:model-value="设置排序方向"
+              />
             </div>
             <div class="link-filter-footer">
               <span>{{ filterCount ? `已选 ${filterCount} 个条件` : '未设置筛选条件' }}</span>
@@ -788,15 +811,30 @@ onMounted(() => {
                   friendLink.contact_email
                 }}</span>
               </div>
-              <span v-else class="manager-muted">{{
-                formatDate(
-                  column.value === 'date'
-                    ? showRecycleBin
-                      ? friendLink.deleted_at
-                      : friendLink.created_at
-                    : friendLink.updated_at,
-                )
-              }}</span>
+              <ElTooltip
+                v-else
+                :content="
+                  formatDate(
+                    column.value === 'date'
+                      ? showRecycleBin
+                        ? friendLink.deleted_at
+                        : friendLink.created_at
+                      : friendLink.updated_at,
+                  )
+                "
+                placement="top"
+                popper-class="friend-link-date-tooltip"
+              >
+                <span class="manager-date">{{
+                  formatRelativeDate(
+                    column.value === 'date'
+                      ? showRecycleBin
+                        ? friendLink.deleted_at
+                        : friendLink.created_at
+                      : friendLink.updated_at,
+                  )
+                }}</span>
+              </ElTooltip>
             </div>
             <div role="cell" class="manager-fixed-actions">
               <div class="manager-ops">
@@ -1029,6 +1067,13 @@ onMounted(() => {
 </template>
 
 <style scoped>
+:global(.friend-link-date-tooltip.el-popper) {
+  width: max-content;
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  white-space: nowrap;
+}
+
 .friend-link-manager {
   --manager-bg: var(--el-bg-color, #fff);
   --manager-ink: var(--el-text-color-primary, #171717);
@@ -1054,6 +1099,12 @@ onMounted(() => {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+.friend-link-manager *,
+.friend-link-manager *::before,
+.friend-link-manager *::after {
+  box-sizing: border-box;
 }
 
 .manager-head {
@@ -1088,6 +1139,15 @@ onMounted(() => {
   gap: 6px;
 }
 
+.manager-date {
+  display: inline-block;
+  max-width: 100%;
+  color: var(--manager-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
 .manager-tabs-row {
   display: flex;
   flex: none;
@@ -1103,11 +1163,15 @@ onMounted(() => {
   gap: 22px;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 
 .manager-tab {
   position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   flex: none;
   height: 34px;
   padding: 0;
@@ -1116,6 +1180,7 @@ onMounted(() => {
   color: var(--manager-muted);
   font: inherit;
   font-size: 12.5px;
+  line-height: 34px;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -1128,7 +1193,7 @@ onMounted(() => {
 .manager-tab.is-active::after {
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: -1px;
   left: 0;
   height: 2px;
   background: var(--el-color-primary);
@@ -1136,9 +1201,13 @@ onMounted(() => {
 }
 
 .manager-tab small {
-  margin-left: 4px;
-  color: var(--manager-muted);
+  margin: 0;
+  color: var(--el-text-color-placeholder, #a3a3a3);
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-size: 10.5px;
+  font-weight: 400;
+  line-height: inherit;
+  vertical-align: baseline;
 }
 
 .friend-link-manager :deep(.el-skeleton) {
@@ -1417,6 +1486,11 @@ onMounted(() => {
   cursor: pointer;
 }
 
+.manager-mode-nav__item .el-icon {
+  flex: none;
+  font-size: 15px;
+}
+
 .manager-mode-nav__item:hover {
   color: var(--manager-ink);
 }
@@ -1577,8 +1651,9 @@ onMounted(() => {
   color: var(--manager-muted);
 }
 
+/* 聚焦只用浅灰加深描边，不引入主题色，保持与管理页其他输入框一致 */
 .manager-search:focus-within {
-  border-color: var(--el-color-primary);
+  border-color: var(--el-border-color-dark, #d4d7de);
 }
 
 .manager-search input {
@@ -1841,7 +1916,7 @@ onMounted(() => {
   font-size: 12px;
 }
 
-@media (--mobile-viewport) {
+@media (max-width: 768px) {
   .friend-link-manager {
     padding: 20px 16px 0;
   }
@@ -1851,11 +1926,14 @@ onMounted(() => {
   }
 
   .manager-toolbar {
-    align-items: stretch;
-    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
 
   .manager-filters {
+    flex: 1;
+    flex-wrap: nowrap;
+    min-width: 0;
     margin-left: 0;
   }
 

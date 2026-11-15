@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from datetime import datetime, timezone
 from typing import cast as type_cast
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import String, cast as sql_cast, func, or_, select
+from sqlalchemy import String, case, cast as sql_cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -32,6 +33,8 @@ from app.modules.users.models import 用户
 from app.shared.kernel.soft_delete import 可软删除对象
 from app.shared.storage.client import 构建公开URL, 尽力删除多个对象
 from app.shared.storage.file_url import 构建公开文件URL, 构建签名文件URL
+
+logger = logging.getLogger(__name__)
 
 
 def 文娱条目查询():
@@ -351,8 +354,11 @@ async def 列出文娱(
     tag: str | None,
     personal_tag: str | None,
     is_deleted: bool = False,
+    sort_by: str | None = None,
+    sort_order: str = "desc",
 ) -> 文娱列表响应:
     """获取当前用户的文娱条目列表。"""
+    logger.debug("查询作品管理列表：排序字段=%s，方向=%s，页码=%s", sort_by, sort_order, page)
     全部文娱最后更新时间 = await 获取全部文娱最后更新时间(db)
     query = select(文娱条目).where(文娱条目.user_id == user.id, 文娱条目.is_deleted.is_(is_deleted))
     if media_type:
@@ -372,6 +378,40 @@ async def 列出文娱(
         if keyword_clause is not None:
             query = query.where(keyword_clause)
 
+    # 默认按更新时间倒序；回收站默认按删除时间倒序，指定排序时以用户选择为准
+    可排序列 = {
+        "updated_at": 文娱条目.updated_at,
+        "created_at": 文娱条目.created_at,
+        "deleted_at": 文娱条目.deleted_at,
+        "title": 文娱条目.title,
+        # 分类与状态按管理页选项顺序排列，避免内部英文值影响显示顺序。
+        "media_type": case(
+            {值: 序号 for 序号, 值 in enumerate(("game", "novel", "book", "anime", "comic", "movie", "tv", "music", "other"))},
+            value=文娱条目.media_type,
+        ),
+        "status": case(
+            {值: 序号 for 序号, 值 in enumerate(("planned", "doing", "done", "paused", "dropped"))},
+            value=文娱条目.status,
+        ),
+        "rating": 文娱条目.rating,
+        "creator": func.nullif(文娱条目.creator, ""),
+        "genres": 文娱条目.genres,
+        "tags": 文娱条目.tags,
+        "personal_tags": 文娱条目.personal_tags,
+        "is_visible": 文娱条目.is_visible,
+        "release_date": 文娱条目.release_date,
+    }
+    if sort_by in 可排序列:
+        排序列 = 可排序列[sort_by]
+        排序表达式 = 排序列.asc() if sort_order == "asc" else 排序列.desc()
+        if sort_by in {"rating", "creator", "release_date", "deleted_at"}:
+            排序表达式 = 排序表达式.nullslast()
+        排序条件 = (排序表达式, 文娱条目.id.asc())
+    elif is_deleted:
+        排序条件 = (文娱条目.deleted_at.desc(), 文娱条目.created_at.desc())
+    else:
+        排序条件 = (文娱条目.updated_at.desc(), 文娱条目.created_at.desc())
+
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
         query.options(
@@ -379,10 +419,7 @@ async def 列出文娱(
             selectinload(文娱条目.assets),
             selectinload(文娱条目.external_sources),
         )
-        .order_by(
-            (文娱条目.deleted_at.desc() if is_deleted else 文娱条目.updated_at.desc()),
-            文娱条目.created_at.desc(),
-        )
+        .order_by(*排序条件)
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
