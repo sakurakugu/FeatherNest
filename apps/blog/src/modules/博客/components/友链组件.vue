@@ -454,7 +454,7 @@ onUnmounted(() => {
                       <input
                         v-model="申请.名称"
                         :class="{ 'is-invalid': 错误.名称 }"
-                        placeholder="例如：某某的小站"
+                        placeholder="例如：某某的小站，B站、Github 都行"
                         autocomplete="off"
                         @input="清除错误('名称')"
                       >

@@ -2208,6 +2208,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/notifications/friend-link-channels': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['\u83B7\u53D6\u53CB\u94FE\u63A8\u9001\u6E20\u9053_api_v1_notifications_friend_link_channels_get']
+    put: operations['\u4FDD\u5B58\u53CB\u94FE\u63A8\u9001\u6E20\u9053_api_v1_notifications_friend_link_channels_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/notifications/channels': {
     parameters: {
       query?: never
@@ -3146,6 +3162,7 @@ export interface components {
       category?: string | null
       contact_email?: string | null
       contact_name?: string | null
+      backlink_url: string
     }
     app__modules__friend_links__schemas________1: {
       name: string
@@ -3468,6 +3485,10 @@ export interface components {
       deleted_at?: string | null
       last_edited_at: string
       updated_at: string
+    }
+    app__modules__notifications__api__________: {
+      channel_ids?: string[]
+      default_channel_ids?: string[]
     }
     app__modules__notifications__schemas______: {
       channel_ids?: string[] | null
@@ -5296,6 +5317,8 @@ export interface operations {
         tag?: string | null
         keyword?: string | null
         is_deleted?: boolean
+        sort_by?: string | null
+        sort_order?: string
       }
       header?: never
       path?: never
@@ -8732,6 +8755,56 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['app__modules__moments__schemas______-Output']
+        }
+      }
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  '\u83B7\u53D6\u53CB\u94FE\u63A8\u9001\u6E20\u9053_api_v1_notifications_friend_link_channels_get': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__api__________']
+        }
+      }
+    }
+  }
+  '\u4FDD\u5B58\u53CB\u94FE\u63A8\u9001\u6E20\u9053_api_v1_notifications_friend_link_channels_put': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['app__modules__notifications__api__________']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['app__modules__notifications__api__________']
         }
       }
       422: {

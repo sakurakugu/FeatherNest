@@ -16,6 +16,10 @@ export async function 获取资料列表(query: MaterialListQuery = {}): Promise
   if (query.type) params.type = query.type
   if (query.tag) params.tag = query.tag
   if (query.keyword) params.keyword = query.keyword
+  if (query.sort_by) {
+    params.sort_by = query.sort_by
+    params.sort_order = query.sort_order ?? 'desc'
+  }
   params.is_deleted = String(query.is_deleted ?? false)
 
   const { data } = await api.get<MaterialListResponse>('/materials', { params })

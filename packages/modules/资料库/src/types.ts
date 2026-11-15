@@ -10,6 +10,16 @@ export type MaterialAssetPayload = NonNullable<MaterialPayload['assets']>[number
 export type MaterialTagStat = paths['/materials/tags']['get']['responses'][200]['content']['application/json'][number]
 export type MaterialBatchStatusPayload = paths['/materials/batch/status']['post']['requestBody']['content']['application/json']
 
+export type MaterialSortField =
+  | 'title'
+  | 'content'
+  | 'type'
+  | 'tag'
+  | 'assets'
+  | 'updated_at'
+  | 'created_at'
+  | 'deleted_at'
+
 export interface MaterialListQuery {
   page?: number
   page_size?: number
@@ -18,4 +28,6 @@ export interface MaterialListQuery {
   tag?: string
   keyword?: string
   is_deleted?: boolean
+  sort_by?: MaterialSortField
+  sort_order?: 'asc' | 'desc'
 }

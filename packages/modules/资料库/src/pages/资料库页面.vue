@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { useIntersectionObserver } from '@vueuse/core'
-/* global Event, HTMLInputElement, IntersectionObserver, MouseEvent, TouchEvent */
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import {
+  Delete,
+  Filter,
+  Plus,
+  RefreshLeft,
+  Search,
+  Upload,
+  WarningFilled,
+} from '@element-plus/icons-vue'
+import { useIntersectionObserver, useStorage, watchDebounced } from '@vueuse/core'
 import {
   ElButton,
-  ElCard,
   ElCheckbox,
-  ElEmpty,
   ElForm,
   ElFormItem,
   ElIcon,
@@ -16,23 +20,26 @@ import {
   ElOption,
   ElPopover,
   ElSelect,
-  ElSpace,
-  ElTag,
+  ElTooltip,
 } from 'element-plus'
-import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
-import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步, 使用长按选择 } from '@feathernest/ui'
-import { 获取API错误消息 } from '@feathernest/api'
-import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
-  创建资料,
-  删除资料,
-  获取资料,
-  获取资料标签,
-  获取资料列表,
-  恢复资料,
-  批量更新资料状态,
-  更新资料,
-} from '../api'
+  BaseDialog,
+  格式化完整时间,
+  格式化相对时间,
+  PencilEditIcon,
+  SortDirectionIcon,
+  TagInlineInput,
+  使用长按选择,
+  使用路由搜索同步,
+} from '@feathernest/ui'
+import '@feathernest/ui/styles/manager.css'
+import { 获取API错误消息 } from '@feathernest/api'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { 创建资料, 删除资料, 获取资料, 获取资料标签, 获取资料列表, 恢复资料, 更新资料 } from '../api'
+import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
+import { 创建文件夹, 获取文件浏览器数据, 上传文件 } from '../files-api'
+import type { FileTreeNode } from '../files-types'
 import type {
   MaterialAssetPayload,
   MaterialAssetRecord,
@@ -40,12 +47,11 @@ import type {
   MaterialListResponse,
   MaterialPayload,
   MaterialRecord,
+  MaterialSortField,
   MaterialStatus,
   MaterialTagStat,
   MaterialType,
 } from '../types'
-import { 创建文件夹, 获取文件浏览器数据, 上传文件 } from '../files-api'
-import type { FileTreeNode } from '../files-types'
 
 const props = withDefaults(defineProps<{
   showBack?: boolean
@@ -55,6 +61,7 @@ const props = withDefaults(defineProps<{
   backTo: '/',
 })
 const route = useRoute()
+const router = useRouter()
 const openedTargetId = ref('')
 const emit = defineEmits<{ 'organized-material-count-change': [count: number] }>()
 
@@ -70,14 +77,6 @@ interface CollectionFormState {
     sort_order: number
     file: MaterialAssetRecord['file']
   }>
-}
-
-interface SwipeState {
-  offset: number
-  startX: number
-  startY: number
-  isDragging: boolean
-  hasMoved: boolean
 }
 
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
@@ -97,10 +96,7 @@ const currentId = ref('')
 const collections = ref<MaterialRecord[]>([])
 const tagOptions = ref<MaterialTagStat[]>([])
 const multiSelectedIds = ref<string[]>([])
-const swipeState = reactive<Record<string, SwipeState>>({})
 const COLLECTION_LIST_PAGE_SIZE = 12
-const SWIPE_THRESHOLD = 86
-const MAX_OFFSET = 122
 const 收藏附件目录名 = '资料附件'
 const pagination = ref({ page: 0, pageSize: COLLECTION_LIST_PAGE_SIZE, total: 0, pageCount: 0 })
 const filters = ref({
@@ -109,15 +105,145 @@ const filters = ref({
   type: '' as MaterialType | '',
   tag: '',
 })
+const 已应用关键词 = ref('')
 const 选中的上传目录 = ref<string | null>(null)
 const 选中的上传目录路径 = ref('全部文件')
+const 视图 = useStorage<'table' | 'cards'>('feathernest.material-manager.view', 'table')
+const 统计 = ref({ 全部: 0, 已整理: 0, 已归档: 0, 回收站: 0 })
 
+/* ==========================================================================
+   列配置、列显隐与排序
+   ========================================================================== */
+const 资料列 = [
+  { value: 'title', label: '标题', width: 'minmax(150px, 1.6fr)', minWidth: 150 },
+  { value: 'content', label: '内容', width: 'minmax(180px, 2fr)', minWidth: 180 },
+  { value: 'type', label: '类型', width: '88px', minWidth: 88 },
+  { value: 'tags', label: '标签', width: 'minmax(100px, 1.2fr)', minWidth: 100 },
+  { value: 'assets', label: '附件', width: '60px', minWidth: 60 },
+  { value: 'date', label: '更新时间', width: '128px', minWidth: 128 },
+] as const
+type 资料列值 = (typeof 资料列)[number]['value']
+const 可见列 = useStorage<资料列值[]>('feathernest.material-manager.columns', [
+  'title',
+  'content',
+  'type',
+  'tags',
+  'assets',
+  'date',
+])
+const 展示列 = computed(() => 资料列.filter(列 => 可见列.value.includes(列.value)))
+const 网格列 = computed(() => [
+  ...(isMultiSelectMode.value ? ['28px'] : []),
+  ...展示列.value.map(列 => 列.width),
+  '92px',
+].join(' '))
+const 排序字段 = ref<MaterialSortField | ''>('')
+const 排序方向 = ref<'asc' | 'desc'>('desc')
+
+function 切换列显示(列值: 资料列值) {
+  if (列值 === 'title') return
+  可见列.value = 可见列.value.includes(列值)
+    ? 可见列.value.filter(项 => 项 !== 列值)
+    : [...可见列.value, 列值]
+}
+
+function 列标题(列: (typeof 资料列)[number]) {
+  if (列.value === 'date') return 日期列标题.value
+  return 列.label
+}
+
+function 列排序字段(列值: 资料列值): MaterialSortField {
+  if (列值 === 'title') return 'title'
+  if (列值 === 'content') return 'content'
+  if (列值 === 'type') return 'type'
+  if (列值 === 'tags') return 'tag'
+  if (列值 === 'assets') return 'assets'
+  return showRecycleBin.value ? 'deleted_at' : 'updated_at'
+}
+
+function 排序图标方向(字段: MaterialSortField): 'asc' | 'desc' | '' {
+  if (!排序字段.value || 排序字段.value !== 字段) return ''
+  return 排序方向.value
+}
+
+function 表头排序(列值: 资料列值) {
+  const 字段 = 列排序字段(列值)
+  if (排序字段.value !== 字段) {
+    排序字段.value = 字段
+    排序方向.value = 'asc'
+  } else if (排序方向.value === 'asc') {
+    排序方向.value = 'desc'
+  } else {
+    排序字段.value = ''
+    排序方向.value = 'desc'
+  }
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+/* ==========================================================================
+   长按多选：按住 520ms 进入多选，进入后复选框才显示
+   ========================================================================== */
+const 按下位置 = new Map<string, { x: number, y: number }>()
 const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<MaterialRecord>({
   getId: record => record.id,
   onLongPress: (record) => {
     enterMultiSelect(record)
   },
 })
+
+function 读取坐标(event: Event): { x: number, y: number } | null {
+  if (event instanceof TouchEvent) {
+    const touch = event.touches[0]
+    return touch ? { x: touch.clientX, y: touch.clientY } : null
+  }
+  if (event instanceof MouseEvent) {
+    return { x: event.clientX, y: event.clientY }
+  }
+  return null
+}
+
+/** 按下时记录起点，未进入多选才启动长按计时 */
+function 处理条目按下(record: MaterialRecord, event: Event) {
+  const point = 读取坐标(event)
+  if (point) {
+    按下位置.set(record.id, point)
+  }
+  if (!isMultiSelectMode.value) {
+    startLongPress(record, event)
+  }
+}
+
+/** 手指或鼠标移动超过阈值说明是在滚动，取消长按 */
+function 处理条目移动(record: MaterialRecord, event: Event) {
+  const start = 按下位置.get(record.id)
+  const point = 读取坐标(event)
+  if (!start || !point) {
+    return
+  }
+  if (Math.abs(point.x - start.x) > 8 || Math.abs(point.y - start.y) > 8) {
+    cancelLongPress(record)
+  }
+}
+
+function 处理条目抬起(record: MaterialRecord) {
+  cancelLongPress(record)
+  按下位置.delete(record.id)
+}
+
+/** 长按已触发时消费掉这次点击，避免顺带打开编辑弹窗 */
+function handleItemClick(record: MaterialRecord) {
+  if (consumeLongPress(record)) {
+    return
+  }
+  if (isMultiSelectMode.value) {
+    toggleMultiSelect(record)
+    return
+  }
+  if (showRecycleBin.value) {
+    return
+  }
+  openEditDialog(record)
+}
 
 function createEmptyForm(): CollectionFormState {
   return {
@@ -143,7 +269,6 @@ const statusOptions: Array<{ label: string, value: MaterialStatus }> = [
   { label: '已整理', value: 'active' },
   { label: '已归档', value: 'archived' },
 ]
-const hasSearchKeyword = computed(() => Boolean(filters.value.keyword.trim()))
 const 路由搜索词 = computed({
   get: () => filters.value.keyword,
   set: (value: string) => {
@@ -151,10 +276,9 @@ const 路由搜索词 = computed({
   },
 })
 使用路由搜索同步(路由搜索词)
-const activeFilterCount = computed(() => [
-  filters.value.type,
-  filters.value.tag.trim(),
-].filter(Boolean).length)
+
+const activeFilterCount = computed(() => [filters.value.type, filters.value.tag.trim()].filter(Boolean).length)
+const hasSearchKeyword = computed(() => Boolean(filters.value.keyword.trim()))
 const hasAnyFilters = computed(() => hasSearchKeyword.value || Boolean(filters.value.status) || activeFilterCount.value > 0)
 const isAssetType = computed(() => form.value.type === 'image' || form.value.type === 'file')
 const hasCoreContent = computed(() => Boolean(
@@ -166,8 +290,6 @@ const shouldShowAnyContentRequiredMark = computed(() => !isAssetType.value && !h
 const shouldShowAssetRequiredMark = computed(() => isAssetType.value || (!hasCoreContent.value && form.value.assets.length === 0))
 const allExistingTags = computed(() => tagOptions.value.map(item => item.name))
 const availableTags = computed(() => getAvailableTags(form.value.tags_text))
-const pageTitleText = computed(() => showRecycleBin.value ? '资料库回收站' : '资料库')
-const statusButtonText = computed(() => filters.value.status ? getStatusLabel(filters.value.status) : '全部状态')
 const hasMoreCollections = computed(() => pagination.value.page < pagination.value.pageCount)
 const 当前上传目录标签 = computed(() => 选中的上传目录路径.value || '全部文件')
 const selectedCollectionIdSet = computed(() => new Set(multiSelectedIds.value))
@@ -175,9 +297,28 @@ const visibleCollectionIdSet = computed(() => new Set(collections.value.map(reco
 const allVisibleSelected = computed(() => (
   collections.value.length > 0 && collections.value.every(record => selectedCollectionIdSet.value.has(record.id))
 ))
-const hasSelectedCollectionNeedingArchive = computed(() => (
-  collections.value.some(record => selectedCollectionIdSet.value.has(record.id) && record.status !== 'archived')
+const 可见已选数量 = computed(() => collections.value.filter(record => selectedCollectionIdSet.value.has(record.id)).length)
+const 部分选中 = computed(() => 可见已选数量.value > 0 && !allVisibleSelected.value)
+const 页头标题 = computed(() => showRecycleBin.value ? '回收站' : '资料库')
+const 页头统计 = computed(() => (
+  showRecycleBin.value
+    ? `共 ${统计.value.回收站} 条已删除资料`
+    : `共 ${统计.value.全部} 条资料 · ${统计.value.已归档} 条已归档`
 ))
+const 状态页签 = computed<Array<{ value: MaterialStatus | '', label: string, count: number }>>(() => [
+  { value: '', label: '全部', count: 统计.value.全部 },
+  { value: 'active', label: '已整理', count: 统计.value.已整理 },
+  { value: 'archived', label: '已归档', count: 统计.value.已归档 },
+])
+const 日期列标题 = computed(() => showRecycleBin.value ? '删除时间' : '更新时间')
+const 空状态描述 = computed(() => {
+  if (showRecycleBin.value) {
+    return hasSearchKeyword.value ? '回收站里没有匹配的资料' : '回收站暂无资料'
+  }
+  if (hasAnyFilters.value) return '暂无符合条件的资料'
+  return '还没有资料，点右上角「新增资料」开始收集吧'
+})
+
 const showDeleteConfirm = ref(false)
 const pendingDeleteIds = ref<string[]>([])
 const deleteMode = ref<'soft' | 'permanent'>('soft')
@@ -287,61 +428,23 @@ function getTypeLabel(value: MaterialType | ''): string {
   return typeOptions.find(item => item.value === value)?.label ?? value
 }
 
-function getStatusLabel(value: MaterialStatus | ''): string {
-  return statusOptions.find(item => item.value === value)?.label ?? value
-}
-
-function getStatusIcon(value: MaterialStatus | '') {
-  if (value === 'active') return Select
-  if (value === 'archived') return Collection
-  return Upload
-}
-
-function getStatusTagType(value: MaterialStatus): 'info' | 'success' {
-  if (value === 'active') return 'success'
-  return 'info'
-}
-
 function getDisplayTitle(record: MaterialRecord): string {
   return record.title?.trim() || '未命名资料'
 }
 
 function getPreviewText(record: MaterialRecord): string {
-  return record.note || record.content_text || '暂无内容'
+  return record.content_text || record.note || '暂无内容'
 }
 
-function getArchiveActionLabel(record: MaterialRecord): string {
-  return record.status === 'archived' ? '取消归档' : '归档'
+function 类型圆点(record: MaterialRecord): string {
+  if (record.type === 'link') return 'manager-dot--primary'
+  if (record.type === 'image') return 'manager-dot--warning'
+  if (record.type === 'file') return 'manager-dot--success'
+  return 'manager-dot--muted'
 }
 
-function getArchiveActionIcon(record: MaterialRecord) {
-  return record.status === 'archived' ? RefreshRight : Collection
-}
-
-function isArchivedCollection(record: MaterialRecord): boolean {
-  return record.status === 'archived'
-}
-
-function getLeftSwipeActionLabel(record: MaterialRecord): string {
-  if (showRecycleBin.value) {
-    return '恢复'
-  }
-  return getArchiveActionLabel(record)
-}
-
-function getLeftSwipeActionIcon(record: MaterialRecord) {
-  if (showRecycleBin.value) {
-    return RefreshRight
-  }
-  return getArchiveActionIcon(record)
-}
-
-function getRightSwipeActionLabel(): string {
-  return showRecycleBin.value ? '永久删除' : '删除'
-}
-
-function getEmptyDescription(): string {
-  return showRecycleBin.value ? '回收站里还没有资料' : '还没有资料内容'
+function 记录时间(record: MaterialRecord): string | null {
+  return showRecycleBin.value ? record.deleted_at : record.updated_at
 }
 
 function 查找根级收藏附件目录(tree: FileTreeNode[]): FileTreeNode | null {
@@ -385,10 +488,6 @@ function 应用上传目录选择(payload: { folderId: string | null, path: stri
   选中的上传目录路径.value = payload.path || '全部文件'
 }
 
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString()
-}
-
 function buildCollectionQuery(page: number, pageSize: number): MaterialListQuery {
   return {
     page,
@@ -398,6 +497,8 @@ function buildCollectionQuery(page: number, pageSize: number): MaterialListQuery
     type: filters.value.type,
     tag: filters.value.tag.trim() || undefined,
     is_deleted: showRecycleBin.value,
+    sort_by: 排序字段.value || undefined,
+    sort_order: 排序字段.value ? 排序方向.value : undefined,
   }
 }
 
@@ -411,8 +512,6 @@ function applyCollectionPage(data: MaterialListResponse, append: boolean) {
   }
 }
 
-
-
 function isSelected(recordId: string): boolean {
   return selectedCollectionIdSet.value.has(recordId)
 }
@@ -425,9 +524,11 @@ function enterMultiSelect(record: MaterialRecord) {
 }
 
 function toggleMultiSelect(record: MaterialRecord) {
-  isMultiSelectMode.value = true
   if (selectedCollectionIdSet.value.has(record.id)) {
     multiSelectedIds.value = multiSelectedIds.value.filter(id => id !== record.id)
+    if (multiSelectedIds.value.length === 0) {
+      isMultiSelectMode.value = false
+    }
     return
   }
   multiSelectedIds.value = [...multiSelectedIds.value, record.id]
@@ -444,151 +545,6 @@ function toggleSelectAllVisibleCollections() {
     return
   }
   multiSelectedIds.value = collections.value.map(record => record.id)
-}
-
-function initSwipeState(id: string) {
-  if (!swipeState[id]) {
-    swipeState[id] = {
-      offset: 0,
-      startX: 0,
-      startY: 0,
-      isDragging: false,
-      hasMoved: false,
-    }
-  }
-}
-
-function onTouchStart(event: Event, id: string) {
-  if (isMultiSelectMode.value) return
-  initSwipeState(id)
-  const state = swipeState[id]
-  state.isDragging = true
-
-  if (event instanceof TouchEvent) {
-    state.startX = event.touches[0].clientX
-    state.startY = event.touches[0].clientY
-  } else if (event instanceof MouseEvent) {
-    state.startX = event.clientX
-    state.startY = event.clientY
-  }
-}
-
-function onTouchMove(event: Event, id: string) {
-  if (isMultiSelectMode.value) return
-  const state = swipeState[id]
-  if (!state?.isDragging) return
-
-  let clientX = 0
-  let clientY = 0
-  if (event instanceof TouchEvent) {
-    clientX = event.touches[0].clientX
-    clientY = event.touches[0].clientY
-  } else if (event instanceof MouseEvent) {
-    clientX = event.clientX
-    clientY = event.clientY
-  }
-
-  const deltaX = clientX - state.startX
-  const deltaY = clientY - state.startY
-
-  if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
-    cancelLongPressById(id)
-  }
-
-  if (Math.abs(deltaY) > Math.abs(deltaX)) {
-    return
-  }
-
-  if (Math.abs(deltaX) > 6) {
-    state.hasMoved = true
-    cancelLongPressById(id)
-  }
-
-  if (event instanceof TouchEvent && Math.abs(deltaX) > 10) {
-    event.preventDefault()
-  }
-
-  state.offset = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, deltaX))
-}
-
-function cancelLongPressById(id: string) {
-  const record = collections.value.find(item => item.id === id)
-  if (record) {
-    cancelLongPress(record)
-  }
-}
-
-function resetSwipeState(id: string) {
-  const state = swipeState[id]
-  if (!state) return
-  state.offset = 0
-  state.isDragging = false
-  state.hasMoved = false
-}
-
-async function onTouchEnd(record: MaterialRecord) {
-  if (isMultiSelectMode.value) return
-  const state = swipeState[record.id]
-  if (!state) return
-
-  const offset = state.offset
-  const hadMoved = state.hasMoved
-  state.isDragging = false
-
-  if (hadMoved) {
-    setTimeout(() => {
-      if (swipeState[record.id]) {
-        swipeState[record.id].hasMoved = false
-      }
-    }, 50)
-  } else {
-    state.hasMoved = false
-  }
-
-  state.offset = 0
-
-  if (offset <= -SWIPE_THRESHOLD) {
-    await removeCollection(record.id)
-    return
-  }
-
-  if (offset >= SWIPE_THRESHOLD) {
-    await toggleArchiveCollection(record)
-  }
-}
-
-function onTouchCancel(record: MaterialRecord) {
-  cancelLongPress(record)
-  resetSwipeState(record.id)
-}
-
-function getCardStyle(id: string) {
-  const state = swipeState[id]
-  if (!state) return {}
-  return {
-    transform: `translateX(${state.offset}px)`,
-    transition: state.isDragging ? 'none' : 'transform 0.26s ease',
-  }
-}
-
-function getLeftActionStyle(id: string) {
-  const state = swipeState[id]
-  if (!state) return { opacity: 0 }
-  const progress = Math.min(1, Math.max(0, state.offset / SWIPE_THRESHOLD))
-  return {
-    opacity: progress,
-    transform: `translateX(${(-16 + progress * 16).toFixed(2)}px) scale(${(0.88 + progress * 0.12).toFixed(3)})`,
-  }
-}
-
-function getRightActionStyle(id: string) {
-  const state = swipeState[id]
-  if (!state) return { opacity: 0 }
-  const progress = Math.min(1, Math.max(0, -state.offset / SWIPE_THRESHOLD))
-  return {
-    opacity: progress,
-    transform: `translateX(${(16 - progress * 16).toFixed(2)}px) scale(${(0.88 + progress * 0.12).toFixed(3)})`,
-  }
 }
 
 async function requestCollectionPage(page: number, append: boolean) {
@@ -617,6 +573,26 @@ async function 获取指定可见数量的收藏(targetVisibleCount: number) {
   }
 }
 
+/** 统计各状态数量，用于页签角标与页头说明。 */
+async function 刷新统计() {
+  try {
+    const [全部, 已整理, 已归档, 回收站] = await Promise.all([
+      获取资料列表({ page: 1, page_size: 1, is_deleted: false }),
+      获取资料列表({ page: 1, page_size: 1, status: 'active', is_deleted: false }),
+      获取资料列表({ page: 1, page_size: 1, status: 'archived', is_deleted: false }),
+      获取资料列表({ page: 1, page_size: 1, is_deleted: true }),
+    ])
+    统计.value = {
+      全部: 全部.total,
+      已整理: 已整理.total,
+      已归档: 已归档.total,
+      回收站: 回收站.total,
+    }
+  } catch (error) {
+    console.error('[资料库] 加载统计失败', error)
+  }
+}
+
 async function reloadCollections(
   targetVisibleCount = pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE,
   options: { silent?: boolean } = {},
@@ -640,6 +616,10 @@ async function reloadCollections(
       total: data.total,
       pageCount: data.pageCount,
     }
+    if (pageContainerRef.value) {
+      pageContainerRef.value.scrollTop = 0
+    }
+    void 刷新统计()
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '加载资料失败'))
   } finally {
@@ -673,7 +653,31 @@ async function loadTags() {
   }
 }
 
-function applyFilters() {
+/** 关键词由防抖监听统一触发刷新，避免清空筛选时重复请求。 */
+function 应用关键词(keyword: string) {
+  if (keyword === 已应用关键词.value) return
+  已应用关键词.value = keyword
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function 切换状态页签(status: MaterialStatus | '') {
+  const 需要刷新 = showRecycleBin.value || filters.value.status !== status
+  showRecycleBin.value = false
+  filters.value.status = status
+  if (!需要刷新) return
+  exitMultiSelect()
+  void Promise.all([reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true }), loadTags()])
+}
+
+function 切换类型(type: MaterialType | '') {
+  if (filters.value.type === type) return
+  filters.value.type = type
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function 切换标签(tag: string) {
+  if (filters.value.tag === tag) return
+  filters.value.tag = tag
   void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
 }
 
@@ -684,50 +688,21 @@ function resetAllFilters() {
     type: '',
     tag: '',
   }
+  已应用关键词.value = ''
   void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
 }
 
-function clearKeywordFilter() {
-  filters.value.keyword = ''
-  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
-}
-
-function clearStatusFilter() {
-  filters.value.status = ''
-  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
-}
-
-function selectStatusFilter(status: MaterialStatus | '') {
-  filters.value.status = status
-  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
-}
-
-function clearTypeFilter() {
-  filters.value.type = ''
-  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
-}
-
-function clearTagFilter() {
-  filters.value.tag = ''
-  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
-}
-
-function openRecycleBin() {
-  showRecycleBin.value = true
+function toggleRecycleBin() {
+  const 进入回收站 = !showRecycleBin.value
+  showRecycleBin.value = 进入回收站
+  if (进入回收站) {
+    filters.value.status = ''
+  }
+  // 回收站的时间列含义从“更新时间”变成“删除时间”，排序一并重置
+  排序字段.value = ''
+  排序方向.value = 'desc'
   exitMultiSelect()
-  void Promise.all([
-    reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true }),
-    loadTags(),
-  ])
-}
-
-function closeRecycleBin() {
-  showRecycleBin.value = false
-  exitMultiSelect()
-  void Promise.all([
-    reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true }),
-    loadTags(),
-  ])
+  void Promise.all([reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true }), loadTags()])
 }
 
 function openCreateDialog() {
@@ -829,74 +804,17 @@ async function removeCollection(id: string) {
   }
 }
 
-async function toggleArchiveCollection(record: MaterialRecord) {
-  if (showRecycleBin.value) {
-    try {
-      await 恢复资料(record.id)
-      ElMessage.success('资料已恢复')
-      await Promise.all([
-        reloadCollections(Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
-        loadTags(),
-      ])
-    } catch (error) {
-      ElMessage.error(获取API错误消息(error, '恢复资料失败'))
-    }
-    return
-  }
-
-  const nextStatus: MaterialStatus = record.status === 'archived' ? 'active' : 'archived'
-  const successText = record.status === 'archived' ? '已取消归档' : '已归档'
+/** 回收站里恢复单条资料（归档状态改由编辑弹窗维护） */
+async function restoreCollection(record: MaterialRecord) {
   try {
-    await 更新资料(record.id, { status: nextStatus })
-    ElMessage.success(successText)
-    await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
+    await 恢复资料(record.id)
+    ElMessage.success('资料已恢复')
+    await Promise.all([
+      reloadCollections(Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
+      loadTags(),
+    ])
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, `${getArchiveActionLabel(record)}失败`))
-  }
-}
-
-async function batchToggleArchiveSelectedCollections() {
-  if (showRecycleBin.value) {
-    const targetIds = collections.value
-      .filter(record => selectedCollectionIdSet.value.has(record.id))
-      .map(record => record.id)
-
-    if (targetIds.length === 0) {
-      exitMultiSelect()
-      return
-    }
-
-    try {
-      await Promise.all(targetIds.map(id => 恢复资料(id)))
-      ElMessage.success(`已恢复 ${targetIds.length} 条资料`)
-      exitMultiSelect()
-      await Promise.all([
-        reloadCollections(Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
-        loadTags(),
-      ])
-    } catch (error) {
-      ElMessage.error(获取API错误消息(error, '批量恢复失败'))
-    }
-    return
-  }
-
-  const targetStatus: MaterialStatus = hasSelectedCollectionNeedingArchive.value ? 'archived' : 'active'
-  const targetIds = collections.value
-    .filter(record => selectedCollectionIdSet.value.has(record.id) && record.status !== targetStatus)
-    .map(record => record.id)
-
-  if (targetIds.length === 0) {
-    exitMultiSelect()
-    return
-  }
-
-  try {
-    const count = await 批量更新资料状态({ ids: targetIds, status: targetStatus })
-    ElMessage.success(targetStatus === 'archived' ? `已归档 ${count} 条资料` : `已取消归档 ${count} 条资料`)
-    exitMultiSelect()
-    await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
-  } catch (error) {
-    ElMessage.error(获取API错误消息(error, targetStatus === 'archived' ? '批量归档失败' : '批量取消归档失败'))
+    ElMessage.error(获取API错误消息(error, '恢复资料失败'))
   }
 }
 
@@ -971,24 +889,6 @@ function moveAsset(index: number, direction: -1 | 1) {
   form.value.assets.splice(targetIndex, 0, item)
 }
 
-function handleCardClick(record: MaterialRecord) {
-  if (consumeLongPress(record)) {
-    return
-  }
-  const state = swipeState[record.id]
-  if (state?.hasMoved) {
-    return
-  }
-  if (isMultiSelectMode.value) {
-    toggleMultiSelect(record)
-    return
-  }
-  if (showRecycleBin.value) {
-    return
-  }
-  openEditDialog(record)
-}
-
 onMounted(async () => {
   await Promise.all([reloadCollections(COLLECTION_LIST_PAGE_SIZE), loadTags()])
 })
@@ -1007,7 +907,6 @@ watch(
   { immediate: true },
 )
 
-
 useIntersectionObserver(loadMoreTriggerRef, (entries) => {
   if (entries.some((entry) => entry.isIntersecting)) void fetchNextPage()
 }, { root: pageContainerRef, rootMargin: '0px 0px 240px 0px' })
@@ -1020,11 +919,12 @@ watch(collections, (items) => {
   }
 })
 
-watch(
+watchDebounced(
   () => filters.value.keyword,
-  () => {
-    void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+  (value) => {
+    应用关键词(value.trim())
   },
+  { debounce: 300 },
 )
 
 watch(showDeleteConfirm, (value) => {
@@ -1047,293 +947,531 @@ watch(showDialog, (visible) => {
 </script>
 
 <template>
-  <div ref="pageContainerRef" class="page-container">
-    <PageSectionShell
-      :title="pageTitleText"
-      :icon="Collection"
-      title-tag="h2"
-      :show-back="props.showBack"
-      :to="props.backTo"
-    >
-      <template #header-extra>
-        <ElSpace wrap>
-          <ElButton v-if="showRecycleBin" @click="closeRecycleBin">
-            <ElIcon><ArrowLeft /></ElIcon>
-            <span>返回列表</span>
-          </ElButton>
-          <ElButton v-else @click="openRecycleBin">
-            <ElIcon><Delete /></ElIcon>
-            <span>回收站</span>
-          </ElButton>
-          <ElButton v-if="!showRecycleBin" type="primary" @click="openCreateDialog">+ 新增资料</ElButton>
-        </ElSpace>
-      </template>
+  <div
+    class="manager-page material-manager"
+    :class="{ 'is-recycle': showRecycleBin, 'is-multi-select': isMultiSelectMode }"
+  >
+    <header class="manager-head">
+      <div>
+        <button
+          v-if="props.showBack"
+          class="manager-back"
+          type="button"
+          @click="router.push(props.backTo)"
+        >
+          ← 返回
+        </button>
+        <h1>{{ 页头标题 }}</h1>
+        <p>{{ 页头统计 }}</p>
+      </div>
+      <div class="manager-head-actions">
+        <ElButton v-if="!showRecycleBin" type="primary" class="manager-create" @click="openCreateDialog">
+          <ElIcon><Plus /></ElIcon>
+          <span>新增资料</span>
+        </ElButton>
+      </div>
+    </header>
 
-      <div class="status-bar">
-        <div class="status-bar-left">
-        <div class="filter-tools">
-          <ElInput
-            v-model="filters.keyword"
-            class="todo-search-input"
-            clearable
-            placeholder="搜索标题、正文、备注"
-            @clear="applyFilters"
-            @keyup.enter="applyFilters"
-          >
-            <template #prefix>
-              <ElIcon><Search /></ElIcon>
-            </template>
-          </ElInput>
+    <div class="manager-toolbar">
+      <div class="manager-mode-nav" role="group" aria-label="资料视图切换">
+        <button
+          type="button"
+          class="manager-mode-nav__item"
+          :class="{ 'is-active': 视图 === 'table' }"
+          title="列表"
+          @click="视图 = 'table'"
+        >
+          <ElIcon>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+            </svg>
+          </ElIcon>
+          <span>列表</span>
+        </button>
+        <button
+          type="button"
+          class="manager-mode-nav__item"
+          :class="{ 'is-active': 视图 === 'cards' }"
+          title="卡片"
+          @click="视图 = 'cards'"
+        >
+          <ElIcon>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="4" width="8" height="7" rx="1" />
+              <rect x="13" y="4" width="8" height="7" rx="1" />
+              <rect x="3" y="13" width="8" height="7" rx="1" />
+              <rect x="13" y="13" width="8" height="7" rx="1" />
+            </svg>
+          </ElIcon>
+          <span>卡片</span>
+        </button>
+      </div>
 
-          <div class="filter-button-group">
-            <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
-              <template #reference>
-                <ElButton>
-                  <span style="display: flex; align-items: center; gap: 6px">
-                    <ElIcon><List /></ElIcon>
-                    <span>{{ statusButtonText }}</span>
-                    <span style="margin-left: 4px">▼</span>
-                  </span>
-                </ElButton>
-              </template>
-              <div class="status-filter-list">
-                <div
-                  class="status-filter-item"
-                  :class="{ 'is-selected': !filters.status }"
-                  @click="selectStatusFilter('')"
+      <div class="manager-filters">
+        <ElPopover
+          placement="bottom-end"
+          :width="300"
+          trigger="click"
+          popper-class="manager-popover"
+        >
+          <template #reference>
+            <button
+              type="button"
+              class="manager-filter-button"
+              :class="{ 'is-active': activeFilterCount > 0 }"
+              aria-label="筛选资料"
+            >
+              <ElIcon><Filter /></ElIcon>
+              <span>筛选</span>
+              <small v-if="activeFilterCount">{{ activeFilterCount }}</small>
+            </button>
+          </template>
+          <div class="manager-filter-panel">
+            <div class="manager-filter-group">
+              <label>类型</label>
+              <div class="manager-filter-chips">
+                <button
+                  type="button"
+                  class="manager-filter-chip"
+                  :class="{ 'is-active': !filters.type }"
+                  :aria-pressed="!filters.type"
+                  @click="切换类型('')"
                 >
-                  <span class="status-filter-text">
-                    <ElIcon><List /></ElIcon>
-                    <span>全部状态</span>
-                  </span>
-                </div>
-                <div
-                  v-for="item in statusOptions"
+                  全部
+                </button>
+                <button
+                  v-for="item in typeOptions"
                   :key="item.value"
-                  class="status-filter-item"
-                  :class="{ 'is-selected': filters.status === item.value }"
-                  @click="selectStatusFilter(item.value)"
+                  type="button"
+                  class="manager-filter-chip"
+                  :class="{ 'is-active': filters.type === item.value }"
+                  :aria-pressed="filters.type === item.value"
+                  @click="切换类型(item.value)"
                 >
-                  <span class="status-filter-text">
-                    <ElIcon><component :is="getStatusIcon(item.value)" /></ElIcon>
-                    <span>{{ item.label }}</span>
-                  </span>
-                </div>
-                <div class="status-filter-divider" />
-                <template v-if="!showRecycleBin">
-                  <div class="status-filter-item" @click="openRecycleBin">
-                    <span class="status-filter-text">
-                      <ElIcon><Delete /></ElIcon>
-                      <span>回收站</span>
-                    </span>
-                  </div>
-                </template>
-                <template v-else>
-                  <div class="status-filter-item" @click="closeRecycleBin">
-                    <span class="status-filter-text">
-                      <ElIcon><ArrowLeft /></ElIcon>
-                      <span>返回列表</span>
-                    </span>
-                  </div>
-                </template>
+                  {{ item.label }}
+                </button>
               </div>
-            </ElPopover>
+            </div>
+            <div v-if="tagOptions.length" class="manager-filter-group">
+              <label>标签</label>
+              <div class="manager-filter-chips manager-filter-chips--tall">
+                <button
+                  v-for="item in tagOptions"
+                  :key="item.name"
+                  type="button"
+                  class="manager-filter-chip"
+                  :class="{ 'is-active': filters.tag === item.name }"
+                  :aria-pressed="filters.tag === item.name"
+                  @click="切换标签(item.name)"
+                >
+                  {{ item.name }}
+                  <span class="material-chip-count">{{ item.count }}</span>
+                </button>
+              </div>
+            </div>
+            <div class="manager-filter-footer">
+              <span>{{ activeFilterCount ? `已选 ${activeFilterCount} 个条件` : '未设置筛选条件' }}</span>
+              <ElButton text size="small" @click="resetAllFilters">清除筛选</ElButton>
+            </div>
+          </div>
+        </ElPopover>
 
-            <ElPopover trigger="click" :width="280" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+        <label class="manager-search">
+          <ElIcon><Search /></ElIcon>
+          <input
+            v-model="filters.keyword"
+            type="search"
+            placeholder="搜索标题、正文、备注"
+            aria-label="搜索资料"
+            maxlength="200"
+          >
+        </label>
+      </div>
+    </div>
+
+    <div class="manager-tabs-row">
+      <nav class="manager-tabs" aria-label="资料状态">
+        <button
+          v-for="页签 in 状态页签"
+          :key="页签.label"
+          type="button"
+          class="manager-tab"
+          :class="{ 'is-active': !showRecycleBin && filters.status === 页签.value }"
+          :aria-pressed="!showRecycleBin && filters.status === 页签.value"
+          @click="切换状态页签(页签.value)"
+        >
+          {{ 页签.label }} <small>{{ 页签.count }}</small>
+        </button>
+      </nav>
+      <button
+        type="button"
+        class="manager-tab"
+        :class="{ 'is-active': showRecycleBin }"
+        :aria-pressed="showRecycleBin"
+        @click="toggleRecycleBin"
+      >
+        回收站 <small>{{ 统计.回收站 }}</small>
+      </button>
+    </div>
+
+    <div
+      ref="pageContainerRef"
+      v-loading="initialLoading || refreshing"
+      class="manager-list-body"
+      :class="{ 'is-multi-select': isMultiSelectMode }"
+      :aria-busy="initialLoading || refreshing || loadingMore"
+    >
+      <!-- 列表视图 -->
+      <div
+        v-if="视图 === 'table' && collections.length"
+        class="manager-table"
+        :class="{ 'is-multi-select': isMultiSelectMode }"
+        :style="{ '--manager-grid-columns': 网格列 }"
+        role="table"
+        aria-label="资料列表"
+      >
+        <div class="manager-row manager-row-head" role="row">
+          <div v-if="isMultiSelectMode" class="material-check-cell" role="columnheader">
+            <ElCheckbox
+              class="material-check"
+              :model-value="allVisibleSelected"
+              :indeterminate="部分选中"
+              aria-label="全选当前页"
+              @update:model-value="toggleSelectAllVisibleCollections"
+            />
+          </div>
+          <div
+            v-for="列 in 展示列"
+            :key="列.value"
+            :class="`material-col-${列.value}`"
+            role="columnheader"
+          >
+            <button
+              type="button"
+              class="manager-sort-heading"
+              :class="{ 'is-active': 排序字段 === 列排序字段(列.value) }"
+              :aria-sort="
+                排序字段 === 列排序字段(列.value)
+                  ? 排序方向 === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+              @click="表头排序(列.value)"
+            >
+              <span>{{ 列标题(列) }}</span>
+              <ElIcon><SortDirectionIcon :direction="排序图标方向(列排序字段(列.value))" /></ElIcon>
+            </button>
+          </div>
+          <div class="manager-column-actions manager-fixed-actions" role="columnheader">
+            <span>操作</span>
+            <ElPopover
+              placement="bottom-end"
+              :width="170"
+              trigger="click"
+              popper-class="manager-popover"
+            >
               <template #reference>
-                <ElButton>
-                  <span style="display: flex; align-items: center; gap: 6px">
-                    <ElIcon><Filter /></ElIcon>
-                    <span>{{ activeFilterCount > 0 ? `更多筛选(${activeFilterCount})` : '更多筛选' }}</span>
-                    <span style="margin-left: 4px">▼</span>
-                  </span>
-                </ElButton>
+                <button type="button" title="设置显示列" aria-label="设置显示列">
+                  <ElIcon>
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="12" cy="5" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="12" cy="19" r="2" />
+                    </svg>
+                  </ElIcon>
+                </button>
               </template>
-              <div class="advanced-filter-panel">
-                <div class="advanced-filter-field">
-                  <span class="advanced-filter-label">类型</span>
-                  <ElSelect v-model="filters.type" clearable placeholder="全部类型" size="small">
-                    <ElOption v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
-                  </ElSelect>
-                </div>
-
-                <div class="advanced-filter-field">
-                  <span class="advanced-filter-label">标签</span>
-                  <ElSelect v-model="filters.tag" clearable filterable placeholder="全部标签" size="small">
-                    <ElOption v-for="item in tagOptions" :key="item.name" :label="`${item.name} (${item.count})`" :value="item.name" />
-                  </ElSelect>
-                </div>
-
-                <div class="advanced-filter-actions">
-                  <ElButton link @click="resetAllFilters">重置筛选</ElButton>
-                  <ElButton type="primary" size="small" @click="applyFilters">应用筛选</ElButton>
-                </div>
+              <div class="manager-column-settings">
+                <label v-for="列 in 资料列" :key="列.value">
+                  <input
+                    type="checkbox"
+                    :checked="可见列.includes(列.value)"
+                    :disabled="列.value === 'title'"
+                    @change="切换列显示(列.value)"
+                  >
+                  {{ 列标题(列) }}
+                </label>
               </div>
             </ElPopover>
-
-            <ElButton type="primary" @click="applyFilters">搜索</ElButton>
           </div>
         </div>
 
-        <div v-if="hasAnyFilters" class="active-filters">
-          <ElTag v-if="hasSearchKeyword" closable @close="clearKeywordFilter">
-            搜索：{{ filters.keyword.trim() }}
-          </ElTag>
-          <ElTag v-if="filters.status" closable @close="clearStatusFilter">
-            状态：{{ getStatusLabel(filters.status) }}
-          </ElTag>
-          <ElTag v-if="filters.type" closable @close="clearTypeFilter">
-            类型：{{ getTypeLabel(filters.type) }}
-          </ElTag>
-          <ElTag v-if="filters.tag.trim()" closable @close="clearTagFilter">
-            标签：{{ filters.tag.trim() }}
-          </ElTag>
-          <ElButton link class="filter-reset-button" @click="resetAllFilters">清空全部</ElButton>
-        </div>
-      </div>
-      </div>
-
-      <div v-if="isMultiSelectMode" class="multi-select-toolbar">
-      <div class="multi-select-toolbar__summary">
-        <ElIcon><Select /></ElIcon>
-        <span>已选择 {{ multiSelectedIds.length }} 项</span>
-      </div>
-      <div class="multi-select-toolbar__actions">
-        <ElButton @click="toggleSelectAllVisibleCollections">
-          {{ allVisibleSelected ? '取消全选' : '全选当前页' }}
-        </ElButton>
-        <ElButton @click="exitMultiSelect">退出多选</ElButton>
-        <ElButton @click="batchToggleArchiveSelectedCollections">
-          {{ showRecycleBin ? '批量恢复' : (hasSelectedCollectionNeedingArchive ? '批量归档' : '批量取消归档') }}
-        </ElButton>
-        <ElButton type="danger" @click="batchDeleteSelectedCollections">
-          {{ showRecycleBin ? '批量永久删除' : '批量删除' }}
-        </ElButton>
-      </div>
-      </div>
-    </PageSectionShell>
-
-    <div v-loading="initialLoading || refreshing" class="collection-list-wrap">
-      <div v-if="collections.length > 0" class="collection-list">
         <div
           v-for="record in collections"
           :key="record.id"
-          class="collection-swipe-item"
-          @touchstart.passive="(event: Event) => { startLongPress(record, event); onTouchStart(event, record.id) }"
-          @touchmove="(event: Event) => onTouchMove(event, record.id)"
-          @touchend="() => { cancelLongPress(record); void onTouchEnd(record) }"
-          @touchcancel="() => onTouchCancel(record)"
-          @mousedown="(event: Event) => { startLongPress(record, event); onTouchStart(event, record.id) }"
-          @mousemove="(event: Event) => onTouchMove(event, record.id)"
-          @mouseup="() => { cancelLongPress(record); void onTouchEnd(record) }"
-          @mouseleave="() => onTouchCancel(record)"
+          class="manager-row"
+          :class="{ 'is-selected': isSelected(record.id) }"
+          role="row"
+          @touchstart.passive="处理条目按下(record, $event)"
+          @touchmove="处理条目移动(record, $event)"
+          @touchend="处理条目抬起(record)"
+          @touchcancel="处理条目抬起(record)"
+          @mousedown="处理条目按下(record, $event)"
+          @mousemove="处理条目移动(record, $event)"
+          @mouseup="处理条目抬起(record)"
+          @mouseleave="处理条目抬起(record)"
+          @click="handleItemClick(record)"
         >
-          <div class="swipe-action left-action" :style="getLeftActionStyle(record.id)">
-            <ElIcon :size="22"><component :is="getLeftSwipeActionIcon(record)" /></ElIcon>
-            <span class="action-text">{{ getLeftSwipeActionLabel(record) }}</span>
+          <div v-if="isMultiSelectMode" class="material-check-cell" role="cell" @click.stop>
+            <ElCheckbox
+              class="material-check"
+              :model-value="isSelected(record.id)"
+              :aria-label="`选择 ${getDisplayTitle(record)}`"
+              @update:model-value="toggleMultiSelect(record)"
+            />
           </div>
 
-          <div class="swipe-action right-action" :style="getRightActionStyle(record.id)">
-            <ElIcon :size="22"><Delete /></ElIcon>
-            <span class="action-text">{{ getRightSwipeActionLabel() }}</span>
-          </div>
-
-          <ElCard
-            class="collection-card"
-            :class="{
-              'is-selected': isSelected(record.id),
-              'is-multi-select': isMultiSelectMode,
-              'is-archived': isArchivedCollection(record),
-            }"
-            :style="getCardStyle(record.id)"
-            shadow="hover"
-            @click="handleCardClick(record)"
+          <div
+            v-for="列 in 展示列"
+            :key="列.value"
+            class="manager-cell"
+            :class="`material-col-${列.value}`"
+            role="cell"
           >
-            <div v-if="isMultiSelectMode" class="select-indicator" :class="{ 'is-selected': isSelected(record.id) }">
-              <ElIcon><Select /></ElIcon>
-            </div>
-            <div class="collection-card-layout">
-              <div class="collection-card-main">
-                <div class="collection-title-block">
-                  <div class="collection-title">{{ getDisplayTitle(record) }}</div>
-                </div>
+            <span
+              v-if="列.value === 'title'"
+              class="material-title"
+              :class="{ 'is-disabled': showRecycleBin }"
+            >
+              {{ getDisplayTitle(record) }}
+            </span>
 
-                <div class="collection-preview">
-                  {{ getPreviewText(record) }}
-                </div>
+            <span v-else-if="列.value === 'content'" class="material-preview">
+              {{ getPreviewText(record) }}
+            </span>
 
-                <div class="collection-meta-row">
-                  <div class="collection-meta-content">
-                    <div class="collection-meta-group">
-                      <div class="collection-meta-line">
-                        <ElTag size="small">{{ getTypeLabel(record.type) }}</ElTag>
-                        <ElTag size="small" :type="getStatusTagType(record.status)">{{ getStatusLabel(record.status) }}</ElTag>
-                      </div>
-                    </div>
-                    <span class="collection-meta-divider">|</span>
-                    <div class="collection-meta-group collection-meta-group--secondary">
-                      <div class="collection-meta-line">
-                        <template v-if="record.tags?.length">
-                          <ElTag v-for="tag in record.tags" :key="tag" size="small" type="info" effect="plain">
-                            {{ tag }}
-                          </ElTag>
-                        </template>
-                        <span v-else class="collection-meta-text">无标签</span>
-                        <span class="collection-meta-text">附件 {{ record.assets.length }}</span>
-                        <span v-if="record.archived_at && isArchivedCollection(record)" class="collection-meta-text">
-                          归档于 {{ formatDateTime(record.archived_at) }}
-                        </span>
-                        <span class="collection-meta-text">更新于 {{ formatDateTime(record.updated_at) }}</span>
-                      </div>
-                    </div>
-                  </div>
+            <span v-else-if="列.value === 'type'" class="manager-status">
+              <i :class="类型圆点(record)" />
+              {{ getTypeLabel(record.type) }}
+            </span>
 
-                </div>
+            <template v-else-if="列.value === 'tags'">
+              <div v-if="record.tags?.length" class="material-tags">
+                <span v-for="tag in record.tags" :key="tag" class="material-tag">{{ tag }}</span>
               </div>
+              <span v-else class="manager-muted">无标签</span>
+            </template>
+
+            <span v-else-if="列.value === 'assets'" class="manager-muted">
+              {{ record.assets.length ? `${record.assets.length} 个` : '—' }}
+            </span>
+
+            <ElTooltip
+              v-else
+              :content="格式化完整时间(记录时间(record))"
+              placement="top"
+              popper-class="manager-date-tooltip"
+            >
+              <span class="manager-date">{{ 格式化相对时间(记录时间(record)) }}</span>
+            </ElTooltip>
+          </div>
+
+          <div class="manager-fixed-actions" role="cell" @click.stop>
+            <div class="manager-ops">
+              <template v-if="showRecycleBin">
+                <ElTooltip content="恢复资料" placement="top">
+                  <button type="button" title="恢复资料" aria-label="恢复资料" @click="restoreCollection(record)">
+                    <ElIcon><RefreshLeft /></ElIcon>
+                  </button>
+                </ElTooltip>
+                <ElTooltip content="永久删除" placement="top">
+                  <button
+                    type="button"
+                    class="manager-delete"
+                    title="永久删除"
+                    aria-label="永久删除"
+                    @click="removeCollection(record.id)"
+                  >
+                    <ElIcon><Delete /></ElIcon>
+                  </button>
+                </ElTooltip>
+              </template>
+              <template v-else>
+                <ElTooltip content="编辑资料" placement="top">
+                  <button type="button" title="编辑资料" aria-label="编辑资料" @click="openEditDialog(record)">
+                    <ElIcon><PencilEditIcon /></ElIcon>
+                  </button>
+                </ElTooltip>
+                <ElTooltip content="移入回收站" placement="top">
+                  <button
+                    type="button"
+                    class="manager-delete"
+                    title="移入回收站"
+                    aria-label="移入回收站"
+                    @click="removeCollection(record.id)"
+                  >
+                    <ElIcon><Delete /></ElIcon>
+                  </button>
+                </ElTooltip>
+              </template>
             </div>
-          </ElCard>
+          </div>
         </div>
       </div>
 
-      <ElEmpty v-else-if="!initialLoading" :description="getEmptyDescription()" />
+      <!-- 卡片视图 -->
+      <div v-else-if="视图 === 'cards' && collections.length" class="manager-cards">
+        <article
+          v-for="record in collections"
+          :key="record.id"
+          class="manager-card material-card"
+          :class="{ 'is-selected': isSelected(record.id) }"
+          @touchstart.passive="处理条目按下(record, $event)"
+          @touchmove="处理条目移动(record, $event)"
+          @touchend="处理条目抬起(record)"
+          @touchcancel="处理条目抬起(record)"
+          @mousedown="处理条目按下(record, $event)"
+          @mousemove="处理条目移动(record, $event)"
+          @mouseup="处理条目抬起(record)"
+          @mouseleave="处理条目抬起(record)"
+          @click="handleItemClick(record)"
+        >
+          <ElCheckbox
+            v-if="isMultiSelectMode"
+            class="material-check material-card__check"
+            :model-value="isSelected(record.id)"
+            :aria-label="`选择 ${getDisplayTitle(record)}`"
+            @click.stop
+            @update:model-value="toggleMultiSelect(record)"
+          />
+
+          <div class="material-card__kicker">
+            <span class="manager-status">
+              <i :class="类型圆点(record)" />
+              {{ getTypeLabel(record.type) }}
+            </span>
+            <template v-if="record.assets.length">
+              <span>·</span>
+              <span>{{ record.assets.length }} 个附件</span>
+            </template>
+          </div>
+
+          <h3>
+            <span class="material-title" :class="{ 'is-disabled': showRecycleBin }">
+              {{ getDisplayTitle(record) }}
+            </span>
+          </h3>
+          <p>{{ getPreviewText(record) }}</p>
+
+          <div v-if="record.tags?.length" class="material-card__tags">
+            <span v-for="tag in record.tags" :key="tag" class="material-tag">{{ tag }}</span>
+          </div>
+
+          <footer @click.stop>
+            <ElTooltip :content="格式化完整时间(记录时间(record))" placement="top" popper-class="manager-date-tooltip">
+              <span>{{ 格式化相对时间(记录时间(record)) }}</span>
+            </ElTooltip>
+            <div class="manager-ops">
+              <template v-if="showRecycleBin">
+                <ElTooltip content="恢复资料" placement="top">
+                  <button type="button" title="恢复资料" aria-label="恢复资料" @click="restoreCollection(record)">
+                    <ElIcon><RefreshLeft /></ElIcon>
+                  </button>
+                </ElTooltip>
+                <ElTooltip content="永久删除" placement="top">
+                  <button
+                    type="button"
+                    class="manager-delete"
+                    title="永久删除"
+                    aria-label="永久删除"
+                    @click="removeCollection(record.id)"
+                  >
+                    <ElIcon><Delete /></ElIcon>
+                  </button>
+                </ElTooltip>
+              </template>
+              <template v-else>
+                <ElTooltip content="编辑资料" placement="top">
+                  <button type="button" title="编辑资料" aria-label="编辑资料" @click="openEditDialog(record)">
+                    <ElIcon><PencilEditIcon /></ElIcon>
+                  </button>
+                </ElTooltip>
+                <ElTooltip content="移入回收站" placement="top">
+                  <button
+                    type="button"
+                    class="manager-delete"
+                    title="移入回收站"
+                    aria-label="移入回收站"
+                    @click="removeCollection(record.id)"
+                  >
+                    <ElIcon><Delete /></ElIcon>
+                  </button>
+                </ElTooltip>
+              </template>
+            </div>
+          </footer>
+        </article>
+      </div>
+
+      <div v-if="!initialLoading && !collections.length" class="manager-empty">{{ 空状态描述 }}</div>
 
       <div
-        v-if="collections.length > 0 && hasMoreCollections"
+        v-if="collections.length"
+        class="manager-list-status"
+        :class="{ 'manager-list-status--end': !loadingMore && !hasMoreCollections }"
+        role="status"
+      >
+        <span v-if="loadingMore">正在加载更早的资料…</span>
+        <button v-else-if="hasMoreCollections" type="button" @click="fetchNextPage">加载更多</button>
+        <span v-else>已显示全部资料</span>
+      </div>
+      <div
+        v-if="collections.length && hasMoreCollections"
         ref="loadMoreTriggerRef"
-        class="collection-load-trigger"
+        class="material-load-trigger"
         aria-hidden="true"
       />
-      <div v-if="loadingMore" class="collection-list-status">
-        正在加载更早的资料...
-      </div>
-      <div v-else-if="collections.length > 0 && !hasMoreCollections" class="collection-list-status collection-list-status--end">
-        已显示全部资料
-      </div>
     </div>
 
     <BaseDialog
       v-model="showDeleteConfirm"
-      title="确认删除"
-      width="360px"
-      style="max-width: 90vw"
+      class="manager-dialog"
+      modal-class="manager-dialog-overlay"
+      width="420px"
+      style="max-width: 92vw"
       :close-on-click-modal="false"
       :close-on-press-escape="false"
     >
-      <div class="delete-confirm-content">
-        <ElIcon :size="40" color="#f56c6c"><WarningFilled /></ElIcon>
-        <span>
-          {{
-            deleteMode === 'permanent'
-              ? (pendingDeleteIds.length > 1 ? `确定永久删除选中的 ${pendingDeleteIds.length} 条资料吗？此操作不可恢复。` : '确定永久删除这条资料吗？此操作不可恢复。')
-              : (pendingDeleteIds.length > 1 ? `确定将选中的 ${pendingDeleteIds.length} 条资料移至回收站吗？` : '确定将这条资料移至回收站吗？')
-          }}
-        </span>
-      </div>
-      <div class="delete-confirm-checkbox">
-        <ElCheckbox v-model="dontAskAgain">本次都不再询问（刷新后恢复）</ElCheckbox>
+      <template #header>
+        <div class="manager-dialog-header">
+          <i />
+          <strong>确认删除</strong>
+          <span>{{ deleteMode === 'permanent' ? '删除后无法恢复' : '可在回收站中找回' }}</span>
+        </div>
+      </template>
+      <div class="manager-dialog-form material-confirm">
+        <div class="material-confirm__body">
+          <ElIcon :size="30" color="var(--el-color-danger)"><WarningFilled /></ElIcon>
+          <span>
+            {{
+              deleteMode === 'permanent'
+                ? (pendingDeleteIds.length > 1 ? `确定永久删除选中的 ${pendingDeleteIds.length} 条资料吗？此操作不可恢复。` : '确定永久删除这条资料吗？此操作不可恢复。')
+                : (pendingDeleteIds.length > 1 ? `确定将选中的 ${pendingDeleteIds.length} 条资料移至回收站吗？` : '确定将这条资料移至回收站吗？')
+            }}
+          </span>
+        </div>
+        <ElCheckbox v-model="dontAskAgain" class="material-confirm__check">
+          本次都不再询问（刷新后恢复）
+        </ElCheckbox>
       </div>
       <template #footer>
-        <div class="delete-confirm-actions">
+        <div class="manager-dialog-footer">
+          <span>{{ deleteMode === 'permanent' ? '永久删除后数据不可恢复' : '删除后可在回收站恢复' }}</span>
           <ElButton @click="cancelDeleteConfirm">取消</ElButton>
           <ElButton type="danger" @click="confirmDeleteConfirm">
             {{ deleteMode === 'permanent' ? '永久删除' : '移至回收站' }}
@@ -1344,115 +1482,124 @@ watch(showDialog, (visible) => {
 
     <BaseDialog
       v-model="showDialog"
-      :title="isEdit ? '编辑资料' : '新增资料'"
+      class="manager-dialog material-dialog"
+      modal-class="manager-dialog-overlay"
       width="760px"
       style="max-width: 96vw"
     >
-      <ElForm label-position="top">
-        <div class="dialog-grid">
-          <ElFormItem label="类型">
-            <ElSelect v-model="form.type">
-              <ElOption v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="状态">
-            <ElSelect v-model="form.status">
-              <ElOption v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </ElSelect>
-          </ElFormItem>
+      <template #header>
+        <div class="manager-dialog-header">
+          <i />
+          <strong>{{ isEdit ? '编辑资料' : '新增资料' }}</strong>
+          <span>{{ isEdit ? '保存后立即更新资料库列表' : '支持网页链接、文本、图片和文件' }}</span>
         </div>
+      </template>
 
-        <ElFormItem>
-          <template #label>
-            <span>标题<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
-          </template>
-          <ElInput v-model="form.title" placeholder="资料标题，可留空" maxlength="300" />
-        </ElFormItem>
-        <ElFormItem>
-          <template #label>
-            <span>正文<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
-          </template>
-          <ElInput v-model="form.content_text" type="textarea" :rows="5" placeholder="网页正文或手动粘贴内容" />
-        </ElFormItem>
-        <ElFormItem>
-          <template #label>
-            <span>备注<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
-          </template>
-          <ElInput v-model="form.note" type="textarea" :rows="4" placeholder="补充备注、整理思路、后续动作" />
-        </ElFormItem>
-        <div v-if="shouldShowAnyContentRequiredMark" class="required-hint">
-          标题、正文、备注或附件至少填写一项
-        </div>
-        <ElFormItem label="标签">
-          <TagInlineInput v-model="form.tags_text" :existing-tags="allExistingTags" placeholder="标签，用逗号分隔" />
-          <div v-if="availableTags.length > 0" class="existing-tags">
-            <ElTag
-              v-for="tag in availableTags"
-              :key="tag"
-              size="small"
-              effect="plain"
-              class="existing-tag"
-              @click="form.tags_text = addTagToForm(form.tags_text, tag)"
-            >
-              {{ tag }}
-            </ElTag>
+      <div class="manager-dialog-form material-form">
+        <ElForm label-position="top">
+          <div class="material-form__grid">
+            <ElFormItem label="类型">
+              <ElSelect v-model="form.type">
+                <ElOption v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="状态">
+              <ElSelect v-model="form.status">
+                <ElOption v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </ElSelect>
+            </ElFormItem>
           </div>
-        </ElFormItem>
 
-        <ElFormItem>
-          <template #label>
-            <span>附件<span v-if="shouldShowAssetRequiredMark" class="required-mark">*</span></span>
-          </template>
-          <div class="asset-panel">
-            <div v-if="isAssetType" class="required-hint">
-              {{ getTypeLabel(form.type) }}类型至少需要上传一个附件
+          <ElFormItem>
+            <template #label>
+              <span>标题<span v-if="shouldShowAnyContentRequiredMark" class="material-required">*</span></span>
+            </template>
+            <ElInput v-model="form.title" placeholder="资料标题，可留空" maxlength="300" />
+          </ElFormItem>
+
+          <ElFormItem>
+            <template #label>
+              <span>正文<span v-if="shouldShowAnyContentRequiredMark" class="material-required">*</span></span>
+            </template>
+            <ElInput v-model="form.content_text" type="textarea" :rows="5" placeholder="网页正文或手动粘贴内容" />
+          </ElFormItem>
+          <ElFormItem>
+            <template #label>
+              <span>备注<span v-if="shouldShowAnyContentRequiredMark" class="material-required">*</span></span>
+            </template>
+            <ElInput v-model="form.note" type="textarea" :rows="4" placeholder="补充备注、整理思路、后续动作" />
+          </ElFormItem>
+
+          <div class="manager-form-section">标签</div>
+          <ElFormItem>
+            <TagInlineInput v-model="form.tags_text" :existing-tags="allExistingTags" placeholder="标签，用逗号分隔" />
+            <div v-if="availableTags.length > 0" class="material-existing-tags">
+              <button
+                v-for="tag in availableTags"
+                :key="tag"
+                type="button"
+                class="manager-filter-chip"
+                @click="form.tags_text = addTagToForm(form.tags_text, tag)"
+              >
+                {{ tag }}
+              </button>
             </div>
-            <div class="asset-toolbar">
-              <div class="asset-folder-summary">
-                <button type="button" class="asset-folder-summary__path" @click="打开目录选择弹窗">
+          </ElFormItem>
+
+          <div class="manager-form-section">
+            <span>附件<span v-if="shouldShowAssetRequiredMark" class="material-required">*</span></span>
+          </div>
+          <ElFormItem>
+            <div class="asset-panel">
+              <div v-if="isAssetType && form.assets.length === 0" class="material-form__hint material-form__hint--danger">
+                {{ getTypeLabel(form.type) }}类型至少需要上传一个附件
+              </div>
+              <div class="asset-toolbar">
+                <button type="button" class="asset-folder-summary" title="选择上传目录" @click="打开目录选择弹窗">
                   {{ 当前上传目录标签 }}
                 </button>
+                <ElButton :loading="uploadLoading" @click="openUploadPicker">
+                  <ElIcon><Upload /></ElIcon>
+                  <span>上传附件</span>
+                </ElButton>
+                <input
+                  ref="uploadInputRef"
+                  class="hidden-upload"
+                  type="file"
+                  multiple
+                  @change="handleUploadChange"
+                >
               </div>
-              <ElButton :loading="uploadLoading" @click="openUploadPicker">
-                <ElIcon><Upload /></ElIcon>
-                <span>上传附件</span>
-              </ElButton>
-              <input
-                ref="uploadInputRef"
-                class="hidden-upload"
-                type="file"
-                multiple
-                @change="handleUploadChange"
-              >
-            </div>
 
-            <div v-if="form.assets.length === 0" class="asset-empty">
-              暂无附件
-            </div>
+              <div v-if="form.assets.length === 0" class="asset-empty">
+                暂无附件
+              </div>
 
-            <div v-else class="asset-list">
-              <div v-for="(asset, index) in form.assets" :key="asset.file_id" class="asset-item">
-                <div class="asset-info">
-                  <a :href="asset.file.url" target="_blank" class="asset-name">
-                    {{ asset.file.original_name }}
-                  </a>
-                  <div class="asset-meta">
-                    {{ asset.file.mime_type }} · {{ Math.max(1, Math.round(asset.file.size / 1024)) }} KB
+              <div v-else class="asset-list">
+                <div v-for="(asset, index) in form.assets" :key="asset.file_id" class="asset-item">
+                  <div class="asset-info">
+                    <a :href="asset.file.url" target="_blank" class="asset-name">
+                      {{ asset.file.original_name }}
+                    </a>
+                    <div class="asset-meta">
+                      {{ asset.file.mime_type }} · {{ Math.max(1, Math.round(asset.file.size / 1024)) }} KB
+                    </div>
+                  </div>
+                  <div class="asset-actions">
+                    <ElButton text :disabled="index === 0" @click="moveAsset(index, -1)">上移</ElButton>
+                    <ElButton text :disabled="index === form.assets.length - 1" @click="moveAsset(index, 1)">下移</ElButton>
+                    <ElButton text type="danger" @click="removeAsset(index)">移除</ElButton>
                   </div>
                 </div>
-                <div class="asset-actions">
-                  <ElButton text :disabled="index === 0" @click="moveAsset(index, -1)">上移</ElButton>
-                  <ElButton text :disabled="index === form.assets.length - 1" @click="moveAsset(index, 1)">下移</ElButton>
-                  <ElButton text type="danger" @click="removeAsset(index)">移除</ElButton>
-                </div>
               </div>
             </div>
-          </div>
-        </ElFormItem>
-      </ElForm>
+          </ElFormItem>
+        </ElForm>
+      </div>
 
       <template #footer>
-        <div class="dialog-footer-actions">
+        <div class="manager-dialog-footer">
+          <span>标题、正文、备注或附件至少填写一项</span>
           <template v-if="isEdit">
             <ElButton @click="showDialog = false">取消</ElButton>
             <ElButton type="primary" :loading="dialogLoading" @click="saveCollection()">
@@ -1475,496 +1622,336 @@ watch(showDialog, (visible) => {
       :initial-folder-id="选中的上传目录"
       @confirm="应用上传目录选择"
     />
+
+    <!-- 多选工具条：长按进入多选后浮在底部 -->
+    <div
+      v-if="isMultiSelectMode && multiSelectedIds.length"
+      class="material-selection-bar"
+      role="status"
+    >
+      <span class="material-selection-bar__count">已选 {{ multiSelectedIds.length }} 项</span>
+      <div class="material-selection-bar__actions">
+        <ElButton @click="toggleSelectAllVisibleCollections">
+          {{ allVisibleSelected ? '取消全选' : '全选当前页' }}
+        </ElButton>
+        <ElButton type="danger" plain @click="batchDeleteSelectedCollections">
+          {{ showRecycleBin ? '批量永久删除' : '批量删除' }}
+        </ElButton>
+        <ElButton text @click="exitMultiSelect">取消选择</ElButton>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-@import '@feathernest/ui/styles/media.css';
+/* ==========================================================================
+   页头、工具栏与页签由 manager.css 提供，这里只补资料库专属部分
+   ========================================================================== */
 
-.page-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  padding: 24px 24px 120px;
-  box-sizing: border-box;
-}
+/* 表格列由脚本按「可见列 + 操作列」内联输出，多选时最前面额外插入复选框列 */
 
-.status-bar {
-  margin-bottom: 16px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.status-bar-left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.filter-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-button-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-button-group :deep(.el-button) {
-  margin-left: 0;
-}
-
-.todo-search-input {
-  width: min(320px, 100%);
-  max-width: 320px;
-}
-
-.active-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-reset-button {
-  padding: 0;
-  height: auto;
-}
-
-.advanced-filter-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.advanced-filter-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.advanced-filter-label {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--el-text-color-secondary);
-}
-
-.advanced-filter-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.status-filter-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.status-filter-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.status-filter-item:hover {
-  background-color: var(--el-fill-color-light);
-}
-
-.status-filter-item.is-selected {
-  background-color: var(--el-fill-color);
-}
-
-.status-filter-text {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--el-text-color-primary);
-}
-
-.status-filter-divider {
-  height: 1px;
-  margin: 6px 8px;
-  background: var(--el-border-color-lighter);
-}
-
-.multi-select-toolbar {
-  position: fixed;
-  left: 50%;
-  bottom: calc(24px + var(--app-safe-area-bottom));
-  transform: translateX(-50%);
-  z-index: 1200;
-  width: min(920px, calc(100vw - 32px));
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
-  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.multi-select-toolbar__summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.multi-select-toolbar__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.collection-list-wrap {
-  min-height: 360px;
-}
-
-.collection-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.collection-swipe-item {
-  position: relative;
-  touch-action: pan-y;
+/* 长按多选时禁止文本选择，避免移动端长按弹出选中菜单 */
+.material-manager .manager-row,
+.material-manager .material-card {
+  -webkit-touch-callout: none;
   user-select: none;
 }
 
-.swipe-action {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 110px;
+.material-manager .material-check-cell {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  border-radius: 18px;
-  color: #fff;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.left-action {
-  left: 0;
-  background: linear-gradient(90deg, var(--el-color-success) 0%, var(--el-color-success-light-3) 100%);
+.material-manager .manager-row.is-selected {
+  --manager-row-bg: var(--manager-active);
+  background: var(--manager-active);
 }
 
-.right-action {
-  right: 0;
-  background: linear-gradient(135deg, #f56c6c 0%, #fb8b8b 100%);
+.material-manager .material-col-title,
+.material-manager .material-col-content {
+  min-width: 0;
 }
 
-.action-text {
-  font-size: 12px;
-  font-weight: 600;
+.material-manager .material-title {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--manager-ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.collection-card {
-  --collection-card-accent-color: #67c23a;
-  --collection-card-surface-color: rgba(103, 194, 58, 0.12);
-  position: relative;
-  z-index: 1;
-  border-radius: 18px;
-  overflow: hidden;
-  cursor: pointer;
-  background:
-    radial-gradient(circle at top left, rgba(103, 194, 58, 0.12), transparent 36%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 251, 0.98));
-  border: 1px solid var(--collection-card-surface-color);
-  border-left-width: 3px;
-  border-left-style: solid;
-  border-left-color: var(--collection-card-accent-color);
+.material-manager .material-title.is-disabled {
+  color: var(--manager-ink-2);
 }
 
-.collection-card.is-selected {
-  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.22);
-  border-color: rgba(103, 194, 58, 0.26);
-  border-left-color: var(--el-color-primary);
+/* 能打开编辑弹窗时，悬停整行或卡片给标题加下划线（回收站与多选模式不加） */
+.material-manager:not(.is-recycle):not(.is-multi-select) .manager-row:hover .material-title,
+.material-manager:not(.is-recycle):not(.is-multi-select) .material-card:hover .material-title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.collection-card.is-archived {
-  --collection-card-accent-color: #6d747e;
-  --collection-card-surface-color: rgba(95, 103, 114, 0.12);
-  background:
-    radial-gradient(circle at top left, rgba(95, 103, 114, 0.16), transparent 38%),
-    linear-gradient(180deg, rgba(245, 247, 250, 0.98), rgba(237, 240, 244, 0.98));
-  border-color: var(--collection-card-surface-color);
-  border-left-width: 3px;
-  border-left-color: var(--collection-card-accent-color);
-}
-
-.collection-card.is-archived.is-selected {
-  border-left-color: var(--el-color-primary);
-}
-
-.collection-card:hover {
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-}
-
-.collection-card.is-multi-select {
-  cursor: pointer;
-}
-
-:deep(.collection-card .el-card__body) {
-  padding: 18px;
-}
-
-.select-indicator {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--el-fill-color);
-  color: var(--el-text-color-secondary);
-  z-index: 2;
-}
-
-.select-indicator.is-selected {
-  background: var(--el-color-primary);
-  color: #fff;
-}
-
-.collection-card-layout {
+.material-manager .material-preview {
   display: block;
-}
-
-.collection-card-main {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.collection-title-block {
-  min-width: 0;
-}
-
-.collection-title {
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.45;
-  color: var(--el-text-color-primary);
-  word-break: break-word;
-  padding-right: 32px;
-}
-
-.collection-card.is-archived .collection-title {
-  color: var(--el-text-color-regular);
-}
-
-.collection-preview {
-  font-size: 14px;
-  line-height: 1.8;
-  color: var(--el-text-color-regular);
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
-  white-space: pre-wrap;
-  word-break: break-word;
+  min-width: 0;
+  color: var(--manager-muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.collection-card.is-archived .collection-preview {
-  color: var(--el-text-color-secondary);
+.material-manager .material-tags {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.collection-meta-row {
+.material-manager .material-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--manager-hover);
+  color: var(--manager-muted);
+  font-size: 10.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.material-manager .material-chip-count {
+  margin-left: 4px;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 9.5px;
+  opacity: 0.72;
+}
+
+/* 多选工具条：长按进入多选后固定在底部居中，列表底部留出空间避免遮住最后一条 */
+.material-manager .manager-list-body.is-multi-select {
+  padding-bottom: 84px;
+}
+
+.material-manager .material-selection-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 60;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  width: min(720px, calc(100vw - 32px));
+  padding: 8px 12px;
+  border: 1px solid var(--manager-line);
+  border-radius: 8px;
+  background: var(--manager-bg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 16%);
+  color: var(--manager-ink-2);
   font-size: 12px;
+  transform: translateX(-50%);
 }
 
-.collection-meta-content {
-  min-width: 0;
+.material-manager .material-selection-bar__count {
+  color: var(--manager-ink);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.material-manager .material-selection-bar__actions {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-}
-
-.collection-meta-group {
-  min-width: 0;
-  display: flex;
-  flex: 0 0 auto;
-}
-
-.collection-meta-group--secondary {
-  flex: 1;
-  min-width: 0;
-}
-
-.collection-meta-line {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
-.collection-meta-divider {
-  display: inline-flex;
-  align-items: center;
-  color: var(--el-text-color-placeholder);
-  line-height: 1;
-  align-self: center;
-  transform: translateY(-1px);
-}
-
-.collection-meta-text {
+.material-manager .material-selection-bar__actions :deep(.el-button) {
+  margin-left: 0;
+  border-radius: 5px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.8;
 }
 
-.collection-load-trigger {
+/* 复选框列 */
+.material-manager .material-check {
+  margin-right: 0;
+  height: auto;
+}
+
+.material-manager .material-check :deep(.el-checkbox__label) {
+  display: none;
+}
+
+/* ==========================================================================
+   卡片视图
+   ========================================================================== */
+.material-manager .material-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 42px 13px 16px;
+}
+
+.material-manager .material-card.is-selected {
+  border-color: var(--el-color-primary);
+  box-shadow: inset 0 0 0 1px var(--el-color-primary);
+}
+
+.material-manager .material-card__check {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.material-manager .material-card__kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--manager-muted);
+  font-size: 11px;
+}
+
+.material-manager .material-card__kicker > span:not(.manager-status) {
+  color: var(--manager-placeholder);
+}
+
+.material-manager .material-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.material-manager .material-card h3 .material-title {
+  font-size: 13px;
+}
+
+/* 卡片高度随栅格拉伸，页脚统一贴底（压过 manager.css 的 12px） */
+.material-manager .material-card footer {
+  margin-top: auto;
+}
+
+.material-manager .material-card footer .manager-ops {
+  margin-left: auto;
+}
+
+/* 加载更多触发器 */
+.material-manager .material-load-trigger {
   width: 100%;
   height: 1px;
 }
 
-.collection-list-status {
-  padding: 16px 0 4px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
+/* ==========================================================================
+   弹窗（弹窗被 teleport 到 body，样式依赖渲染时的 scoped 属性）
+   ========================================================================== */
+.material-confirm__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 2px 0 14px;
+  color: var(--manager-ink-2);
+  font-size: 12.5px;
+  line-height: 1.7;
 }
 
-.collection-list-status--end {
+.material-confirm__check :deep(.el-checkbox__label) {
   color: var(--el-text-color-placeholder);
+  font-size: 11.5px;
 }
 
-.muted-text {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.dialog-grid {
+.material-form__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 0 12px;
+}
+
+.material-required {
+  margin-left: 2px;
+  color: var(--el-color-danger);
+}
+
+.material-form__hint {
+  margin: 0 0 12px;
+  color: var(--el-text-color-placeholder);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.material-form__hint--danger {
+  color: var(--el-color-danger);
+}
+
+.material-existing-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .asset-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-}
-
-.existing-tags {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.existing-tag {
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.existing-tag:hover {
-  color: var(--el-color-primary);
-  border-color: var(--el-color-primary);
-}
-
-.required-mark {
-  color: var(--el-color-danger);
-  margin-left: 2px;
-}
-
-.required-hint {
-  margin-top: -6px;
-  margin-bottom: 18px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--el-color-danger);
 }
 
 .asset-toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 }
 
 .asset-folder-summary {
-  flex: 1 1 0;
+  flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.asset-folder-summary__path {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
-  background: var(--el-fill-color-extra-light);
+  height: 30px;
+  padding: 0 9px;
+  overflow: hidden;
+  border: 1px solid var(--manager-line);
+  border-radius: 5px;
+  background: var(--manager-bg);
+  color: var(--manager-ink-2);
+  font-size: 12px;
+  line-height: 28px;
   text-align: left;
-  color: var(--el-text-color-primary);
-  font-size: 13px;
-  line-height: 1.6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.14s;
 }
 
-.asset-folder-summary__path:hover {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-fill-color-light);
+.asset-folder-summary:hover {
+  border-color: var(--el-border-color-dark, #d4d7de);
+}
+
+.asset-toolbar :deep(.el-button) {
+  margin-left: 0;
+  border-radius: 5px;
+  font-size: 12px;
 }
 
 .asset-empty {
   width: 100%;
-  padding: 16px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: 10px;
-  color: var(--el-text-color-secondary);
+  padding: 14px;
+  border: 1px dashed var(--manager-line);
+  border-radius: 6px;
+  color: var(--el-text-color-placeholder);
+  font-size: 11.5px;
 }
 
 .asset-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
 }
 
@@ -1973,9 +1960,9 @@ watch(showDialog, (visible) => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--manager-line);
+  border-radius: 6px;
   background: var(--el-fill-color-extra-light);
 }
 
@@ -1985,13 +1972,19 @@ watch(showDialog, (visible) => {
 
 .asset-name {
   color: var(--el-color-primary);
+  font-size: 12px;
   text-decoration: none;
 }
 
+.asset-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .asset-meta {
-  margin-top: 4px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
+  margin-top: 3px;
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
 }
 
 .asset-actions {
@@ -1999,145 +1992,67 @@ watch(showDialog, (visible) => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 2px;
+}
+
+.asset-actions :deep(.el-button) {
+  margin-left: 0;
+  font-size: 11.5px;
 }
 
 .hidden-upload {
   display: none;
 }
 
-.dialog-footer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.delete-confirm-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-}
-
-.delete-confirm-checkbox {
-  margin-top: 16px;
-  padding-left: 52px;
-}
-
-.delete-confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-:deep(.status-filter-popover) {
-  padding: 8px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-  border: 1px solid var(--el-border-color-lighter) !important;
-}
-
-:global(html.dark) :deep(.status-filter-popover) {
-  background-color: var(--el-bg-color) !important;
-  border-color: var(--el-border-color) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-}
-
-:global(html.dark) .status-filter-item:hover {
-  background-color: var(--bg-hover);
-}
-
-:global(html.dark) .status-filter-item.is-selected {
-  background-color: rgba(103, 194, 58, 0.15);
-}
-
-:global(html.dark) .status-filter-text {
-  color: var(--text-primary);
-}
-
-:global(.dark) .page-container .page-title,
-:global(.dark) .page-container .page-title span,
-:global(.dark) .page-container .page-title .el-icon {
-  color: #fff !important;
-}
-
-:global(.dark) .page-container .collection-card {
-  background:
-    radial-gradient(circle at top left, rgba(103, 194, 58, 0.16), transparent 38%),
-    linear-gradient(180deg, rgba(34, 39, 46, 0.98), rgba(24, 28, 34, 0.98));
-  border-color: rgba(255, 255, 255, 0.06);
-  border-left-color: var(--collection-card-accent-color) !important;
-}
-
-:global(.dark) .page-container .collection-card.is-archived {
-  background:
-    radial-gradient(circle at top left, rgba(160, 162, 167, 0.16), transparent 38%),
-    linear-gradient(180deg, rgba(48, 52, 59, 0.98), rgba(38, 42, 48, 0.98));
-  border-color: rgba(255, 255, 255, 0.08);
-  border-left-color: #5f6772 !important;
-}
-
-:global(.dark) .page-container .collection-title,
-:global(.dark) .page-container .collection-card.is-archived .collection-title {
-  color: #fff !important;
-}
-
-:global(.dark) .page-container .collection-card.is-selected {
-  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.32);
-  border-left-color: var(--el-color-primary);
-}
-
-:global(.dark) .page-container .multi-select-toolbar {
-  background: rgba(24, 24, 28, 0.92);
-  border-color: rgb(var(--el-color-primary-rgb) / 0.32);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
-}
-
-@media (--mobile-viewport) {
-  .page-container {
-    padding: 16px 16px 136px;
-  }
-
-  .page-container :deep(.page-header-shell__header) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .status-bar {
-    align-items: stretch;
-  }
-
-  .dialog-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .todo-search-input {
-    width: 100%;
-    max-width: none;
-  }
-
-  .multi-select-toolbar {
-    width: calc(100vw - 24px);
-    bottom: calc(12px + var(--app-safe-area-bottom));
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .multi-select-toolbar__actions {
-    width: 100%;
-  }
-
-  .collection-meta-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .collection-meta-content {
+/* ==========================================================================
+   窄屏：收起次要列，卡片单列排布
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* 窄屏工具栏换行：视图切换独占一行，筛选与搜索分到下一行 */
+  .material-manager .manager-toolbar {
     flex-wrap: wrap;
+    row-gap: 8px;
   }
 
-  .collection-meta-divider {
+  .material-manager .manager-filters {
+    flex: 1 1 100%;
+  }
+
+  /* 网格列由内联 style 提供，窄屏用 !important 覆盖成「标题 + 操作」两列 */
+  .material-manager .manager-table {
+    --manager-grid-columns: minmax(0, 1fr) 84px !important;
+  }
+
+  .material-manager .manager-table.is-multi-select {
+    --manager-grid-columns: 28px minmax(0, 1fr) 84px !important;
+  }
+
+  .material-manager .material-col-content,
+  .material-manager .material-col-type,
+  .material-manager .material-col-tags,
+  .material-manager .material-col-assets,
+  .material-manager .material-col-date {
     display: none;
+  }
+
+  .material-manager .manager-list-body.is-multi-select {
+    padding-bottom: 116px;
+  }
+
+  .material-manager .material-selection-bar {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .material-manager .material-selection-bar__actions {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+
+  .material-form__grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .asset-item {
@@ -2147,16 +2062,6 @@ watch(showDialog, (visible) => {
 
   .asset-actions {
     justify-content: flex-start;
-  }
-
-  .dialog-footer-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .asset-folder-summary,
-  .asset-folder-summary__path {
-    width: 100%;
   }
 }
 </style>

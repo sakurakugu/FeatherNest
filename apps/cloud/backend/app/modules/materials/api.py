@@ -44,6 +44,11 @@ async def 列出资料(
     tag: str | None = Query(default=None),
     keyword: str | None = Query(default=None),
     is_deleted: bool = Query(False, description="是否显示已删除（回收站）"),
+    sort_by: str | None = Query(
+        default=None,
+        description="排序字段：title/content/type/tag/assets/updated_at/created_at/deleted_at",
+    ),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
@@ -58,6 +63,8 @@ async def 列出资料(
         tag=tag,
         keyword=keyword,
         is_deleted=is_deleted,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
 
@@ -123,3 +130,4 @@ async def 批量更新资料状态(
     """批量更新资料库状态。"""
     count = await 批量更新资料状态_service(db, user, body)
     return {"count": count}
+

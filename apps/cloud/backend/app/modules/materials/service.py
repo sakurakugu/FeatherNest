@@ -224,6 +224,42 @@ def _构建关键词条件(keyword: str):
     )
 
 
+def _构建资料排序表达式(sort_by: str | None):
+    """按前端传入的字段构造排序表达式，未知字段返回 None 走默认排序。"""
+    if not sort_by:
+        return None
+    if sort_by == "title":
+        return func.coalesce(资料.title, "")
+    if sort_by == "content":
+        return func.length(func.coalesce(资料.content_text, ""))
+    if sort_by == "type":
+        return 资料.type
+    if sort_by == "tag":
+        # 按资料名下最小的标签名排序，无标签的资料排到最后
+        return (
+            select(func.min(资料标签.name))
+            .select_from(资料标签)
+            .join(资料标签关联, 资料标签关联.tag_id == 资料标签.id, isouter=False)
+            .where(资料标签关联.material_id == 资料.id)
+            .correlate(资料)
+            .scalar_subquery()
+        )
+    if sort_by == "assets":
+        return (
+            select(func.count(资料资产.id))
+            .where(资料资产.material_id == 资料.id)
+            .correlate(资料)
+            .scalar_subquery()
+        )
+    if sort_by == "updated_at":
+        return 资料.updated_at
+    if sort_by == "created_at":
+        return 资料.created_at
+    if sort_by == "deleted_at":
+        return 资料.deleted_at
+    return None
+
+
 async def 列出资料标签(db: AsyncSession, user: 用户, *, is_deleted: bool) -> list[资料标签信息]:
     """读取当前用户的资料库标签列表。"""
     result = await db.execute(
@@ -252,6 +288,8 @@ async def 列出资料(
     tag: str | None,
     keyword: str | None,
     is_deleted: bool,
+    sort_by: str | None = None,
+    sort_order: str = "desc",
 ) -> PaginatedResponse:
     """获取当前用户的资料库列表。"""
     query = select(资料).where(资料.user_id == user.id, 资料.is_deleted == is_deleted)
@@ -267,14 +305,19 @@ async def 列出资料(
         if keyword_clause is not None:
             query = query.where(keyword_clause)
 
+    排序表达式 = _构建资料排序表达式(sort_by)
+    if 排序表达式 is None:
+        主排序 = 资料.deleted_at.desc() if is_deleted else 资料.updated_at.desc()
+    else:
+        主排序 = 排序表达式.asc().nulls_last() if sort_order == "asc" else 排序表达式.desc().nulls_last()
+
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
-    primary_order_column = 资料.deleted_at.desc() if is_deleted else 资料.updated_at.desc()
     result = await db.execute(
         query.options(
             selectinload(资料.assets).selectinload(资料资产.file),
             selectinload(资料.material_tags),
         )
-        .order_by(primary_order_column, 资料.created_at.desc())
+        .order_by(主排序, 资料.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
